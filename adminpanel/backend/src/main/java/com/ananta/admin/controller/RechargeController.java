@@ -11,7 +11,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
+@CrossOrigin(
+        origins = {
+                "http://localhost:8081",
+                "http://localhost:19006",
+                "http://localhost:3000"
+        },
+        maxAge = 3600
+)
 @RestController
 @RequestMapping("/api/admin/recharges")
 public class RechargeController {

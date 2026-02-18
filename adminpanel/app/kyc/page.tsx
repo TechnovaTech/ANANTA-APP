@@ -1,10 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 export default function KYCPage() {
   const [kycRequests, setKycRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     fetchKYC();
@@ -120,7 +122,7 @@ export default function KYCPage() {
             </thead>
             <tbody>
               {kycRequests.map((kyc: any, index) => (
-                <tr key={kyc._id} style={{borderBottom:index < kycRequests.length - 1 ? '1px solid #e2e8f0' : 'none'}}>
+                <tr key={kyc.id} style={{borderBottom:index < kycRequests.length - 1 ? '1px solid #e2e8f0' : 'none'}}>
                   <td style={{padding:'20px'}}>
                     <div>
                       <div style={{fontWeight:600,color:'#1a202c',fontSize:16,marginBottom:6}}>{kyc.fullName}</div>
@@ -154,42 +156,60 @@ export default function KYCPage() {
                     <span style={{color:'#718096',fontSize:15}}>{new Date(kyc.createdAt).toLocaleDateString('en-US', {year:'numeric',month:'short',day:'numeric'})}</span>
                   </td>
                   <td style={{padding:'20px'}}>
-                    {kyc.status === 'PENDING' && (
-                      <div style={{display:'flex',gap:8}}>
-                        <button 
-                          onClick={() => handleKYCAction(kyc._id, 'approve')}
-                          style={{
-                            padding:'10px 20px',
-                            border:'none',
-                            borderRadius:6,
-                            cursor:'pointer',
-                            fontSize:13,
-                            fontWeight:600,
-                            background:'#38a169',
-                            color:'white',
-                            transition:'all 0.2s'
-                          }}
-                        >
-                          Approve
-                        </button>
-                        <button 
-                          onClick={() => handleKYCAction(kyc._id, 'reject')}
-                          style={{
-                            padding:'10px 20px',
-                            border:'1px solid #e53e3e',
-                            borderRadius:6,
-                            cursor:'pointer',
-                            fontSize:13,
-                            fontWeight:600,
-                            background:'white',
-                            color:'#e53e3e',
-                            transition:'all 0.2s'
-                          }}
-                        >
-                          Reject
-                        </button>
-                      </div>
-                    )}
+                    <div style={{display:'flex',gap:8}}>
+                      <button
+                        onClick={() => router.push(`/users/${kyc.userId}`)}
+                        style={{
+                          padding:'10px 20px',
+                          borderRadius:6,
+                          cursor:'pointer',
+                          fontSize:13,
+                          fontWeight:600,
+                          background:'white',
+                          color:'#3182ce',
+                          border:'1px solid #3182ce',
+                          transition:'all 0.2s'
+                        }}
+                      >
+                        View
+                      </button>
+                      {kyc.status === 'PENDING' && (
+                        <>
+                          <button 
+                            onClick={() => handleKYCAction(kyc.id, 'approve')}
+                            style={{
+                              padding:'10px 20px',
+                              border:'none',
+                              borderRadius:6,
+                              cursor:'pointer',
+                              fontSize:13,
+                              fontWeight:600,
+                              background:'#38a169',
+                              color:'white',
+                              transition:'all 0.2s'
+                            }}
+                          >
+                            Approve
+                          </button>
+                          <button 
+                            onClick={() => handleKYCAction(kyc.id, 'reject')}
+                            style={{
+                              padding:'10px 20px',
+                              border:'1px solid #e53e3e',
+                              borderRadius:6,
+                              cursor:'pointer',
+                              fontSize:13,
+                              fontWeight:600,
+                              background:'white',
+                              color:'#e53e3e',
+                              transition:'all 0.2s'
+                            }}
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

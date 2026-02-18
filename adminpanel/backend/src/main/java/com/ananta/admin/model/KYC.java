@@ -46,7 +46,7 @@ public class KYC {
     }
 
     public enum DocumentType {
-        AADHAR, PAN, PASSPORT
+        AADHAR, PAN, PASSPORT, DRIVING_LICENSE
     }
 
     public enum KYCStatus {

@@ -1,11 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useRouter } from 'next/navigation';
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
     fetchUsers();
@@ -35,6 +37,21 @@ export default function UsersPage() {
       fetchUsers();
     } catch (error) {
       alert('Error updating user');
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to delete this user?')) {
+      return;
+    }
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/admin/users/${userId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchUsers();
+    } catch (error) {
+      alert('Error deleting user');
     }
   };
 
@@ -105,7 +122,7 @@ export default function UsersPage() {
             </thead>
             <tbody>
               {filteredUsers.map((user: any, index) => (
-                <tr key={user._id} style={{borderBottom:index < filteredUsers.length - 1 ? '1px solid #e2e8f0' : 'none'}}>
+                <tr key={user.id} style={{borderBottom:index < filteredUsers.length - 1 ? '1px solid #e2e8f0' : 'none'}}>
                   <td style={{padding:'20px'}}>
                     <div>
                       <div style={{fontWeight:600,color:'#1a202c',fontSize:16,marginBottom:4}}>{user.username}</div>
@@ -133,7 +150,55 @@ export default function UsersPage() {
                     </span>
                   </td>
                   <td style={{padding:'20px'}}>
-                    <div style={{display:'flex',gap:8}}>
+                    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                      <button 
+                        onClick={() => router.push(`/users/${user.userId}`)}
+                        style={{
+                          padding:'8px 14px',
+                          border:'1px solid #3182ce',
+                          borderRadius:6,
+                          cursor:'pointer',
+                          fontSize:13,
+                          fontWeight:600,
+                          background:'white',
+                          color:'#3182ce',
+                          transition:'all 0.2s'
+                        }}
+                      >
+                        View
+                      </button>
+                      <button 
+                        onClick={() => router.push(`/users/${user.userId}/edit`)}
+                        style={{
+                          padding:'8px 14px',
+                          border:'1px solid #805ad5',
+                          borderRadius:6,
+                          cursor:'pointer',
+                          fontSize:13,
+                          fontWeight:600,
+                          background:'white',
+                          color:'#805ad5',
+                          transition:'all 0.2s'
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteUser(user.userId)}
+                        style={{
+                          padding:'8px 14px',
+                          border:'1px solid #e53e3e',
+                          borderRadius:6,
+                          cursor:'pointer',
+                          fontSize:13,
+                          fontWeight:600,
+                          background:'white',
+                          color:'#e53e3e',
+                          transition:'all 0.2s'
+                        }}
+                      >
+                        Delete
+                      </button>
                       <button 
                         onClick={() => handleUserAction(user.userId, 'isBlocked', !user.isBlocked)}
                         style={{

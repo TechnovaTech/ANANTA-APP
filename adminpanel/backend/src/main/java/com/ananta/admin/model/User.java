@@ -18,8 +18,34 @@ public class User {
     @Column(nullable = false)
     private String username;
 
+    @Column
+    private String email;
+
     @Column(nullable = false)
     private String phone;
+
+    @Column(name = "full_name")
+    private String fullName;
+
+    private String gender;
+
+    private String birthday;
+
+    private String bio;
+
+    @Column(name = "address_line1")
+    private String addressLine1;
+
+    private String city;
+
+    private String state;
+
+    private String country;
+
+    @Column(name = "pin_code")
+    private String pinCode;
+
+    private String location;
 
     @Column(name = "is_blocked")
     private boolean isBlocked = false;

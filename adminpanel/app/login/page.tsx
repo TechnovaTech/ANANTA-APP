@@ -3,8 +3,9 @@ import { useState } from 'react';
 import axios from 'axios';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('admin@ananta.com');
-  const [password, setPassword] = useState('Admin@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -51,7 +52,7 @@ export default function LoginPage() {
 
         {/* Login Form */}
         <div style={{background:'white',padding:40,borderRadius:12,boxShadow:'0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',border:'1px solid #e2e8f0'}}>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} autoComplete="off">
             <div style={{marginBottom:24}}>
               <label style={{display:'block',marginBottom:8,color:'#2d3748',fontWeight:600,fontSize:14}}>
                 Email Address
@@ -70,6 +71,7 @@ export default function LoginPage() {
                   outline:'none',
                   background:'#f7fafc'
                 }}
+                autoComplete="off"
                 onFocus={(e) => {
                   e.target.style.borderColor = '#4299e1';
                   e.target.style.background = 'white';
@@ -86,30 +88,53 @@ export default function LoginPage() {
               <label style={{display:'block',marginBottom:8,color:'#2d3748',fontWeight:600,fontSize:14}}>
                 Password
               </label>
-              <input 
-                type="password" 
-                value={password} 
-                onChange={(e)=>setPassword(e.target.value)} 
-                style={{
-                  width:'100%',
-                  padding:'14px 16px',
-                  border:'2px solid #e2e8f0',
-                  borderRadius:8,
-                  fontSize:16,
-                  transition:'all 0.2s',
-                  outline:'none',
-                  background:'#f7fafc'
-                }}
-                onFocus={(e) => {
-                  e.target.style.borderColor = '#4299e1';
-                  e.target.style.background = 'white';
-                }}
-                onBlur={(e) => {
-                  e.target.style.borderColor = '#e2e8f0';
-                  e.target.style.background = '#f7fafc';
-                }}
-                required 
-              />
+              <div style={{position:'relative'}}>
+                <input 
+                  type={showPassword ? 'text' : 'password'} 
+                  value={password} 
+                  onChange={(e)=>setPassword(e.target.value)} 
+                  style={{
+                    width:'100%',
+                    padding:'14px 16px',
+                    paddingRight:44,
+                    border:'2px solid #e2e8f0',
+                    borderRadius:8,
+                    fontSize:16,
+                    transition:'all 0.2s',
+                    outline:'none',
+                    background:'#f7fafc'
+                  }}
+                  autoComplete="new-password"
+                  placeholder="Enter your password"
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#4299e1';
+                    e.target.style.background = 'white';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e2e8f0';
+                    e.target.style.background = '#f7fafc';
+                  }}
+                  required 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position:'absolute',
+                    right:12,
+                    top:'50%',
+                    transform:'translateY(-50%)',
+                    fontSize:12,
+                    color:'#4a5568',
+                    background:'transparent',
+                    border:'none',
+                    cursor:'pointer',
+                    padding:0
+                  }}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
 
             {error && (

@@ -3,15 +3,19 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { Inter_400Regular, Inter_700Bold, useFonts } from '@expo-google-fonts/inter';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ImageBackground, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View, StatusBar, Dimensions } from 'react-native';
+import { ImageBackground, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View, StatusBar, Dimensions, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
+const API_BASE = 'http://localhost:8080';
 
 export default function OTPScreen() {
+  const params = useLocalSearchParams();
+  const phone = typeof params.phone === 'string' ? params.phone : '';
   const [otp, setOtp] = useState(['', '', '', '', '']);
+  const [submitting, setSubmitting] = useState(false);
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
   const [fontsLoaded] = useFonts({
@@ -26,6 +30,56 @@ export default function OTPScreen() {
 
     if (value && index < 4) {
       inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleVerify = async () => {
+    const code = otp.join('');
+    if (code.length !== 5) {
+      Alert.alert('Error', 'Please enter the 5-digit OTP (12345)');
+      return;
+    }
+    if (!phone) {
+      Alert.alert('Error', 'Phone number missing, please go back and enter phone');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      const response = await fetch(`${API_BASE}/api/app/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otp: code }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => null);
+        const message = err?.message || 'Invalid OTP';
+        Alert.alert('Error', message);
+        return;
+      }
+      const data = await response.json();
+      const userId = data.userId as string;
+      const kycStatus = data.kycStatus as string;
+      const hasProfile = !!data.hasProfile;
+
+      if (kycStatus === 'APPROVED') {
+        router.replace('/(tabs)');
+        return;
+      }
+
+      if (kycStatus === 'REJECTED') {
+        router.replace({ pathname: '/auth/kyc-rejected', params: { userId } });
+        return;
+      }
+
+      if (hasProfile) {
+        router.replace({ pathname: '/auth/kyc-review', params: { userId } });
+      } else {
+        router.replace({ pathname: '/auth/profile', params: { userId } });
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong while verifying OTP');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -99,7 +153,8 @@ export default function OTPScreen() {
               
               <TouchableOpacity 
                 style={styles.verifyButtonContainer}
-                onPress={() => router.push('/auth/profile')}
+                onPress={handleVerify}
+                disabled={submitting}
               >
                 <LinearGradient
                   colors={['#127d96', '#15a3c7', '#1bb5d8']}

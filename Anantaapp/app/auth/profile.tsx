@@ -3,24 +3,34 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { LevelBadge } from '@/components/level-badge';
 import { Animated } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { useProfile } from '../../contexts/ProfileContext';
+
+const API_BASE = 'http://localhost:8080';
 
 export default function ProfileScreen() {
+  const params = useLocalSearchParams();
+  const userId = typeof params.userId === 'string' ? params.userId : '';
+  const { updateProfile } = useProfile();
   const { isDark } = useTheme();
   const progressAnim = useRef(new Animated.Value(0)).current;
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [userName, setUserName] = useState('');
+  const [email, setEmail] = useState('');
   const [gender, setGender] = useState('');
   const [bio, setBio] = useState('');
   const [location, setLocation] = useState('');
   const [birthday, setBirthday] = useState('');
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [addressLine1, setAddressLine1] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
@@ -68,7 +78,19 @@ export default function ProfileScreen() {
   };
 
   const isBackImageRequired = documentType !== 'Passport';
-  const isFormValid = documentType && documentNumber && frontImage && (isBackImageRequired ? backImage : true);
+  const isFormValid =
+    userName.trim().length > 0 &&
+    email.trim().length > 0 &&
+    name.trim().length > 0 &&
+    addressLine1.trim().length > 0 &&
+    city.trim().length > 0 &&
+    state.trim().length > 0 &&
+    country.trim().length > 0 &&
+    pinCode.trim().length > 0 &&
+    documentType &&
+    documentNumber.trim().length > 0 &&
+    frontImage &&
+    (isBackImageRequired ? !!backImage : true);
 
   // Sample data
   const cities = [
@@ -105,8 +127,33 @@ export default function ProfileScreen() {
     }).start();
   }, [progressPercentage]);
 
+  const handleDateChange = (_event: any, selectedDate?: Date) => {
+    if (Platform.OS !== 'ios') {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      setBirthDate(selectedDate);
+      const day = String(selectedDate.getDate()).padStart(2, '0');
+      const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const year = selectedDate.getFullYear();
+      setBirthday(`${day}/${month}/${year}`);
+    }
+  };
+
   const handleImagePicker = async () => {
     try {
+      if (Platform.OS === 'web') {
+        const result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+        if (!result.canceled) {
+          setProfileImage(result.assets[0].uri);
+        }
+        return;
+      }
       Alert.alert(
         'Select Photo',
         'Choose an option',
@@ -195,10 +242,12 @@ export default function ProfileScreen() {
   };
 
   const pickKycImage = async (type: 'profile' | 'id' | 'doc1' | 'doc2' | 'front' | 'back') => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to select an image.');
-      return;
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to select an image.');
+        return;
+      }
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -232,6 +281,67 @@ export default function ProfileScreen() {
           setBackImage(uri);
           break;
       }
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!userId) {
+      Alert.alert('Error', 'User information missing, please go back and verify OTP again');
+      return;
+    }
+    if (!isFormValid) {
+      Alert.alert('Error', 'Please fill all required fields');
+      return;
+    }
+
+    try {
+      const payload = {
+        userId,
+        username: userName.trim(),
+        email: email.trim(),
+        fullName: name.trim(),
+        gender,
+        birthday,
+        bio,
+        addressLine1,
+        city,
+        state,
+        country,
+        pinCode,
+        location,
+        documentType,
+        documentNumber,
+      };
+
+      const response = await fetch(`${API_BASE}/api/app/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => null);
+        const message = err?.message || 'Failed to submit KYC';
+        Alert.alert('Error', message);
+        return;
+      }
+
+      updateProfile({
+        name,
+        title: userName,
+        bio,
+        location,
+        email,
+        city,
+        state,
+        country,
+        pinCode,
+        addressLine1,
+      });
+
+      router.replace({ pathname: '/auth/kyc-review', params: { userId } });
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong while submitting your details');
     }
   };
 
@@ -290,6 +400,22 @@ export default function ProfileScreen() {
           
           <View style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}>
             <Image 
+              source={{ uri: 'https://cdn-icons-png.flaticon.com/512/561/561127.png' }} 
+              style={[styles.iconImage, { tintColor: isDark ? '#555' : Colors.light.primary }]} 
+            />
+            <TextInput
+              style={[styles.input, { color: isDark ? 'white' : '#333' }]}
+              placeholder="Email"
+              placeholderTextColor={isDark ? '#888' : '#666'}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}>
+            <Image 
               source={{ uri: 'https://cdn-icons-png.flaticon.com/512/1077/1077012.png' }} 
               style={[styles.iconImage, { tintColor: isDark ? '#555' : Colors.light.primary }]} 
             />
@@ -316,19 +442,49 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-down" size={20} color={isDark ? '#888' : '#666'} />
           </TouchableOpacity>
           
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}>
-            <Image 
-              source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2693/2693507.png' }} 
-              style={[styles.iconImage, { tintColor: isDark ? '#555' : Colors.light.primary }]} 
-            />
-            <TextInput
-              style={[styles.input, { color: isDark ? 'white' : '#333' }]}
-              placeholder="Birthday (DD/MM/YYYY)"
-              placeholderTextColor={isDark ? '#888' : '#666'}
-              value={birthday}
-              onChangeText={setBirthday}
-            />
-          </View>
+          {Platform.OS === 'web' ? (
+            <View style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}>
+              <Image 
+                source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2693/2693507.png' }} 
+                style={[styles.iconImage, { tintColor: isDark ? '#555' : Colors.light.primary }]} 
+              />
+              <TextInput
+                style={[styles.input, { color: isDark ? 'white' : '#333' }]}
+                placeholder="Birthday (DD/MM/YYYY)"
+                placeholderTextColor={isDark ? '#888' : '#666'}
+                value={birthday}
+                onChangeText={setBirthday}
+              />
+            </View>
+          ) : (
+            <>
+              <TouchableOpacity 
+                style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Image 
+                  source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2693/2693507.png' }} 
+                  style={[styles.iconImage, { tintColor: isDark ? '#555' : Colors.light.primary }]} 
+                />
+                <ThemedText
+                  style={[styles.dropdownText, { color: birthday ? (isDark ? 'white' : '#333') : (isDark ? '#888' : '#666') }]}
+                >
+                  {birthday || 'Birthday (DD/MM/YYYY)'}
+                </ThemedText>
+                <Ionicons name="calendar-outline" size={20} color={isDark ? '#888' : '#666'} />
+              </TouchableOpacity>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={birthDate || new Date(2000, 0, 1)}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  maximumDate={new Date()}
+                  onChange={handleDateChange}
+                />
+              )}
+            </>
+          )}
           
           <View style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}>
             <Image 
@@ -537,7 +693,7 @@ export default function ProfileScreen() {
       
           <TouchableOpacity 
             style={[styles.nextButtonContainer, { opacity: isFormValid ? 1 : 0.5 }]}
-            onPress={() => router.push('/(tabs)')}
+            onPress={handleSubmit}
             disabled={!isFormValid}
           >
             <LinearGradient

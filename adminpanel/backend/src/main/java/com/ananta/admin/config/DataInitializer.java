@@ -23,13 +23,12 @@ public class DataInitializer implements CommandLineRunner {
         if (adminRepository.count() == 0) {
             Admin admin = new Admin();
             admin.setEmail("admin@gmail.com");
-            admin.setPassword(passwordEncoder.encode("admi123"));
+            admin.setPassword(passwordEncoder.encode("admin123"));
             admin.setRole("ADMIN");
             admin.setCreatedAt(LocalDateTime.now());
             admin.setUpdatedAt(LocalDateTime.now());
-            
             adminRepository.save(admin);
-            System.out.println("Admin user seeded successfully!");
+            System.out.println("Default admin user created: admin@gmail.com");
         }
     }
 }

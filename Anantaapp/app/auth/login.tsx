@@ -6,10 +6,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Alert, Image, ImageBackground, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View, StatusBar, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 
 const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
+  const [phone, setPhone] = useState('');
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_700Bold,
@@ -34,6 +36,14 @@ export default function LoginScreen() {
         }
       ]
     );
+  };
+
+  const handleGetOtp = () => {
+    if (!phone.trim()) {
+      Alert.alert('Error', 'Please enter your phone number');
+      return;
+    }
+    router.push({ pathname: '/auth/otp', params: { phone: phone.trim() } });
   };
 
   if (!fontsLoaded) {
@@ -87,13 +97,15 @@ export default function LoginScreen() {
                         placeholder="Enter your phone number"
                         placeholderTextColor="#888"
                         keyboardType="phone-pad"
+                        value={phone}
+                        onChangeText={setPhone}
                       />
                     </LinearGradient>
                   </View>
                   
                   <TouchableOpacity 
                     style={styles.otpButtonContainer}
-                    onPress={() => router.push('/auth/otp')}
+                    onPress={handleGetOtp}
                   >
                     <LinearGradient
                       colors={['#127d96', '#15a3c7', '#1bb5d8']}
