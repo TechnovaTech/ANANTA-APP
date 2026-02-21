@@ -6,7 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
-const API_BASE = 'http://localhost:8082';
+const API_BASE = 'https://ecofuelglobal.com';
 
 export default function WalletScreen() {
   const { isDark } = useTheme();

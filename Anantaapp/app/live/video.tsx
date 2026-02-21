@@ -6,12 +6,12 @@ import { Animated, Image, StyleSheet, TextInput, TouchableOpacity, View, Text, K
 import { useTheme } from '@/contexts/ThemeContext';
 import { createAgoraEngine } from '@/agoraClient';
 
-const API_BASE = 'http://localhost:8082';
+const API_BASE = 'https://ecofuelglobal.com';
 
 const resolveGiftImageUrl = (value: string | null | undefined) => {
   if (!value) return '';
   if (value.startsWith('http') || value.startsWith('data:')) return value;
-  if (value.startsWith('/uploads/')) return `http://localhost:3000${value}`;
+  if (value.startsWith('/uploads/')) return `https://ecofuelglobal.com${value}`;
   return value;
 };
 
@@ -19,7 +19,7 @@ const resolveProfileImageUrl = (value: string | null | undefined) => {
   if (!value) return '';
   if (value.startsWith('blob:')) return '';
   if (value.startsWith('http') || value.startsWith('data:')) return value;
-  if (value.startsWith('/uploads/')) return `http://localhost:3000${value}`;
+  if (value.startsWith('/uploads/')) return `https://ecofuelglobal.com${value}`;
   if (value.length > 100) return `data:image/jpeg;base64,${value}`;
   return value;
 };

@@ -19,12 +19,12 @@ import { router } from 'expo-router';
 import { useProfile } from '../../contexts/ProfileContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
-const API_BASE = 'http://localhost:8082';
+const API_BASE = 'https://ecofuelglobal.com';
 
 const resolveProfileUri = (value: string | null | undefined) => {
   if (!value) return null;
   if (value.startsWith('http') || value.startsWith('data:')) return value;
-  if (value.startsWith('/uploads/')) return `http://localhost:3000${value}`;
+  if (value.startsWith('/uploads/')) return `https://ecofuelglobal.com${value}`;
   if (value.length > 100) return `data:image/jpeg;base64,${value}`;
   return value;
 };

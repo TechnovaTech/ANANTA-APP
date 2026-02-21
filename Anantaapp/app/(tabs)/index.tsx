@@ -68,7 +68,7 @@ export default function HomeScreen() {
     }
   };
   
-  const API_BASE = 'http://localhost:8082';
+  const API_BASE = 'https://ecofuelglobal.com';
 
   const videos = [
     { id: 1, title: '#joy with life partner', user: 'Rachel James', location: 'India', views: '23K', image: require('@/assets/images/h1.png.png') },
@@ -123,7 +123,7 @@ export default function HomeScreen() {
     if (!value) return null;
     if (value.startsWith('blob:')) return null;
     if (value.startsWith('http') || value.startsWith('data:')) return { uri: value };
-    if (value.startsWith('/uploads/')) return { uri: `http://localhost:3000${value}` };
+    if (value.startsWith('/uploads/')) return { uri: `https://ecofuelglobal.com${value}` };
     if (value.length > 100) return { uri: `data:image/jpeg;base64,${value}` };
     return { uri: value };
   };
@@ -132,7 +132,7 @@ export default function HomeScreen() {
     if (!value) return null;
     if (value.startsWith('blob:')) return null;
     if (value.startsWith('http') || value.startsWith('data:')) return value;
-    if (value.startsWith('/uploads/')) return `http://localhost:3000${value}`;
+    if (value.startsWith('/uploads/')) return `https://ecofuelglobal.com${value}`;
     if (value.length > 100) return `data:application/octet-stream;base64,${value}`;
     return value;
   };

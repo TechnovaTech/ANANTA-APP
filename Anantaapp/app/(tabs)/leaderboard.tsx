@@ -10,7 +10,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
-const API_BASE = 'http://localhost:8082';
+const API_BASE = 'https://ecofuelglobal.com';
 
 const avatars = [
   require('@/assets/images/h1.png.png'),

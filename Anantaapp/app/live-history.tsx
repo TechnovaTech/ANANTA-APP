@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
 
-const API_BASE = 'http://localhost:8082';
+const API_BASE = 'https://ecofuelglobal.com';
 
 type LiveHistoryItem = {
   sessionId: string;
@@ -338,4 +338,3 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 });
-

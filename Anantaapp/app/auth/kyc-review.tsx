@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
-const API_BASE = 'http://localhost:8082';
+const API_BASE = 'https://ecofuelglobal.com';
 
 export default function KycReviewScreen() {
   const params = useLocalSearchParams();
@@ -95,4 +95,3 @@ const styles = StyleSheet.create({
     color: '#127d96',
   },
 });
-

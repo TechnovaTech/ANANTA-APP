@@ -14,7 +14,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useProfile } from '../../contexts/ProfileContext';
 import * as FileSystem from 'expo-file-system';
 
-const API_BASE = 'http://localhost:8082';
+const API_BASE = 'https://ecofuelglobal.com';
 
 export default function ProfileScreen() {
   const params = useLocalSearchParams();

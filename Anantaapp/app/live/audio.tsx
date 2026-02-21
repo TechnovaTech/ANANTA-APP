@@ -9,7 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { createAgoraEngine } from '@/agoraClient';
 
 const { width, height } = Dimensions.get('window');
-const API_BASE = 'http://localhost:8082';
+const API_BASE = 'https://ecofuelglobal.com';
 
 export default function AudioLiveScreen() {
   const { isDark } = useTheme();

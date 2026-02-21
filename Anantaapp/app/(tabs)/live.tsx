@@ -205,7 +205,7 @@ export default function LiveScreen() {
       if (!value) return null;
       if (value.startsWith('blob:')) return null;
       if (value.startsWith('http') || value.startsWith('data:')) return { uri: value };
-      if (value.startsWith('/uploads/')) return { uri: `http://localhost:3000${value}` };
+      if (value.startsWith('/uploads/')) return { uri: `https://ecofuelglobal.com${value}` };
       if (value.length > 100) return { uri: `data:image/jpeg;base64,${value}` };
       return { uri: value };
     };
