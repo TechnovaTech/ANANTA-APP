@@ -9,7 +9,7 @@ import { ImageBackground, KeyboardAvoidingView, Platform, ScrollView, StyleSheet
 import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
-const API_BASE = 'http://localhost:8080';
+const API_BASE = 'http://localhost:8082';
 
 export default function OTPScreen() {
   const params = useLocalSearchParams();
@@ -60,6 +60,10 @@ export default function OTPScreen() {
       const userId = data.userId as string;
       const kycStatus = data.kycStatus as string;
       const hasProfile = !!data.hasProfile;
+
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && userId) {
+        window.localStorage.setItem('userId', userId);
+      }
 
       if (kycStatus === 'APPROVED') {
         router.replace('/(tabs)');

@@ -19,4 +19,7 @@ public class RegisterRequest {
     private String location;
     private String documentType;
     private String documentNumber;
+    private String profileImage;
+    private String documentFrontImage;
+    private String documentBackImage;
 }

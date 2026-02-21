@@ -2,37 +2,71 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, StyleSheet, TextInput, TouchableOpacity, View, Text, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { Animated, Image, StyleSheet, TextInput, TouchableOpacity, View, Text, KeyboardAvoidingView, Platform, Alert, Modal, FlatList } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
+import { createAgoraEngine } from '@/agoraClient';
+
+const API_BASE = 'http://localhost:8082';
+
+const resolveGiftImageUrl = (value: string | null | undefined) => {
+  if (!value) return '';
+  if (value.startsWith('http') || value.startsWith('data:')) return value;
+  if (value.startsWith('/uploads/')) return `http://localhost:3000${value}`;
+  return value;
+};
+
+const resolveProfileImageUrl = (value: string | null | undefined) => {
+  if (!value) return '';
+  if (value.startsWith('blob:')) return '';
+  if (value.startsWith('http') || value.startsWith('data:')) return value;
+  if (value.startsWith('/uploads/')) return `http://localhost:3000${value}`;
+  if (value.length > 100) return `data:image/jpeg;base64,${value}`;
+  return value;
+};
 
 export default function VideoLiveScreen() {
   const { isDark } = useTheme();
   const params = useLocalSearchParams();
-  const title = params.title as string || '#Love me like you do';
-  const user = params.user as string || 'Micale clarke';
-  const location = params.location as string || 'Location';
-  const views = params.views as string || '20';
+  const title = (params.title as string) || 'Live session';
+  const hostUsername = (params.hostUsername as string) || (params.user as string) || 'Micale clarke';
+  const hostProfileImage = (params.hostProfileImage as string) || '';
+  const hostUserId = (params.hostUserId as string) || '';
+  const location = (params.location as string) || 'Location';
+  const views = (params.views as string) || '20';
+  const sessionId = params.sessionId as string | undefined;
+  const channelName = params.channelName as string | undefined;
+  const token = params.token as string | undefined;
+  const appId = params.appId as string | undefined;
+  const userId = params.userId as string | undefined;
   
   const [likes, setLikes] = useState(15000);
   const [isLiked, setIsLiked] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(() => {
+    const value = params.isFollowing as string | undefined;
+    if (value === undefined) return false;
+    if (typeof value === 'string') {
+      return value === 'true' || value === '1';
+    }
+    return false;
+  });
   const [floatingHearts, setFloatingHearts] = useState<any[]>([]);
+  const [isMuted, setIsMuted] = useState(false);
+  const [isCameraOn, setIsCameraOn] = useState(true);
+  const [joined, setJoined] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [giftList, setGiftList] = useState<any[]>([]);
+  const [showGifts, setShowGifts] = useState(false);
+  const [loadingGifts, setLoadingGifts] = useState(false);
+  const resolvedHostProfileImage = resolveProfileImageUrl(hostProfileImage);
   
-  const [liveComments, setLiveComments] = useState<any[]>([
-    { id: 1, user: 'Johnson joy', message: 'Great stream!', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50' },
-    { id: 2, user: 'Henny', message: 'Love this song', avatar: 'https://images.unsplash.com/photo-1494790108755-2616c9c0e0e0?w=50' },
-    { id: 3, user: 'Mike', message: 'Amazing performance!', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=50' }
-  ]);
+  const engineRef = useRef<any | null>(null);
+  const role = (params.role as string) || 'host';
+  
+  const [liveComments, setLiveComments] = useState<any[]>([]);
   const [messageText, setMessageText] = useState('');
   const animatedValues = useRef<{[key: number]: Animated.Value}>({});
   
-  const comments = [
-    { id: 1, user: 'Johnson joy', message: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50' },
-    { id: 2, user: 'Johnson joy', message: 'Hi micale john', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50' },
-    { id: 3, user: 'Henny', message: 'Hi', avatar: 'https://images.unsplash.com/photo-1494790108755-2616c9c0e0e0?w=50' },
-    { id: 4, user: 'Johnson joy', message: 'How are you?', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50' },
-    { id: 5, user: 'Henny', message: 'Im good, How are you?', avatar: 'https://images.unsplash.com/photo-1494790108755-2616c9c0e0e0?w=50' },
-  ];
+  const comments: any[] = [];
 
   const addFloatingHeart = () => {
     const newHeart = {
@@ -46,17 +80,145 @@ export default function VideoLiveScreen() {
       setFloatingHearts(prev => prev.filter(heart => heart.id !== newHeart.id));
     }, 3000);
   };
-
-  const handleFollow = () => {
-    setIsFollowing(!isFollowing);
+  const handleGift = () => {
+    if (role !== 'viewer') {
+      return;
+    }
+    if (!userId) {
+      return;
+    }
+    if (!hostUserId) {
+      return;
+    }
+    setShowGifts(true);
+    if (giftList.length === 0) {
+      loadGifts();
+    }
+    if (walletBalance === null) {
+      loadWallet();
+    }
   };
 
+  const loadWallet = async () => {
+    if (!userId) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/app/wallet/${userId}`);
+      if (!res.ok) {
+        return;
+      }
+      const data = await res.json();
+      const value = typeof data.balance === 'number' ? data.balance : Number(data.balance) || 0;
+      setWalletBalance(value);
+    } catch {
+    }
+  };
+
+  const loadGifts = async () => {
+    try {
+      setLoadingGifts(true);
+      const res = await fetch(`${API_BASE}/api/app/gifts`);
+      if (!res.ok) {
+        setLoadingGifts(false);
+        return;
+      }
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setGiftList(
+          data.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            coinValue: item.coinValue,
+            imageUrl: resolveGiftImageUrl(item.imageUrl),
+          }))
+        );
+      }
+      setLoadingGifts(false);
+    } catch {
+      setLoadingGifts(false);
+    }
+  };
+
+  const handleSendGift = async (gift: any) => {
+    if (!userId || !hostUserId) {
+      return;
+    }
+    const cost = typeof gift.coinValue === 'number' ? gift.coinValue : Number(gift.coinValue) || 0;
+    if (cost <= 0) {
+      return;
+    }
+    if (walletBalance !== null && walletBalance < cost) {
+      Alert.alert('Insufficient balance', 'You do not have enough coins to send this gift.');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/app/gifts/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fromUserId: userId,
+          toUserId: hostUserId,
+          giftId: gift.id,
+        }),
+      });
+      if (!res.ok) {
+        Alert.alert('Error', 'Unable to send gift');
+        return;
+      }
+      const data = await res.json();
+      if (typeof data.fromBalance === 'number') {
+        setWalletBalance(data.fromBalance);
+      }
+      addFloatingHeart();
+      setShowGifts(false);
+    } catch {
+      Alert.alert('Error', 'Unable to send gift');
+    }
+  };
+
+  const handleFollow = async () => {
+    if (role !== 'viewer') {
+      return;
+    }
+    if (!userId || !hostUserId) {
+      setIsFollowing(prev => !prev);
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE}/api/app/follow/toggle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          followerId: userId,
+          followeeId: hostUserId,
+        }),
+      });
+      if (!response.ok) {
+        setIsFollowing(prev => !prev);
+        return;
+      }
+      const data = await response.json();
+      if (typeof data.isFollowing === 'boolean') {
+        setIsFollowing(data.isFollowing);
+      } else {
+        setIsFollowing(prev => !prev);
+      }
+    } catch {
+      setIsFollowing(prev => !prev);
+    }
+  };
+  
   const handleLike = () => {
     setLikes(prev => prev + 1);
     setIsLiked(true);
     addFloatingHeart();
   };
-
+  
   const sendMessage = () => {
     if (messageText.trim()) {
       const newComment = {
@@ -70,15 +232,116 @@ export default function VideoLiveScreen() {
     }
   };
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const randomComment = comments[Math.floor(Math.random() * comments.length)];
-      const newComment = { ...randomComment, id: Date.now() };
-      setLiveComments(prev => [...prev, newComment].slice(-5));
-    }, 3000);
+  const initAgora = async () => {
+    if (!appId || !token || !channelName) return;
+    try {
+      const engine = await createAgoraEngine(appId);
+      if (!engine) {
+        if (Platform.OS === 'web') {
+          Alert.alert('Live video', 'Live video works only in the mobile app, not in browser.');
+        }
+        return;
+      }
+      engineRef.current = engine;
+      if (engine.enableVideo) {
+        await engine.enableVideo();
+      }
+      if (engine.setChannelProfile) {
+        await engine.setChannelProfile(1);
+      }
+      if (engine.setClientRole) {
+        const clientRole = role === 'viewer' ? 2 : 1;
+        await engine.setClientRole(clientRole);
+      }
+      if (engine.addListener) {
+        engine.addListener('JoinChannelSuccess', () => {
+          setJoined(true);
+        });
+      }
+      if (engine.joinChannel) {
+        await engine.joinChannel(token, channelName, null, 0);
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Unable to start video live');
+    }
+  };
 
-    return () => clearInterval(interval);
-  }, []);
+  const cleanupAgora = async () => {
+    const engine = engineRef.current;
+    if (engine) {
+      try {
+        if (engine.leaveChannel) {
+          await engine.leaveChannel();
+        }
+        if (engine.destroy) {
+          await engine.destroy();
+        }
+      } catch {
+      }
+      engineRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    initAgora();
+    return () => {
+      cleanupAgora();
+    };
+  }, [appId, token, channelName]);
+
+  const toggleMute = async () => {
+    const engine = engineRef.current;
+    if (!engine || !engine.muteLocalAudioStream) return;
+    const next = !isMuted;
+    try {
+      await engine.muteLocalAudioStream(next);
+      setIsMuted(next);
+    } catch {
+    }
+  };
+
+  const toggleCamera = async () => {
+    const engine = engineRef.current;
+    if (!engine) return;
+    try {
+      if (isCameraOn) {
+        if (engine.enableLocalVideo) {
+          await engine.enableLocalVideo(false);
+        }
+        setIsCameraOn(false);
+      } else {
+        if (engine.enableLocalVideo) {
+          await engine.enableLocalVideo(true);
+        }
+        setIsCameraOn(true);
+      }
+      if (engine.switchCamera) {
+        await engine.switchCamera();
+      }
+    } catch {
+    }
+  };
+
+  const endLive = async () => {
+    try {
+      if (role === 'host' && sessionId && userId) {
+        await fetch(`${API_BASE}/api/app/live/end`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId,
+            userId,
+          }),
+        });
+      }
+    } catch {
+    } finally {
+      await cleanupAgora();
+      router.back();
+    }
+  };
 
   return (
     <KeyboardAvoidingView 
@@ -86,38 +349,53 @@ export default function VideoLiveScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
-      <Image 
-        source={require('../../assets/images/video image.png')}
-        style={styles.backgroundImage}
-      />
+      <View style={styles.backgroundImage} />
       
       <View style={styles.overlay}>
         <View style={styles.header}>
-          <View style={styles.userInfo}>
-            <Image 
-              source={{ uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face' }}
-              style={styles.userAvatar}
-            />
-            <View style={styles.userDetails}>
-              <ThemedText style={styles.username}>@{user}</ThemedText>
-              <ThemedText style={styles.liveText}>{title}</ThemedText>
+          {role === 'viewer' && (
+            <>
+              <View style={styles.userInfo}>
+                <Image 
+                  source={
+                    resolvedHostProfileImage
+                      ? { uri: resolvedHostProfileImage }
+                      : { uri: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&h=50&fit=crop&crop=face' }
+                  }
+                  style={styles.userAvatar}
+                />
+                <View style={styles.userDetails}>
+                  <ThemedText style={styles.username}>@{hostUsername}</ThemedText>
+                  <ThemedText style={styles.liveText}>{title}</ThemedText>
+                </View>
+              </View>
+              
+              <View style={styles.headerRight}>
+                <TouchableOpacity style={[styles.followButton, { backgroundColor: isDark ? '#FFD700' : Colors.light.primary }, isFollowing && styles.followingButton]} onPress={handleFollow}>
+                  <ThemedText style={[styles.followText, { color: isDark ? 'black' : 'white' }, isFollowing && styles.followingText]}>
+                    {isFollowing ? 'Following' : 'Follow'}
+                  </ThemedText>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.closeButton}
+                  onPress={endLive}
+                >
+                  <ThemedText style={styles.closeText}>×</ThemedText>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
+          {role === 'host' && (
+            <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end' }}>
+              <TouchableOpacity 
+                style={styles.closeButton}
+                onPress={endLive}
+              >
+                <ThemedText style={styles.closeText}>×</ThemedText>
+              </TouchableOpacity>
             </View>
-          </View>
-          
-          <View style={styles.headerRight}>
-            <TouchableOpacity style={[styles.followButton, { backgroundColor: isDark ? '#FFD700' : Colors.light.primary }, isFollowing && styles.followingButton]} onPress={handleFollow}>
-              <ThemedText style={[styles.followText, { color: isDark ? 'black' : 'white' }, isFollowing && styles.followingText]}>
-                {isFollowing ? 'Following' : 'Follow'}
-              </ThemedText>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.closeButton}
-              onPress={() => router.back()}
-            >
-              <ThemedText style={styles.closeText}>×</ThemedText>
-            </TouchableOpacity>
-          </View>
+          )}
         </View>
 
         <View style={styles.stats}>
@@ -177,17 +455,87 @@ export default function VideoLiveScreen() {
           </View>
           
           <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.actionButton}>
-              <ThemedText style={styles.actionIcon}>🎤</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton}>
-              <ThemedText style={styles.actionIcon}>🎁</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
-              <ThemedText style={[styles.actionIcon, { color: isLiked ? '#ff4444' : 'white' }]}>❤️</ThemedText>
-            </TouchableOpacity>
+            {role === 'host' ? (
+              <>
+                <TouchableOpacity style={styles.actionButton} onPress={toggleMute}>
+                  <ThemedText style={styles.actionIcon}>{isMuted ? '🔇' : '🎤'}</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={toggleCamera}>
+                  <ThemedText style={styles.actionIcon}>📷</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={endLive}>
+                  <ThemedText style={styles.actionIcon}>⏹</ThemedText>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
+                  <ThemedText style={[styles.actionIcon, { color: isLiked ? '#ff4444' : 'white' }]}>❤️</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={handleGift}>
+                  <ThemedText style={[styles.actionIcon, { color: '#ffd93d' }]}>🎁</ThemedText>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </View>
+
+        <Modal
+          visible={showGifts}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowGifts(false)}
+        >
+          <View style={styles.giftModalOverlay}>
+            <View style={styles.giftModalContainer}>
+              <View style={styles.giftModalHeader}>
+                <Text style={styles.giftModalTitle}>Send a gift</Text>
+                <TouchableOpacity onPress={() => setShowGifts(false)}>
+                  <Text style={styles.giftModalClose}>×</Text>
+                </TouchableOpacity>
+              </View>
+              {walletBalance !== null && (
+                <Text style={styles.giftBalanceText}>
+                  Your balance: {walletBalance} coins
+                </Text>
+              )}
+              {loadingGifts ? (
+                <Text style={styles.giftLoadingText}>Loading gifts...</Text>
+              ) : giftList.length === 0 ? (
+                <Text style={styles.giftLoadingText}>No gifts available.</Text>
+              ) : (
+                <FlatList
+                  data={giftList}
+                  keyExtractor={item => String(item.id)}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.giftList}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      style={styles.giftItem}
+                      onPress={() => handleSendGift(item)}
+                    >
+                      <View style={styles.giftImageWrapper}>
+                        {item.imageUrl ? (
+                          <Image
+                            source={{ uri: item.imageUrl }}
+                            style={styles.giftImage}
+                          />
+                        ) : (
+                          <Text style={styles.giftPlaceholder}>🎁</Text>
+                        )}
+                      </View>
+                      <Text style={styles.giftName} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <Text style={styles.giftCoins}>{item.coinValue} coins</Text>
+                    </TouchableOpacity>
+                  )}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
       </View>
     </KeyboardAvoidingView>
   );
@@ -379,6 +727,78 @@ const styles = StyleSheet.create({
   },
   actionIcon: {
     fontSize: 18,
+  },
+  giftModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  giftModalContainer: {
+    backgroundColor: 'rgba(15,15,16,0.98)',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  giftModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  giftModalTitle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  giftModalClose: {
+    color: 'white',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  giftBalanceText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  giftLoadingText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+  },
+  giftList: {
+    paddingTop: 8,
+  },
+  giftItem: {
+    width: 90,
+    marginRight: 12,
+    alignItems: 'center',
+  },
+  giftImageWrapper: {
+    width: 70,
+    height: 70,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  giftImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+  },
+  giftPlaceholder: {
+    fontSize: 30,
+  },
+  giftName: {
+    color: 'white',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  giftCoins: {
+    color: '#ffd93d',
+    fontSize: 11,
   },
   floatingHeartsContainer: {
     position: 'absolute',

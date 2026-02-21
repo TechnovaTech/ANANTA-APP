@@ -103,6 +103,42 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Recharge Requests
               </Link>
               
+              <Link href="/settings" style={{
+                display:'flex',
+                alignItems:'center',
+                padding:'12px 24px',
+                textDecoration:'none',
+                color: pathname==='/settings' ? '#3182ce' : '#4a5568',
+                background: pathname==='/settings' ? '#ebf8ff' : 'transparent',
+                borderRight: pathname==='/settings' ? '3px solid #3182ce' : '3px solid transparent',
+                fontWeight: pathname==='/settings' ? 600 : 500,
+                fontSize:15
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{marginRight:12}}>
+                  <path d="M12 8a4 4 0 100 8 4 4 0 000-8z"/>
+                  <path d="M4.93 6.21a1 1 0 011.32-.48l1.12.45a7.03 7.03 0 011.5-.87l.26-1.19A1 1 0 0110.1 3h3.8a1 1 0 01.98.79l.26 1.19a7.03 7.03 0 011.5.87l1.12-.45a1 1 0 011.32.48l1.9 3.29a1 1 0 01-.34 1.35l-1.03.66a6.96 6.96 0 010 1.74l1.03.66a1 1 0 01.34 1.35l-1.9 3.29a1 1 0 01-1.32.48l-1.12-.45a7.03 7.03 0 01-1.5.87l-.26 1.19a1 1 0 01-.98.79h-3.8a1 1 0 01-.98-.79l-.26-1.19a7.03 7.03 0 01-1.5-.87l-1.12.45a1 1 0 01-1.32-.48l-1.9-3.29a1 1 0 01.34-1.35l1.03-.66a6.96 6.96 0 010-1.74l-1.03-.66a1 1 0 01-.34-1.35l1.9-3.29z"/>
+                </svg>
+                App Settings
+              </Link>
+
+              <Link href="/hero" style={{
+                display:'flex',
+                alignItems:'center',
+                padding:'12px 24px',
+                textDecoration:'none',
+                color: pathname==='/hero' ? '#3182ce' : '#4a5568',
+                background: pathname==='/hero' ? '#ebf8ff' : 'transparent',
+                borderRight: pathname==='/hero' ? '3px solid #3182ce' : '3px solid transparent',
+                fontWeight: pathname==='/hero' ? 600 : 500,
+                fontSize:15
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{marginRight:12}}>
+                  <path d="M4 6h16v10H4z"/>
+                  <path d="M2 20h20v2H2z"/>
+                </svg>
+                Hero Section
+              </Link>
+              
               <Link href="/kyc" style={{
                 display:'flex',
                 alignItems:'center',

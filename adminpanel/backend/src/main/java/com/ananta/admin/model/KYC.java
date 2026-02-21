@@ -25,6 +25,14 @@ public class KYC {
     @Column(name = "document_number", nullable = false)
     private String documentNumber;
 
+    @Lob
+    @Column(name = "document_front_image")
+    private String documentFrontImage;
+
+    @Lob
+    @Column(name = "document_back_image")
+    private String documentBackImage;
+
     @Enumerated(EnumType.STRING)
     private KYCStatus status = KYCStatus.PENDING;
 

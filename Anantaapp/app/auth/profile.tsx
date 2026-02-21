@@ -1,4 +1,4 @@
-import { StyleSheet, TextInput, TouchableOpacity, View, Image, ScrollView, KeyboardAvoidingView, Platform, Alert, StatusBar, Modal, FlatList } from 'react-native';
+import { StyleSheet, TextInput, TouchableOpacity, View, Image, ScrollView, KeyboardAvoidingView, Platform, Alert, StatusBar, Modal, FlatList, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -12,8 +12,9 @@ import { LevelBadge } from '@/components/level-badge';
 import { Animated } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useProfile } from '../../contexts/ProfileContext';
+import * as FileSystem from 'expo-file-system';
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = 'http://localhost:8082';
 
 export default function ProfileScreen() {
   const params = useLocalSearchParams();
@@ -65,8 +66,10 @@ export default function ProfileScreen() {
   const [backImage, setBackImage] = useState<string | null>(null);
   const [showDocumentDropdown, setShowDocumentDropdown] = useState(false);
   const [showGenderDropdown, setShowGenderDropdown] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
-  const documentTypes = ['Aadhaar Card', 'Passport', 'Driving License'];
+  const documentTypes = ['Aadhaar Card', 'Passport'];
   const genderOptions = ['Male', 'Female', 'Other'];
   const getPlaceholder = () => {
     switch (documentType) {
@@ -81,16 +84,11 @@ export default function ProfileScreen() {
   const isFormValid =
     userName.trim().length > 0 &&
     email.trim().length > 0 &&
-    name.trim().length > 0 &&
-    addressLine1.trim().length > 0 &&
-    city.trim().length > 0 &&
-    state.trim().length > 0 &&
-    country.trim().length > 0 &&
-    pinCode.trim().length > 0 &&
     documentType &&
     documentNumber.trim().length > 0 &&
     frontImage &&
-    (isBackImageRequired ? !!backImage : true);
+    (isBackImageRequired ? !!backImage : true) &&
+    acceptedTerms;
 
   // Sample data
   const cities = [
@@ -284,33 +282,66 @@ export default function ProfileScreen() {
     }
   };
 
+  const toBase64 = async (uri: string | null) => {
+    if (!uri) return null;
+    try {
+      if (Platform.OS === 'web') {
+        if (uri.startsWith('data:')) {
+          return uri;
+        }
+        const res = await fetch(uri);
+        const blob = await res.blob();
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+        return dataUrl;
+      }
+      const base64 = await FileSystem.readAsStringAsync(uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      return `data:image/jpeg;base64,${base64}`;
+    } catch {
+      return null;
+    }
+  };
+
   const handleSubmit = async () => {
     if (!userId) {
       Alert.alert('Error', 'User information missing, please go back and verify OTP again');
       return;
     }
     if (!isFormValid) {
-      Alert.alert('Error', 'Please fill all required fields');
+      Alert.alert('Error', 'Please fill all required fields and accept the User Agreement');
       return;
     }
 
     try {
+      const profileImageBase64 = await toBase64(profileImage);
+      const frontImageBase64 = await toBase64(frontImage);
+      const backImageBase64 = await toBase64(backImage);
+
       const payload = {
         userId,
         username: userName.trim(),
         email: email.trim(),
-        fullName: name.trim(),
+        fullName: name.trim().length > 0 ? name.trim() : userName.trim(),
         gender,
         birthday,
         bio,
-        addressLine1,
-        city,
-        state,
-        country,
-        pinCode,
+        addressLine1: '',
+        city: '',
+        state: '',
+        country: '',
+        pinCode: '',
         location,
         documentType,
         documentNumber,
+        profileImage: profileImageBase64,
+        documentFrontImage: frontImageBase64,
+        documentBackImage: backImageBase64,
       };
 
       const response = await fetch(`${API_BASE}/api/app/register`, {
@@ -413,20 +444,6 @@ export default function ProfileScreen() {
               autoCapitalize="none"
             />
           </View>
-
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}>
-            <Image 
-              source={{ uri: 'https://cdn-icons-png.flaticon.com/512/1077/1077012.png' }} 
-              style={[styles.iconImage, { tintColor: isDark ? '#555' : Colors.light.primary }]} 
-            />
-            <TextInput
-              style={[styles.input, { color: isDark ? 'white' : '#333' }]}
-              placeholder="Full Name"
-              placeholderTextColor={isDark ? '#888' : '#666'}
-              value={name}
-              onChangeText={setName}
-            />
-          </View>
           
           <TouchableOpacity 
             style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}
@@ -501,81 +518,7 @@ export default function ProfileScreen() {
           </View>
         </View>
         
-        {/* Address Information */}
-        <View style={styles.sectionContainer}>
-          <ThemedText style={[styles.sectionTitle, { color: isDark ? 'white' : Colors.light.primary }]}>Address Information</ThemedText>
-          
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}>
-            <Image 
-              source={{ uri: 'https://cdn-icons-png.flaticon.com/512/684/684908.png' }} 
-              style={[styles.iconImage, { tintColor: isDark ? '#555' : Colors.light.primary }]} 
-            />
-            <TextInput
-              style={[styles.input, { color: isDark ? 'white' : '#333' }]}
-              placeholder="Address Line 1"
-              placeholderTextColor={isDark ? '#888' : '#666'}
-              value={addressLine1}
-              onChangeText={setAddressLine1}
-            />
-          </View>
-          
-          <TouchableOpacity 
-            style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}
-            onPress={() => setShowCityDropdown(true)}
-          >
-            <Image 
-              source={{ uri: 'https://cdn-icons-png.flaticon.com/512/684/684908.png' }} 
-              style={[styles.iconImage, { tintColor: isDark ? '#555' : Colors.light.primary }]} 
-            />
-            <ThemedText style={[styles.dropdownText, { color: city ? (isDark ? 'white' : '#333') : (isDark ? '#888' : '#666') }]}>
-              {city || 'Select City'}
-            </ThemedText>
-            <Ionicons name="chevron-down" size={20} color={isDark ? '#888' : '#666'} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}
-            onPress={() => setShowStateDropdown(true)}
-          >
-            <Image 
-              source={{ uri: 'https://cdn-icons-png.flaticon.com/512/684/684908.png' }} 
-              style={[styles.iconImage, { tintColor: isDark ? '#555' : Colors.light.primary }]} 
-            />
-            <ThemedText style={[styles.dropdownText, { color: state ? (isDark ? 'white' : '#333') : (isDark ? '#888' : '#666') }]}>
-              {state || 'Select State'}
-            </ThemedText>
-            <Ionicons name="chevron-down" size={20} color={isDark ? '#888' : '#666'} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}
-            onPress={() => setShowCountryDropdown(true)}
-          >
-            <Image 
-              source={{ uri: 'https://cdn-icons-png.flaticon.com/512/684/684908.png' }} 
-              style={[styles.iconImage, { tintColor: isDark ? '#555' : Colors.light.primary }]} 
-            />
-            <ThemedText style={[styles.dropdownText, { color: country ? (isDark ? 'white' : '#333') : (isDark ? '#888' : '#666') }]}>
-              {country || 'Select Country'}
-            </ThemedText>
-            <Ionicons name="chevron-down" size={20} color={isDark ? '#888' : '#666'} />
-          </TouchableOpacity>
-          
-          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}>
-            <Image 
-              source={{ uri: 'https://cdn-icons-png.flaticon.com/512/684/684908.png' }} 
-              style={[styles.iconImage, { tintColor: isDark ? '#555' : Colors.light.primary }]} 
-            />
-            <TextInput
-              style={[styles.input, { color: isDark ? 'white' : '#333' }]}
-              placeholder="Pin Code"
-              placeholderTextColor={isDark ? '#888' : '#666'}
-              value={pinCode}
-              onChangeText={setPinCode}
-              keyboardType="numeric"
-            />
-          </View>
-        </View>
+        {/* Address Information removed as per latest requirement */}
         
         {/* Other Information */}
         <View style={styles.sectionContainer}>
@@ -689,6 +632,18 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        <View style={styles.sectionContainer}>
+          <TouchableOpacity style={styles.termsRow} onPress={() => setShowTermsModal(true)}>
+            <View style={[styles.checkbox, { borderColor: isDark ? '#888' : '#666', backgroundColor: acceptedTerms ? (isDark ? '#127d96' : '#127d96') : 'transparent' }]}>
+              {acceptedTerms && <Ionicons name="checkmark" size={16} color="white" />}
+            </View>
+            <ThemedText style={[styles.termsText, { color: isDark ? 'white' : '#333' }]}>
+              I agree to the User Agreement
+            </ThemedText>
+          </TouchableOpacity>
+        </View>
+
       </View>
       
           <TouchableOpacity 
@@ -705,6 +660,49 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </ScrollView>
     </KeyboardAvoidingView>
+
+    {/* Terms Modal */}
+    <Modal visible={showTermsModal} transparent animationType="slide" onRequestClose={() => setShowTermsModal(false)}>
+      <View style={styles.modalOverlay}>
+        <View style={[styles.termsModal, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}>
+          <View style={styles.modalHeader}>
+            <ThemedText style={[styles.modalTitle, { color: isDark ? 'white' : '#333' }]}>User Agreement</ThemedText>
+            <TouchableOpacity onPress={() => setShowTermsModal(false)}>
+              <Ionicons name="close" size={24} color={isDark ? 'white' : '#333'} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.termsBody}>
+            <ThemedText style={[styles.termsParagraph, { color: isDark ? '#ddd' : '#444' }]}>
+              By creating an account you agree that:
+            </ThemedText>
+            <ThemedText style={[styles.termsParagraph, { color: isDark ? '#ddd' : '#444' }]}>
+              • You are at least 18 years old or have permission from a guardian.
+            </ThemedText>
+            <ThemedText style={[styles.termsParagraph, { color: isDark ? '#ddd' : '#444' }]}>
+              • You will provide correct information and keep it up to date.
+            </ThemedText>
+            <ThemedText style={[styles.termsParagraph, { color: isDark ? '#ddd' : '#444' }]}>
+              • You will not use the app for illegal, abusive or harmful activity.
+            </ThemedText>
+            <ThemedText style={[styles.termsParagraph, { color: isDark ? '#ddd' : '#444' }]}>
+              • Virtual coins have no real-world cash value and can be changed or removed at any time.
+            </ThemedText>
+            <ThemedText style={[styles.termsParagraph, { color: isDark ? '#ddd' : '#444' }]}>
+              • We may review your KYC documents to protect the community and follow the law.
+            </ThemedText>
+          </ScrollView>
+          <TouchableOpacity
+            style={[styles.modalButton, { backgroundColor: '#127d96', marginTop: 12 }]}
+            onPress={() => {
+              setAcceptedTerms(true);
+              setShowTermsModal(false);
+            }}
+          >
+            <Text style={[styles.modalButtonText, { color: 'white' }]}>I Agree</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
 
     {/* City Dropdown Modal */}
     <Modal visible={showCityDropdown} transparent animationType="slide">
@@ -1218,5 +1216,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 2,
     borderColor: 'white',
+  },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  termsModal: {
+    maxHeight: '70%',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+  },
+  termsBody: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  termsParagraph: {
+    fontSize: 14,
+    marginBottom: 8,
+    lineHeight: 20,
+  },
+  modalButton: {
+    borderRadius: 20,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

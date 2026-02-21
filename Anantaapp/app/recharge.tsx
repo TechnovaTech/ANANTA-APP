@@ -9,6 +9,7 @@ import {
   Alert,
   StatusBar,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -18,7 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width, height } = Dimensions.get('window');
 
 interface RechargePlan {
-  id: string;
+  id: string | number;
   name: string;
   price: number;
   coins: number;
@@ -37,6 +38,8 @@ interface RechargeHistory {
 type PaymentMethod = 'UPI' | 'Card' | 'Wallet';
 type RechargeStep = 'plans' | 'payment' | 'order' | 'complete' | 'history';
 
+const API_BASE = 'http://localhost:8082';
+
 export default function RechargeScreen() {
   const { isDark } = useTheme();
   const [currentStep, setCurrentStep] = useState<RechargeStep>('plans');
@@ -47,14 +50,13 @@ export default function RechargeScreen() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
-
-  const rechargePlans: RechargePlan[] = [
+  const [rechargePlans, setRechargePlans] = useState<RechargePlan[]>([
     { id: '1', name: 'Basic', price: 50, coins: 100 },
     { id: '2', name: 'Silver', price: 100, coins: 250, popular: true },
     { id: '3', name: 'Gold', price: 200, coins: 600 },
     { id: '4', name: 'Platinum', price: 500, coins: 1500 },
     { id: '5', name: 'Diamond', price: 1000, coins: 3500 },
-  ];
+  ]);
 
   const rechargeHistory: RechargeHistory[] = [
     { id: '1', date: '2025-11-29', planName: 'Gold', amount: 200, status: 'Success', coinsAdded: 600 },
@@ -63,6 +65,24 @@ export default function RechargeScreen() {
     { id: '4', date: '2025-11-26', planName: 'Platinum', amount: 500, status: 'Success', coinsAdded: 1500 },
     { id: '5', date: '2025-11-25', planName: 'Silver', amount: 100, status: 'Success', coinsAdded: 250 },
   ];
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/app/wallet/plans`);
+        if (!response.ok) {
+          return;
+        }
+        const data = await response.json();
+        const list: RechargePlan[] = data.plans || data || [];
+        if (Array.isArray(list) && list.length > 0) {
+          setRechargePlans(list);
+        }
+      } catch (e) {
+      }
+    };
+    fetchPlans();
+  }, []);
 
   const handlePlanSelect = (plan: RechargePlan) => {
     setSelectedPlan(plan);
@@ -90,11 +110,38 @@ export default function RechargeScreen() {
   };
 
   const handleCompletePayment = async () => {
+    if (!selectedPlan) return;
+
+    let userId: string | null = null;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      userId = window.localStorage.getItem('userId');
+    }
+
+    if (!userId) {
+      Alert.alert('Error', 'User not identified. Please login again.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      const success = Math.random() > 0.3;
-      setPaymentSuccess(success);
+      const response = await fetch(`${API_BASE}/api/app/wallet/topup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          planId: selectedPlan.id,
+        }),
+      });
+
+      if (!response.ok) {
+        setPaymentSuccess(false);
+        setCurrentStep('complete');
+        return;
+      }
+
+      setPaymentSuccess(true);
       setCurrentStep('complete');
     } catch (error) {
       setPaymentSuccess(false);
@@ -273,11 +320,13 @@ export default function RechargeScreen() {
           />
         </View>
         <Text style={[styles.successTitle, { color: isDark ? 'white' : '#333' }]}>
-          {paymentSuccess ? 'Payment Successful!' : 'Payment Failed'}
+          {paymentSuccess ? 'Request Submitted!' : 'Payment Failed'}
         </Text>
         
         {paymentSuccess && (
-          <Text style={[styles.coinsAdded, { color: '#4CAF50' }]}>+{selectedPlan?.coins} Coins Added!</Text>
+          <Text style={[styles.coinsAdded, { color: '#4CAF50' }]}>
+            {selectedPlan?.coins} coins request sent for approval
+          </Text>
         )}
         
         <TouchableOpacity 

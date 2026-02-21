@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = 'http://localhost:8082';
 
 export default function KycReviewScreen() {
   const params = useLocalSearchParams();

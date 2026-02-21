@@ -3,7 +3,9 @@ package com.ananta.admin.controller;
 import com.ananta.admin.model.DailyRecharge;
 import com.ananta.admin.repository.DailyRechargeRepository;
 import com.ananta.admin.repository.WalletRepository;
+import com.ananta.admin.repository.WalletTransactionRepository;
 import com.ananta.admin.model.Wallet;
+import com.ananta.admin.model.WalletTransaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +30,9 @@ public class RechargeController {
     @Autowired
     WalletRepository walletRepository;
 
+    @Autowired
+    WalletTransactionRepository walletTransactionRepository;
+
     @GetMapping
     public ResponseEntity<?> getAllRecharges() {
         List<DailyRecharge> recharges = rechargeRepository.findAll();
@@ -49,15 +54,23 @@ public class RechargeController {
              }
              recharge.setStatus(DailyRecharge.RechargeStatus.APPROVED);
              rechargeRepository.save(recharge);
-             // Update Wallet
              Wallet wallet = walletRepository.findByUserId(recharge.getUserId())
                  .orElseGet(() -> {
                      Wallet newWallet = new Wallet();
                      newWallet.setUserId(recharge.getUserId());
                      return newWallet;
                  });
-             wallet.setBalance(wallet.getBalance() + recharge.getAmount());
+             double coinsToAdd = recharge.getCoins() != null ? recharge.getCoins() : recharge.getAmount();
+             wallet.setBalance(wallet.getBalance() + coinsToAdd);
              walletRepository.save(wallet);
+
+             WalletTransaction tx = new WalletTransaction();
+             tx.setUserId(recharge.getUserId());
+             tx.setAmount(coinsToAdd);
+             tx.setCredit(true);
+             tx.setType("RECHARGE");
+             tx.setNote("Recharge: " + recharge.getPlanName());
+             walletTransactionRepository.save(tx);
         } else if ("reject".equalsIgnoreCase(action)) {
              recharge.setStatus(DailyRecharge.RechargeStatus.REJECTED);
              rechargeRepository.save(recharge);

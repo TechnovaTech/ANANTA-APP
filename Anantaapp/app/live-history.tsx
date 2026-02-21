@@ -1,179 +1,246 @@
-import { StyleSheet, ScrollView, TouchableOpacity, View, Image, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import { useState, useMemo } from 'react';
 
-const { width } = Dimensions.get('window');
+const API_BASE = 'http://localhost:8082';
 
+type LiveHistoryItem = {
+  sessionId: string;
+  title: string;
+  type: string;
+  createdAt: string | null;
+  endedAt: string | null;
+  status: string;
+  viewerCount: number | null;
+};
 
+const formatDateTime = (iso: string | null) => {
+  if (!iso) {
+    return '';
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = ((hours + 11) % 12) + 1;
+  return `${day}/${month}/${year} ${displayHour}:${minutes} ${suffix}`;
+};
 
 export default function LiveHistoryScreen() {
   const { isDark } = useTheme();
-  const [selectedMonth, setSelectedMonth] = useState('All Months');
-  const [showSidebar, setShowSidebar] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [items, setItems] = useState<LiveHistoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const months = [
-    'All Months',
-    'Jan 2024',
-    'Feb 2024', 
-    'Mar 2024',
-    'Apr 2024',
-    'May 2024',
-    'Jun 2024',
-    'Jul 2024',
-    'Aug 2024',
-    'Sep 2024',
-    'Oct 2024',
-    'Nov 2024',
-    'Dec 2024'
-  ];
-
-  const allHistoryItems = [
-    {
-      id: 1,
-      title: 'Music Chat',
-      date: 'Sep 11, 45 min.',
-      month: 'Sep 2024',
-      image: require('@/assets/images/h1.png.png')
-    },
-    {
-      id: 2,
-      title: 'Game Stream',
-      date: 'Sep 11, 45 min.',
-      month: 'Sep 2024',
-      image: require('@/assets/images/h2.png.png')
-    },
-    {
-      id: 3,
-      title: 'Talk Show',
-      date: 'Aug 25, 30 min.',
-      month: 'Aug 2024',
-      image: require('@/assets/images/h1.png.png')
-    },
-    {
-      id: 4,
-      title: 'Comedy Night',
-      date: 'Aug 20, 60 min.',
-      month: 'Aug 2024',
-      image: require('@/assets/images/h2.png.png')
-    },
-    {
-      id: 5,
-      title: 'Dance Party',
-      date: 'Jul 15, 90 min.',
-      month: 'Jul 2024',
-      image: require('@/assets/images/h1.png.png')
+  useEffect(() => {
+    let userId: string | null = null;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      userId = window.localStorage.getItem('userId');
     }
-  ];
+    setCurrentUserId(userId);
+  }, []);
 
-  const filteredHistoryItems = useMemo(() => {
-    if (selectedMonth === 'All Months') {
-      return allHistoryItems;
+  useEffect(() => {
+    if (!currentUserId) {
+      return;
     }
-    return allHistoryItems.filter(item => item.month === selectedMonth);
-  }, [selectedMonth]);
+    const fetchHistory = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(
+          `${API_BASE}/api/app/live/history/${currentUserId}`
+        );
+        if (!res.ok) {
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+          setLoading(false);
+          return;
+        }
+        const mapped: LiveHistoryItem[] = data.map((item: any) => ({
+          sessionId: String(item.sessionId),
+          title: item.title || 'Live Session',
+          type: item.type || 'VIDEO',
+          createdAt: item.createdAt || null,
+          endedAt: item.endedAt || null,
+          status: item.status || 'ENDED',
+          viewerCount:
+            typeof item.viewerCount === 'number' ? item.viewerCount : null,
+        }));
+        setItems(mapped);
+        setLoading(false);
+      } catch {
+        setLoading(false);
+      }
+    };
+    fetchHistory();
+  }, [currentUserId]);
 
-  const handleMonthSelect = (month: string) => {
-    setSelectedMonth(month);
-    setShowSidebar(false);
+  const renderItem = ({ item }: { item: LiveHistoryItem }) => {
+    const isEnded = item.status === 'ENDED';
+    const typeLabel =
+      item.type === 'AUDIO'
+        ? 'Audio live'
+        : item.type === 'VIDEO'
+        ? 'Video live'
+        : item.type;
+    const timeLabel = item.endedAt || item.createdAt;
+    const timeText = timeLabel ? formatDateTime(timeLabel) : '';
+    const viewers =
+      item.viewerCount !== null && item.viewerCount !== undefined
+        ? `${item.viewerCount} viewers`
+        : '';
+    return (
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: isDark ? '#1e1e1e' : 'white' },
+        ]}
+      >
+        <View style={styles.cardHeader}>
+          <ThemedText
+            style={[
+              styles.cardTitle,
+              { color: isDark ? 'white' : '#222' },
+            ]}
+            numberOfLines={1}
+          >
+            {item.title}
+          </ThemedText>
+          <ThemedText
+            style={[
+              styles.cardType,
+              { color: isDark ? '#f7c14d' : '#127d96' },
+            ]}
+          >
+            {typeLabel}
+          </ThemedText>
+        </View>
+        <View style={styles.cardFooter}>
+          <ThemedText
+            style={[
+              styles.cardTime,
+              { color: isDark ? '#aaa' : '#666' },
+            ]}
+          >
+            {timeText}
+          </ThemedText>
+          <View style={styles.badgesRow}>
+            {viewers ? (
+              <ThemedText
+                style={[
+                  styles.cardBadge,
+                  { color: isDark ? '#ddd' : '#555' },
+                ]}
+              >
+                {viewers}
+              </ThemedText>
+            ) : null}
+            <ThemedText
+              style={[
+                styles.statusBadge,
+                {
+                  borderColor: isEnded ? '#28a745' : '#ffc107',
+                  color: isEnded ? '#28a745' : '#ffc107',
+                },
+              ]}
+            >
+              {isEnded ? 'Ended' : item.status}
+            </ThemedText>
+          </View>
+        </View>
+      </View>
+    );
   };
 
   return (
-    <ThemedView style={[styles.container, { backgroundColor: isDark ? '#1a1a1a' : '#f8f9fa' }]}>
+    <ThemedView
+      style={[
+        styles.container,
+        { backgroundColor: isDark ? '#000' : '#f8f9fa' },
+      ]}
+    >
       <LinearGradient
         colors={isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7']}
         style={styles.header}
       >
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.push('/(tabs)/profile')}
+        <View style={styles.headerLeft}>
+          <Ionicons
+            name="arrow-back"
+            size={24}
+            color={isDark ? 'black' : 'white'}
+            onPress={() => router.back()}
+          />
+        </View>
+        <ThemedText
+          style={[
+            styles.headerTitle,
+            { color: isDark ? 'black' : 'white' },
+          ]}
         >
-          <Ionicons name="arrow-back" size={24} color={isDark ? 'black' : 'white'} />
-        </TouchableOpacity>
-        <ThemedText style={[styles.headerTitle, { color: isDark ? 'black' : 'white' }]}>Live Data & History</ThemedText>
-        <View style={styles.placeholder} />
+          Live history
+        </ThemedText>
+        <View style={styles.headerRight} />
       </LinearGradient>
 
-      <View style={[styles.filterContainer, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}>
-        <TouchableOpacity 
-          style={[styles.monthPicker, { 
-            backgroundColor: isDark ? '#333' : '#f0f0f0',
-            borderColor: isDark ? '#f7c14d' : '#127d96'
-          }]}
-          onPress={() => setShowSidebar(!showSidebar)}
-        >
-          <ThemedText style={[styles.monthPickerText, { color: isDark ? 'white' : '#333' }]}>
-            {selectedMonth}
-          </ThemedText>
-          <Ionicons name="chevron-down" size={16} color={isDark ? 'white' : '#333'} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.mainContent}>
-        <View style={[styles.contentWrapper, showSidebar && styles.dimmed]}>
-          <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-            {filteredHistoryItems.length > 0 ? (
-              filteredHistoryItems.map((item) => (
-                <TouchableOpacity key={item.id} style={[styles.historyItem, { 
-                  backgroundColor: isDark ? '#333' : '#F5F5F5',
-                  borderColor: isDark ? '#f7c14d' : '#126996'
-                }]}>
-                  <Image source={item.image} style={styles.profileImage} />
-                  <View style={styles.textContainer}>
-                    <ThemedText style={[styles.historyTitle, { color: isDark ? 'white' : 'black' }]}>{item.title}</ThemedText>
-                    <ThemedText style={[styles.historyDate, { color: isDark ? '#ccc' : '#666' }]}>{item.date}</ThemedText>
-                  </View>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.noDataContainer}>
-                <ThemedText style={[styles.noDataText, { color: isDark ? '#ccc' : '#666' }]}>
-                  No live history found for {selectedMonth}
-                </ThemedText>
-              </View>
-            )}
-          </ScrollView>
+      {loading && (
+        <View style={styles.loader}>
+          <ActivityIndicator
+            size="small"
+            color={isDark ? '#f7c14d' : '#127d96'}
+          />
         </View>
+      )}
 
-        {showSidebar && (
-          <>
-            <TouchableOpacity 
-              style={styles.overlay}
-              activeOpacity={1}
-              onPress={() => setShowSidebar(false)}
-            />
-            <View style={[styles.sidebar, { 
-              backgroundColor: isDark ? '#333' : '#f8f9fa',
-              borderLeftColor: isDark ? '#f7c14d' : '#127d96'
-            }]}>
-              <ThemedText style={[styles.sidebarTitle, { color: isDark ? 'white' : '#333' }]}>Filter</ThemedText>
-              <ScrollView showsVerticalScrollIndicator={false}>
-                {months.map((month) => (
-                  <TouchableOpacity
-                    key={month}
-                    style={[styles.monthOption, {
-                      backgroundColor: selectedMonth === month ? (isDark ? '#f7c14d' : '#127d96') : 'transparent'
-                    }]}
-                    onPress={() => handleMonthSelect(month)}
-                  >
-                    <ThemedText style={[styles.monthOptionText, { 
-                      color: selectedMonth === month ? (isDark ? 'black' : 'white') : (isDark ? '#ccc' : '#333'),
-                      fontWeight: selectedMonth === month ? 'bold' : 'normal'
-                    }]}>
-                      {month}
-                    </ThemedText>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </>
-        )}
-      </View>
+      {!loading && items.length === 0 && (
+        <View style={styles.emptyState}>
+          <ThemedText
+            style={[
+              styles.emptyText,
+              { color: isDark ? '#777' : '#999' },
+            ]}
+          >
+            No live sessions yet.
+          </ThemedText>
+          <ThemedText
+            style={[
+              styles.emptySubText,
+              { color: isDark ? '#666' : '#888' },
+            ]}
+          >
+            Start a live to see your history here.
+          </ThemedText>
+        </View>
+      )}
+
+      {!loading && items.length > 0 && (
+        <FlatList
+          data={items}
+          keyExtractor={item => item.sessionId}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -186,125 +253,89 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 25,
-    height: 120,
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 14,
   },
-  backButton: {
-    padding: 5,
+  headerLeft: {
+    width: 32,
+    alignItems: 'flex-start',
   },
-  placeholder: {
-    width: 24,
+  headerRight: {
+    width: 32,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-    letterSpacing: 1,
+    fontSize: 18,
+    fontWeight: '700',
   },
-  filterContainer: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+  loader: {
+    paddingTop: 16,
   },
-  monthPicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  monthPickerText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  mainContent: {
-    flex: 1,
-    position: 'relative',
-  },
-  contentWrapper: {
-    flex: 1,
-  },
-  dimmed: {
-    opacity: 0.3,
-  },
-  content: {
-    flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    zIndex: 1,
-  },
-  sidebar: {
-    position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: '70%',
-    borderLeftWidth: 1,
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    zIndex: 2,
-  },
-  sidebarTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  monthOption: {
-    paddingVertical: 12,
+  listContent: {
     paddingHorizontal: 12,
-    borderRadius: 8,
-    marginBottom: 6,
+    paddingTop: 8,
+    paddingBottom: 16,
   },
-  monthOptionText: {
-    fontSize: 14,
-    textAlign: 'center',
+  card: {
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  historyItem: {
+  cardHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    borderRadius: 25,
-    marginBottom: 12,
-    borderWidth: 1,
-  },
-  profileImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 16,
-  },
-  textContainer: {
-    flex: 1,
-  },
-  historyTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
     marginBottom: 4,
   },
-  historyDate: {
-    fontSize: 14,
-  },
-  noDataContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 50,
-  },
-  noDataText: {
+  cardTitle: {
     fontSize: 16,
-    textAlign: 'center',
+    fontWeight: '600',
+    flex: 1,
+    marginRight: 8,
+  },
+  cardType: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardTime: {
+    fontSize: 12,
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardBadge: {
+    fontSize: 11,
+    marginRight: 8,
+  },
+  statusBadge: {
+    fontSize: 11,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  emptyState: {
+    paddingTop: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    marginBottom: 4,
+  },
+  emptySubText: {
+    fontSize: 12,
   },
 });
+

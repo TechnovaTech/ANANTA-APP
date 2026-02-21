@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,56 +17,197 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 
 const { width } = Dimensions.get('window');
+const API_BASE = 'http://localhost:8082';
+
+const resolveAvatarUri = (value: string | null | undefined) => {
+  if (!value) return '';
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('http') || trimmed.startsWith('data:')) return trimmed;
+  if (trimmed.startsWith('/uploads/')) return `http://localhost:3000${trimmed}`;
+  if (trimmed.length > 100) return `data:image/jpeg;base64,${trimmed}`;
+  return trimmed;
+};
+
+type ConversationItem = {
+  threadId: string;
+  otherUserId: string;
+  name: string;
+  username: string;
+  lastMessage: string;
+  time: string;
+  unread: number;
+  avatar: any;
+};
+
+type ContactItem = {
+  userId: string;
+  name: string;
+  username: string;
+  avatar: any;
+};
+
+const formatTime = (iso: string | null | undefined) => {
+  if (!iso) {
+    return '';
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  const now = new Date();
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+  if (sameDay) {
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const suffix = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = ((hours + 11) % 12) + 1;
+    return `${displayHour}:${minutes} ${suffix}`;
+  }
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday =
+    date.getFullYear() === yesterday.getFullYear() &&
+    date.getMonth() === yesterday.getMonth() &&
+    date.getDate() === yesterday.getDate();
+  if (isYesterday) {
+    return 'Yesterday';
+  }
+  return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+};
 
 export default function MessagesScreen() {
   const { isDark } = useTheme();
-  const conversations = [
-    {
-      id: 1,
-      name: 'John Doe',
-      lastMessage: 'Hey! How are you doing?',
-      time: '2:30 PM',
-      unread: 2,
-      avatar: require('@/assets/images/h1.png.png'),
-      isOnline: true
-    },
-    {
-      id: 2,
-      name: 'Sarah Wilson',
-      lastMessage: 'Thanks for the help yesterday!',
-      time: '1:45 PM',
-      unread: 0,
-      avatar: require('@/assets/images/h2.png.png'),
-      isOnline: true
-    },
-    {
-      id: 3,
-      name: 'Mike Johnson',
-      lastMessage: 'See you tomorrow at the meeting',
-      time: '12:20 PM',
-      unread: 1,
-      avatar: require('@/assets/images/h3.png.png'),
-      isOnline: false
-    },
-    {
-      id: 4,
-      name: 'Emma Davis',
-      lastMessage: 'Can you send me the documents?',
-      time: '11:30 AM',
-      unread: 0,
-      avatar: require('@/assets/images/h4.png.png'),
-      isOnline: true
-    },
-    {
-      id: 5,
-      name: 'Alex Brown',
-      lastMessage: 'Great job on the presentation!',
-      time: 'Yesterday',
-      unread: 0,
-      avatar: require('@/assets/images/h1.png.png'),
-      isOnline: false
-    },
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<ConversationItem[]>([]);
+  const [contacts, setContacts] = useState<ContactItem[]>([]);
+  const [showNewChat, setShowNewChat] = useState(false);
+
+  const initialAvatars = [
+    require('@/assets/images/h1.png.png'),
+    require('@/assets/images/h2.png.png'),
+    require('@/assets/images/h3.png.png'),
+    require('@/assets/images/h4.png.png'),
   ];
+
+  const pickAvatar = (index: number) => {
+    if (initialAvatars.length === 0) {
+      return null;
+    }
+    const i = index % initialAvatars.length;
+    return initialAvatars[i];
+  };
+
+  useEffect(() => {
+    let userId: string | null = null;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      userId = window.localStorage.getItem('userId');
+    }
+    setCurrentUserId(userId);
+  }, []);
+
+  useEffect(() => {
+    if (!currentUserId) {
+      return;
+    }
+    const fetchConversations = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/app/messages/threads/${currentUserId}`);
+        if (!res.ok) {
+          return;
+        }
+        const data = await res.json();
+        if (!Array.isArray(data)) {
+          return;
+        }
+        const mapped: ConversationItem[] = data.map((item: any, index: number) => {
+          const name = item.fullName || item.username || 'User';
+          const username = item.username ? `@${item.username}` : '@user';
+          const time = item.lastMessageTime ? formatTime(item.lastMessageTime) : '';
+          const avatarUri = resolveAvatarUri(item.profileImage);
+          const avatar = avatarUri ? { uri: avatarUri } : pickAvatar(index);
+          return {
+            threadId: String(item.threadId),
+            otherUserId: String(item.otherUserId),
+            name,
+            username,
+            lastMessage: item.lastMessage || '',
+            time,
+            unread: item.unreadCount || 0,
+            avatar,
+          };
+        });
+        setConversations(mapped);
+      } catch {
+      }
+    };
+    fetchConversations();
+    const interval = setInterval(fetchConversations, 5000);
+    return () => clearInterval(interval);
+  }, [currentUserId]);
+
+  const openChat = (threadId: string | null, otherUserId: string, name: string, avatar: any) => {
+    if (!currentUserId) {
+      return;
+    }
+    router.push({
+      pathname: '/chat',
+      params: {
+        threadId: threadId || '',
+        otherUserId,
+        otherName: name,
+        otherAvatar: typeof avatar === 'number' ? String(avatar) : avatar?.uri || '',
+      },
+    });
+  };
+
+  const loadContacts = async () => {
+    if (!currentUserId) {
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/app/profile/${currentUserId}`);
+      console.log('[Messages] loadContacts profile status:', res.status);
+      if (!res.ok) {
+        return;
+      }
+      const data = await res.json();
+      const followersJson = Array.isArray(data.followersList) ? data.followersList : [];
+      const followingJson = Array.isArray(data.followingList) ? data.followingList : [];
+      console.log('[Messages] followersList length:', followersJson.length);
+      console.log('[Messages] followingList length:', followingJson.length);
+      const mapUser = (item: any, index: number): ContactItem => {
+        const name = item.fullName || item.username || 'User';
+        const username = item.username ? `@${item.username}` : '@user';
+        const avatarUri = resolveAvatarUri(item.profileImage);
+        const avatar = avatarUri ? { uri: avatarUri } : pickAvatar(index);
+        return {
+          userId: String(item.userId),
+          name,
+          username,
+          avatar,
+        };
+      };
+      const combinedRaw = [...followersJson, ...followingJson];
+      const seen: Record<string, boolean> = {};
+      const combined: ContactItem[] = [];
+      combinedRaw.forEach((item: any, index: number) => {
+        const userId = String(item.userId);
+        if (!seen[userId]) {
+          seen[userId] = true;
+          combined.push(mapUser(item, index));
+        }
+      });
+      console.log('[Messages] combined contacts length:', combined.length);
+      setContacts(combined);
+      setShowNewChat(true);
+    } catch (err) {
+      console.log('[Messages] loadContacts error:', err);
+    }
+  };
 
   return (
     <ThemedView style={[styles.container, { backgroundColor: isDark ? '#1a1a1a' : '#f8f9fa' }]}>
@@ -73,33 +215,53 @@ export default function MessagesScreen() {
         colors={isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7']}
         style={styles.header}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.push('/(tabs)/profile')}
         >
           <Ionicons name="arrow-back" size={24} color={isDark ? 'black' : 'white'} />
         </TouchableOpacity>
         <ThemedText style={[styles.headerTitle, { color: isDark ? 'black' : 'white' }]}>Messages</ThemedText>
-        <View style={styles.placeholder} />
+        <TouchableOpacity style={styles.newChatButton} onPress={loadContacts}>
+          <Ionicons name="add" size={24} color={isDark ? 'black' : 'white'} />
+        </TouchableOpacity>
       </LinearGradient>
 
       <ScrollView style={styles.conversationsContainer} showsVerticalScrollIndicator={false}>
-        {conversations.map((conversation) => (
-          <TouchableOpacity key={conversation.id} style={[styles.conversationItem, { 
-            backgroundColor: isDark ? '#2a2a2a' : 'white'
-          }]}>
+        {conversations.map((conversation, index) => (
+          <TouchableOpacity
+            key={conversation.threadId}
+            style={[
+              styles.conversationItem,
+              {
+                backgroundColor: isDark ? '#2a2a2a' : 'white',
+              },
+            ]}
+            onPress={() => openChat(conversation.threadId, conversation.otherUserId, conversation.name, conversation.avatar)}
+          >
             <View style={styles.avatarContainer}>
-              <Image source={conversation.avatar} style={[styles.avatar, { borderColor: isDark ? '#f7c14d' : '#127d96' }]} />
-              {conversation.isOnline && <View style={styles.onlineIndicator} />}
+              {conversation.avatar && (
+                <Image
+                  source={conversation.avatar}
+                  style={[styles.avatar, { borderColor: isDark ? '#f7c14d' : '#127d96' }]}
+                />
+              )}
             </View>
-            
+
             <View style={styles.conversationContent}>
               <View style={styles.conversationHeader}>
-                <ThemedText style={[styles.userName, { color: isDark ? 'white' : '#333' }]}>{conversation.name}</ThemedText>
-                <ThemedText style={[styles.messageTime, { color: isDark ? '#ccc' : '#666' }]}>{conversation.time}</ThemedText>
+                <ThemedText style={[styles.userName, { color: isDark ? 'white' : '#333' }]}>
+                  {conversation.name}
+                </ThemedText>
+                <ThemedText style={[styles.messageTime, { color: isDark ? '#ccc' : '#666' }]}>
+                  {conversation.time}
+                </ThemedText>
               </View>
               <View style={styles.messageRow}>
-                <ThemedText style={[styles.lastMessage, { color: isDark ? '#aaa' : '#666' }]} numberOfLines={1}>
+                <ThemedText
+                  style={[styles.lastMessage, { color: isDark ? '#aaa' : '#666' }]}
+                  numberOfLines={1}
+                >
                   {conversation.lastMessage}
                 </ThemedText>
                 {conversation.unread > 0 && (
@@ -107,7 +269,9 @@ export default function MessagesScreen() {
                     colors={isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7']}
                     style={styles.unreadBadge}
                   >
-                    <ThemedText style={[styles.unreadCount, { color: isDark ? 'black' : 'white' }]}>{conversation.unread}</ThemedText>
+                    <ThemedText style={[styles.unreadCount, { color: isDark ? 'black' : 'white' }]}>
+                      {conversation.unread}
+                    </ThemedText>
                   </LinearGradient>
                 )}
               </View>
@@ -115,6 +279,71 @@ export default function MessagesScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {showNewChat && (
+        <View
+          style={[
+            styles.newChatOverlay,
+            { backgroundColor: isDark ? 'rgba(0,0,0,0.9)' : 'rgba(0,0,0,0.4)' },
+          ]}
+        >
+          <View
+            style={[
+              styles.newChatContainer,
+              { backgroundColor: isDark ? '#1a1a1a' : 'white' },
+            ]}
+          >
+            <View style={styles.newChatHeader}>
+              <ThemedText style={[styles.newChatTitle, { color: isDark ? 'white' : '#333' }]}>
+                New Chat
+              </ThemedText>
+              <TouchableOpacity onPress={() => setShowNewChat(false)}>
+                <Ionicons name="close" size={24} color={isDark ? 'white' : '#333'} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {contacts.map((item, index) => (
+                <TouchableOpacity
+                  key={item.userId}
+                  style={[
+                    styles.conversationItem,
+                    {
+                      backgroundColor: isDark ? '#2a2a2a' : 'white',
+                      marginHorizontal: 0,
+                    },
+                  ]}
+                  onPress={() => {
+                    setShowNewChat(false);
+                    openChat(null, item.userId, item.name, item.avatar);
+                  }}
+                >
+                  <View style={styles.avatarContainer}>
+                    {item.avatar && (
+                      <Image
+                        source={item.avatar}
+                        style={[styles.avatar, { borderColor: isDark ? '#f7c14d' : '#127d96' }]}
+                      />
+                    )}
+                  </View>
+                  <View style={styles.conversationContent}>
+                    <ThemedText
+                      style={[styles.userName, { color: isDark ? 'white' : '#333' }]}
+                    >
+                      {item.name}
+                    </ThemedText>
+                    <ThemedText
+                      style={[styles.lastMessage, { color: isDark ? '#aaa' : '#666' }]}
+                      numberOfLines={1}
+                    >
+                      {item.username}
+                    </ThemedText>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      )}
     </ThemedView>
   );
 }
@@ -133,6 +362,9 @@ const styles = StyleSheet.create({
     height: 120,
   },
   backButton: {
+    padding: 5,
+  },
+  newChatButton: {
     padding: 5,
   },
   headerTitle: {
@@ -222,5 +454,30 @@ const styles = StyleSheet.create({
   unreadCount: {
     fontSize: 13,
     fontWeight: 'bold',
+  },
+  newChatOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  newChatContainer: {
+    width: width * 0.9,
+    maxHeight: '80%',
+    borderRadius: 16,
+    padding: 16,
+  },
+  newChatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  newChatTitle: {
+    fontSize: 18,
+    fontWeight: '700',
   },
 });

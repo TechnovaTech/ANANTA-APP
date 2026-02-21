@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Image,
   KeyboardAvoidingView,
@@ -20,6 +20,14 @@ import { useProfile } from '../contexts/ProfileContext';
 import { useTheme } from '../contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
+const API_BASE = 'http://localhost:8082';
+
+const resolveProfileUri = (value: string | null | undefined) => {
+  if (!value) return null;
+  if (value.startsWith('http') || value.startsWith('data:')) return value;
+  if (value.startsWith('/uploads/')) return `http://localhost:3000${value}`;
+  return value;
+};
 
 export default function EditProfileScreen() {
   const { profileData, updateProfile } = useProfile();
@@ -36,6 +44,55 @@ export default function EditProfileScreen() {
   const [country, setCountry] = useState(profileData.country);
   const [pinCode, setPinCode] = useState(profileData.pinCode);
   const [userName, setUserName] = useState(profileData.UserName);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const storedUserId = window.localStorage.getItem('userId');
+      if (storedUserId) {
+        loadProfile(storedUserId);
+      }
+    }
+  }, []);
+
+  const loadProfile = async (userId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/app/profile/${userId}`);
+      if (!res.ok) {
+        return;
+      }
+      const data = await res.json();
+      const user = data.user;
+      const profileUri = resolveProfileUri(user.profileImage);
+      setProfileImage(profileUri || profileImage);
+      setName(user.fullName || '');
+      setUserName(user.username || '');
+      setBio(user.bio || '');
+      setLocation(user.location || '');
+      setGender(user.gender || '');
+      setBirthday(user.birthday || '');
+      setAddressLine1(user.addressLine1 || '');
+      setCity(user.city || '');
+      setState(user.state || '');
+      setCountry(user.country || '');
+      setPinCode(user.pinCode || '');
+      updateProfile({
+        name: user.fullName || '',
+        UserName: user.username || '',
+        bio: user.bio || '',
+        location: user.location || '',
+        gender: user.gender || '',
+        birthday: user.birthday || '',
+        addressLine1: user.addressLine1 || '',
+        city: user.city || '',
+        state: user.state || '',
+        country: user.country || '',
+        pinCode: user.pinCode || '',
+        profileImage: profileUri || profileImage,
+        profilePhoto: profileUri || profileImage,
+      });
+    } catch {
+    }
+  };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -124,23 +181,7 @@ export default function EditProfileScreen() {
               />
             </View>
             
-            <View style={styles.fieldContainer}>
-              <View style={styles.fieldHeader}>
-                <Ionicons name="person-circle" size={16} color={isDark ? '#f7c14d' : '#127d96'} />
-                <Text style={[styles.fieldLabel, { color: isDark ? '#ccc' : '#333' }]}>Name</Text>
-              </View>
-              <TextInput
-                style={[styles.textInput, { 
-                  backgroundColor: isDark ? '#333' : '#f8f9fa',
-                  color: isDark ? 'white' : '#333',
-                  borderColor: isDark ? '#f7c14d' : '#127d96'
-                }]}
-                value={name}
-                onChangeText={setName}
-                placeholder="Enter your name"
-                placeholderTextColor={isDark ? '#888' : '#666'}
-              />
-            </View>
+            {/* Name field hidden as requested; value still used in saveProfile */}
             
             <View style={styles.fieldContainer}>
               <View style={styles.fieldHeader}>
@@ -200,100 +241,7 @@ export default function EditProfileScreen() {
           </View>
           
           {/* Address Information */}
-          <View style={[styles.sectionCard, { backgroundColor: isDark ? '#2a2a2a' : 'white' }]}>
-            <Text style={[styles.sectionTitle, { color: isDark ? 'white' : '#333' }]}>Address Information</Text>
-            
-            <View style={styles.fieldContainer}>
-              <View style={styles.fieldHeader}>
-                <Ionicons name="home" size={16} color={isDark ? '#f7c14d' : '#127d96'} />
-                <Text style={[styles.fieldLabel, { color: isDark ? '#ccc' : '#333' }]}>Address Line 1</Text>
-              </View>
-              <TextInput
-                style={[styles.textInput, { 
-                  backgroundColor: isDark ? '#333' : '#f8f9fa',
-                  color: isDark ? 'white' : '#333',
-                  borderColor: isDark ? '#f7c14d' : '#127d96'
-                }]}
-                value={addressLine1}
-                onChangeText={setAddressLine1}
-                placeholder="Enter your address"
-                placeholderTextColor={isDark ? '#888' : '#666'}
-              />
-            </View>
-            
-            <View style={styles.fieldContainer}>
-              <View style={styles.fieldHeader}>
-                <Ionicons name="business" size={16} color={isDark ? '#f7c14d' : '#127d96'} />
-                <Text style={[styles.fieldLabel, { color: isDark ? '#ccc' : '#333' }]}>City</Text>
-              </View>
-              <TextInput
-                style={[styles.textInput, { 
-                  backgroundColor: isDark ? '#333' : '#f8f9fa',
-                  color: isDark ? 'white' : '#333',
-                  borderColor: isDark ? '#f7c14d' : '#127d96'
-                }]}
-                value={city}
-                onChangeText={setCity}
-                placeholder="Enter your city"
-                placeholderTextColor={isDark ? '#888' : '#666'}
-              />
-            </View>
-            
-            <View style={styles.fieldContainer}>
-              <View style={styles.fieldHeader}>
-                <Ionicons name="map" size={16} color={isDark ? '#f7c14d' : '#127d96'} />
-                <Text style={[styles.fieldLabel, { color: isDark ? '#ccc' : '#333' }]}>State</Text>
-              </View>
-              <TextInput
-                style={[styles.textInput, { 
-                  backgroundColor: isDark ? '#333' : '#f8f9fa',
-                  color: isDark ? 'white' : '#333',
-                  borderColor: isDark ? '#f7c14d' : '#127d96'
-                }]}
-                value={state}
-                onChangeText={setState}
-                placeholder="Enter your state"
-                placeholderTextColor={isDark ? '#888' : '#666'}
-              />
-            </View>
-            
-            <View style={styles.fieldContainer}>
-              <View style={styles.fieldHeader}>
-                <Ionicons name="globe" size={16} color={isDark ? '#f7c14d' : '#127d96'} />
-                <Text style={[styles.fieldLabel, { color: isDark ? '#ccc' : '#333' }]}>Country</Text>
-              </View>
-              <TextInput
-                style={[styles.textInput, { 
-                  backgroundColor: isDark ? '#333' : '#f8f9fa',
-                  color: isDark ? 'white' : '#333',
-                  borderColor: isDark ? '#f7c14d' : '#127d96'
-                }]}
-                value={country}
-                onChangeText={setCountry}
-                placeholder="Enter your country"
-                placeholderTextColor={isDark ? '#888' : '#666'}
-              />
-            </View>
-            
-            <View style={styles.fieldContainer}>
-              <View style={styles.fieldHeader}>
-                <Ionicons name="mail" size={16} color={isDark ? '#f7c14d' : '#127d96'} />
-                <Text style={[styles.fieldLabel, { color: isDark ? '#ccc' : '#333' }]}>Pin Code</Text>
-              </View>
-              <TextInput
-                style={[styles.textInput, { 
-                  backgroundColor: isDark ? '#333' : '#f8f9fa',
-                  color: isDark ? 'white' : '#333',
-                  borderColor: isDark ? '#f7c14d' : '#127d96'
-                }]}
-                value={pinCode}
-                onChangeText={setPinCode}
-                placeholder="Enter your pin code"
-                placeholderTextColor={isDark ? '#888' : '#666'}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
+          {/* Address Information removed as requested */}
           
           {/* Other Information */}
           <View style={[styles.sectionCard, { backgroundColor: isDark ? '#2a2a2a' : 'white' }]}>

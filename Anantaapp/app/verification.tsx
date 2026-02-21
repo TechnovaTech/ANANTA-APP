@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,6 +9,7 @@ import {
   Image,
   TextInput,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,11 +18,12 @@ import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
+const API_BASE = 'http://localhost:8082';
 
 export default function VerificationScreen() {
   const { isDark } = useTheme();
   const [selectedDocType, setSelectedDocType] = useState('');
-  const [documentImage, setDocumentImage] = useState(null);
+  const [documentImage, setDocumentImage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     fullName: '',
     documentNumber: '',
@@ -29,9 +31,45 @@ export default function VerificationScreen() {
     address: '',
   });
 
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const storedUserId = window.localStorage.getItem('userId');
+      if (storedUserId) {
+        loadVerification(storedUserId);
+      }
+    }
+  }, []);
+
+  const loadVerification = async (userId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/app/profile/${userId}`);
+      if (!res.ok) {
+        return;
+      }
+      const data = await res.json();
+      const kyc = data.kyc;
+      const user = data.user;
+      if (kyc) {
+        setSelectedDocType((kyc.documentType || '').toLowerCase());
+        setFormData(prev => ({
+          ...prev,
+          fullName: user.fullName || '',
+          documentNumber: kyc.documentNumber || '',
+          address: user.addressLine1 || '',
+        }));
+      } else if (user) {
+        setFormData(prev => ({
+          ...prev,
+          fullName: user.fullName || '',
+          address: user.addressLine1 || '',
+        }));
+      }
+    } catch {
+    }
+  };
+
   const documentTypes = [
     { id: 'aadhar', name: 'Aadhar Card', icon: 'card-outline' },
-    { id: 'pan', name: 'PAN Card', icon: 'document-outline' },
     { id: 'license', name: 'Driving License', icon: 'car-outline' },
   ];
 

@@ -10,6 +10,7 @@ import {
   Alert,
   Modal,
   TextInput,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,9 +19,65 @@ import { router } from 'expo-router';
 import { useProfile } from '../../contexts/ProfileContext';
 import { useTheme } from '../../contexts/ThemeContext';
 
+const API_BASE = 'http://localhost:8082';
+
+const resolveProfileUri = (value: string | null | undefined) => {
+  if (!value) return null;
+  if (value.startsWith('http') || value.startsWith('data:')) return value;
+  if (value.startsWith('/uploads/')) return `http://localhost:3000${value}`;
+  if (value.length > 100) return `data:image/jpeg;base64,${value}`;
+  return value;
+};
+
 export default function ProfileScreen() {
   const { profileData, updateProfile, logout } = useProfile();
   const { isDark } = useTheme();
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const storedUserId = window.localStorage.getItem('userId');
+      if (storedUserId) {
+        loadProfile(storedUserId);
+      }
+    }
+  }, []);
+
+  const loadProfile = async (userId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/app/profile/${userId}`);
+      if (!res.ok) {
+        return;
+      }
+      const data = await res.json();
+      console.log('[Profile] loadProfile userId:', userId);
+      console.log('[Profile] counts:', {
+        followers: data.followers,
+        following: data.following,
+        coins: data.coins,
+        followersListLength: Array.isArray(data.followersList) ? data.followersList.length : 'n/a',
+        followingListLength: Array.isArray(data.followingList) ? data.followingList.length : 'n/a',
+      });
+      const user = data.user;
+      const profileUri = resolveProfileUri(user.profileImage);
+      updateProfile({
+        name: user.fullName || user.username || profileData.name,
+        title: user.username || profileData.title,
+        bio: user.bio || profileData.bio,
+        location: user.location || profileData.location,
+        addressLine1: user.addressLine1 || '',
+        city: user.city || '',
+        state: user.state || '',
+        country: user.country || '',
+        pinCode: user.pinCode || '',
+        profileImage: profileUri || profileData.profileImage,
+        profilePhoto: profileUri || profileData.profileImage,
+        followers: typeof data.followers === 'number' ? data.followers : profileData.followers,
+        following: typeof data.following === 'number' ? data.following : profileData.following,
+        coins: typeof data.coins === 'number' ? data.coins : profileData.coins,
+      });
+    } catch {
+    }
+  };
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -99,19 +156,19 @@ export default function ProfileScreen() {
       <View style={[styles.statsContainer, { backgroundColor: isDark ? '#f7c14d' : '#127d96' }]}>
         <TouchableOpacity style={styles.statItem} onPress={() => router.push('/followers')}>
           <Ionicons name="people" size={20} color={isDark ? 'black' : 'white'} />
-          <Text style={[styles.statNumber, { color: isDark ? 'black' : 'white' }]}>10K</Text>
+          <Text style={[styles.statNumber, { color: isDark ? 'black' : 'white' }]}>{profileData.followers}</Text>
           <Text style={[styles.statLabel, { color: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)' }]}>Followers</Text>
         </TouchableOpacity>
         <View style={styles.statDivider} />
         <TouchableOpacity style={styles.statItem} onPress={() => router.push('/following')}>
           <Ionicons name="person-add" size={20} color={isDark ? 'black' : 'white'} />
-          <Text style={[styles.statNumber, { color: isDark ? 'black' : 'white' }]}>20k</Text>
+          <Text style={[styles.statNumber, { color: isDark ? 'black' : 'white' }]}>{profileData.following}</Text>
           <Text style={[styles.statLabel, { color: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)' }]}>Following</Text>
         </TouchableOpacity>
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <Ionicons name="diamond" size={20} color={isDark ? 'black' : 'white'} />
-          <Text style={[styles.statNumber, { color: isDark ? 'black' : 'white' }]}>200</Text>
+          <Text style={[styles.statNumber, { color: isDark ? 'black' : 'white' }]}>{profileData.coins}</Text>
           <Text style={[styles.statLabel, { color: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)' }]}>Coins</Text>
         </View>
       </View>
@@ -127,11 +184,11 @@ export default function ProfileScreen() {
             <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Verify</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/live-history')}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/wallet')}>
             <View style={[styles.actionIcon, { backgroundColor: '#FF6B35' }]}>
-              <Ionicons name="bar-chart" size={24} color="white" />
+              <Ionicons name="wallet" size={24} color="white" />
             </View>
-            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Live Data</Text>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Wallet</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/messages')}>
@@ -144,11 +201,11 @@ export default function ProfileScreen() {
         
         {/* Second row - 3 icons */}
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/post')}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/settings')}>
             <View style={[styles.actionIcon, { backgroundColor: '#9C27B0' }]}>
-              <Ionicons name="add-circle" size={24} color="white" />
+              <Ionicons name="settings-outline" size={24} color="white" />
             </View>
-            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Post</Text>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Settings</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/earnings')}>

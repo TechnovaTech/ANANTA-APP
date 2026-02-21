@@ -125,10 +125,7 @@ export default function KYCPage() {
                 <tr key={kyc.id} style={{borderBottom:index < kycRequests.length - 1 ? '1px solid #e2e8f0' : 'none'}}>
                   <td style={{padding:'20px'}}>
                     <div>
-                      <div style={{fontWeight:600,color:'#1a202c',fontSize:16,marginBottom:6}}>{kyc.fullName}</div>
-                      <div style={{fontSize:14,color:'#718096',fontFamily:'monospace',background:'#f7fafc',padding:'4px 8px',borderRadius:4,display:'inline-block'}}>
-                        {kyc.userId}
-                      </div>
+                      <div style={{fontWeight:600,color:'#1a202c',fontSize:16,marginBottom:6}}>{kyc.userId}</div>
                     </div>
                   </td>
                   <td style={{padding:'20px'}}>

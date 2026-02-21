@@ -18,7 +18,10 @@ const defaultProfile = {
   state: '',
   country: '',
   pinCode: '',
-  UserName: '@Micale clarke'
+  UserName: '@Micale clarke',
+  followers: 0,
+  following: 0,
+  coins: 0
 };
 
 export const ProfileProvider = ({ children }) => {

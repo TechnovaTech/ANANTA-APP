@@ -2,20 +2,27 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
-import { Image, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, StatusBar, Dimensions, Animated } from 'react-native';
+import { Image, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, StatusBar, Dimensions, Animated, Alert } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { createAgoraEngine } from '@/agoraClient';
 
 const { width, height } = Dimensions.get('window');
+const API_BASE = 'http://localhost:8082';
 
 export default function AudioLiveScreen() {
   const { isDark } = useTheme();
   const params = useLocalSearchParams();
-  const title = params.title as string || 'Morning Meditation';
-  const user = params.user as string || 'Sarah Wilson';
-  const location = params.location as string || 'India';
-  const listeners = params.listeners as string || '1.2K';
+  const title = (params.title as string) || 'Morning Meditation';
+  const user = (params.user as string) || 'Sarah Wilson';
+  const location = (params.location as string) || 'India';
+  const listeners = (params.listeners as string) || '1.2K';
+  const sessionId = params.sessionId as string | undefined;
+  const channelName = params.channelName as string | undefined;
+  const token = params.token as string | undefined;
+  const appId = params.appId as string | undefined;
+  const userId = params.userId as string | undefined;
   
   const [isFollowing, setIsFollowing] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -28,6 +35,7 @@ export default function AudioLiveScreen() {
   const [floatingHearts, setFloatingHearts] = useState<any[]>([]);
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const engineRef = useRef<any | null>(null);
   
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -139,6 +147,92 @@ export default function AudioLiveScreen() {
     };
   }, []);
 
+  const initAgora = async () => {
+    if (!appId || !token || !channelName) return;
+    try {
+      const engine = await createAgoraEngine(appId);
+      if (!engine) {
+        if (Platform.OS === 'web') {
+          Alert.alert('Live audio', 'Live audio works only in the mobile app, not in browser.');
+        }
+        return;
+      }
+      engineRef.current = engine;
+      if (engine.enableAudio) {
+        await engine.enableAudio();
+      }
+      if (engine.setChannelProfile) {
+        await engine.setChannelProfile(1);
+      }
+      if (engine.setClientRole) {
+        await engine.setClientRole(1);
+      }
+      if (engine.joinChannel) {
+        await engine.joinChannel(token, channelName, null, 0);
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Unable to start audio live');
+    }
+  };
+
+  const cleanupAgora = async () => {
+    const engine = engineRef.current;
+    if (engine) {
+      try {
+        if (engine.leaveChannel) {
+          await engine.leaveChannel();
+        }
+        if (engine.destroy) {
+          await engine.destroy();
+        }
+      } catch {
+      }
+      engineRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    initAgora();
+    return () => {
+      cleanupAgora();
+    };
+  }, [appId, token, channelName]);
+
+  const toggleMute = async () => {
+    const engine = engineRef.current;
+    if (!engine || !engine.muteLocalAudioStream) {
+      setIsMuted(prev => !prev);
+      return;
+    }
+    const next = !isMuted;
+    try {
+      await engine.muteLocalAudioStream(next);
+      setIsMuted(next);
+    } catch {
+    }
+  };
+
+  const endLive = async () => {
+    try {
+      if (sessionId && userId) {
+        await fetch(`${API_BASE}/api/app/live/end`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sessionId,
+            userId,
+          }),
+        });
+      }
+    } catch {
+    } finally {
+      await cleanupAgora();
+      router.back();
+    }
+  };
+
   const wave1Scale = waveAnim1.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 1.3]
@@ -166,7 +260,7 @@ export default function AudioLiveScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={endLive}>
           <Ionicons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
         
@@ -287,7 +381,7 @@ export default function AudioLiveScreen() {
         <View style={styles.actionButtons}>
           <TouchableOpacity 
             style={[styles.actionButton, isMuted && styles.mutedButton]}
-            onPress={() => setIsMuted(!isMuted)}
+            onPress={toggleMute}
           >
             <Ionicons 
               name={isMuted ? "volume-mute" : "volume-high"} 
@@ -296,8 +390,8 @@ export default function AudioLiveScreen() {
             />
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="gift" size={20} color="white" />
+          <TouchableOpacity style={styles.actionButton} onPress={endLive}>
+            <Ionicons name="stop-circle" size={20} color="#ff4444" />
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionButton} onPress={addFloatingHeart}>

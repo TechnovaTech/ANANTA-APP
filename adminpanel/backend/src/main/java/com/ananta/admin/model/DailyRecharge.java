@@ -18,6 +18,12 @@ public class DailyRecharge {
     @Column(nullable = false)
     private Double amount;
 
+    @Column(name = "coins")
+    private Integer coins;
+
+    @Column(name = "plan_name")
+    private String planName;
+
     @Enumerated(EnumType.STRING)
     private RechargeStatus status = RechargeStatus.PENDING;
 

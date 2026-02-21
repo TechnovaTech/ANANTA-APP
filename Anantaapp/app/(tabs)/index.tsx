@@ -3,7 +3,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { router } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
-import { Dimensions, Image, ScrollView, StyleSheet, TouchableOpacity, View, Animated, Text, StatusBar } from 'react-native';
+import { Dimensions, Image, ScrollView, StyleSheet, TouchableOpacity, View, Animated, Text, StatusBar, Platform, Alert } from 'react-native';
+import { Video } from 'expo-av';
 import { useTheme } from '@/contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,10 +15,13 @@ const scale = width / 375;
 
 export default function HomeScreen() {
   const { isDark } = useTheme();
-  const [followedUsers, setFollowedUsers] = useState<number[]>([]);
+  const [followedKeys, setFollowedKeys] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'video' | 'audio'>('video');
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const bannerScrollRef = useRef<ScrollView>(null);
+  const [videoLives, setVideoLives] = useState<any[]>([]);
+  const [audioLives, setAudioLives] = useState<any[]>([]);
+  const [heroItems, setHeroItems] = useState<any[]>([]);
   
   // Smooth animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -38,35 +42,33 @@ export default function HomeScreen() {
     ]).start();
   }, []);
 
-  const handleFollow = (userId: number) => {
-    setFollowedUsers(prev => 
-      prev.includes(userId) 
-        ? prev.filter(id => id !== userId)
-        : [...prev, userId]
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  
+  const handleFollow = async (item: any) => {
+    const followKey = (item as any).followKey || String(item.id);
+    const isFollowing = followedKeys.includes(followKey);
+    setFollowedKeys(prev =>
+      isFollowing ? prev.filter(key => key !== followKey) : [...prev, followKey]
     );
+    if (!item.hostUserId || !currentUserId) {
+      return;
+    }
+    try {
+      await fetch(`${API_BASE}/api/app/follow/toggle`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          followerId: currentUserId,
+          followeeId: item.hostUserId,
+        }),
+      });
+    } catch {
+    }
   };
   
-  const bannerImages = [
-    require('@/assets/images/xvv 1.png'),
-    require('@/assets/images/h1.png.png'),
-    require('@/assets/images/h2.png.png'),
-    require('@/assets/images/h3.png.png'),
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentBannerIndex(prevIndex => {
-        const nextIndex = (prevIndex + 1) % bannerImages.length;
-        bannerScrollRef.current?.scrollTo({
-          x: nextIndex * width,
-          animated: true,
-        });
-        return nextIndex;
-      });
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [bannerImages.length]);
+  const API_BASE = 'http://localhost:8082';
 
   const videos = [
     { id: 1, title: '#joy with life partner', user: 'Rachel James', location: 'India', views: '23K', image: require('@/assets/images/h1.png.png') },
@@ -92,6 +94,207 @@ export default function HomeScreen() {
     { id: 9, title: 'Meditation Hour', user: 'Anna Kim', location: 'Japan', listeners: '1.1K', image: require('@/assets/images/h1.png.png') },
   ];
 
+  useEffect(() => {
+    if (heroItems.length < 2) {
+      return;
+    }
+    const interval = setInterval(() => {
+      setCurrentBannerIndex(prevIndex => {
+        const nextIndex = (prevIndex + 1) % heroItems.length;
+        bannerScrollRef.current?.scrollTo({
+          x: nextIndex * width,
+          animated: true,
+        });
+        return nextIndex;
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [heroItems.length]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const storedUserId = window.localStorage.getItem('userId');
+      setCurrentUserId(storedUserId);
+    }
+  }, []);
+
+  const resolveProfileImageSource = (value: string | null | undefined) => {
+    if (!value) return null;
+    if (value.startsWith('blob:')) return null;
+    if (value.startsWith('http') || value.startsWith('data:')) return { uri: value };
+    if (value.startsWith('/uploads/')) return { uri: `http://localhost:3000${value}` };
+    if (value.length > 100) return { uri: `data:image/jpeg;base64,${value}` };
+    return { uri: value };
+  };
+
+  const resolveHeroMediaUrl = (value: string | null | undefined) => {
+    if (!value) return null;
+    if (value.startsWith('blob:')) return null;
+    if (value.startsWith('http') || value.startsWith('data:')) return value;
+    if (value.startsWith('/uploads/')) return `http://localhost:3000${value}`;
+    if (value.length > 100) return `data:application/octet-stream;base64,${value}`;
+    return value;
+  };
+
+  const fetchHeroItems = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/app/hero`);
+      if (!response.ok) {
+        return;
+      }
+      const data = await response.json();
+      const items = Array.isArray(data.items) ? data.items : [];
+      setHeroItems(items);
+      setCurrentBannerIndex(prevIndex => (items.length === 0 || prevIndex >= items.length ? 0 : prevIndex));
+    } catch {
+    }
+  };
+
+  const fetchHomeLiveSessions = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/app/live/list`);
+      if (!response.ok) {
+        return;
+      }
+      const data = await response.json();
+      const sessions = Array.isArray(data.sessions) ? data.sessions : [];
+      const videoSessions = sessions.filter((s: any) => s.type === 'VIDEO');
+      const audioSessions = sessions.filter((s: any) => s.type === 'AUDIO');
+
+      const mapToCards = (items: any[], fallback: any[]) => {
+        if (!items.length) return [];
+        return items.map((session, index) => {
+          const fallbackItem = fallback[index % fallback.length];
+          const isVideo = session.type === 'VIDEO';
+          const viewers = session.viewerCount || 0;
+          return {
+            id: session.sessionId,
+            sessionId: session.sessionId,
+            hostUserId: session.hostUserId,
+            title: session.title || '#LIVE',
+            user: session.username || session.hostUserId || 'LIVE',
+            location: session.location || session.country || 'Unknown',
+            views: isVideo ? String(viewers) : undefined,
+            listeners: !isVideo ? String(viewers) : undefined,
+            image: resolveProfileImageSource(session.profileImage),
+            followKey: session.hostUserId != null ? session.hostUserId : String(fallbackItem.id),
+          };
+        });
+      };
+
+      setVideoLives(mapToCards(videoSessions, videos));
+      setAudioLives(mapToCards(audioSessions, audioStreams));
+    } catch {
+    }
+  };
+
+  useEffect(() => {
+    fetchHomeLiveSessions();
+    const interval = setInterval(fetchHomeLiveSessions, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    fetchHeroItems();
+    const interval = setInterval(fetchHeroItems, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const currentVideos = videoLives.length ? videoLives : videos;
+  const currentAudios = audioLives.length ? audioLives : audioStreams;
+
+  const hasLive = activeTab === 'video' ? videoLives.length > 0 : audioLives.length > 0;
+  const hasHero = heroItems.length > 0;
+  const getCurrentList = () => (activeTab === 'video' ? currentVideos : currentAudios);
+  const currentList = getCurrentList();
+  const primaryItem = currentList[0];
+  const extraItem = currentList[5];
+  const resolveImage = (item: any) => item?.image ?? null;
+  const renderImage = (source: any, style: any) =>
+    source ? <Image source={source} style={style} /> : <View style={[style, styles.imagePlaceholder, { backgroundColor: isDark ? '#222' : '#e5e7eb' }]} />;
+
+  const handleJoinFromHome = async (item: any, type: 'video' | 'audio') => {
+    if (!item.sessionId) {
+      if (type === 'video') {
+        router.push({
+          pathname: '/live/video',
+          params: {
+            title: item.title,
+            user: item.user,
+            location: item.location,
+            views: (item as any).views,
+            image: JSON.stringify(item.image)
+          }
+        });
+      } else {
+        router.push({
+          pathname: '/live/audio',
+          params: {
+            title: item.title,
+            user: item.user,
+            location: item.location,
+            listeners: (item as any).listeners,
+            image: JSON.stringify(item.image)
+          }
+        });
+      }
+      return;
+    }
+
+    try {
+      let userId: string | null = null;
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        userId = window.localStorage.getItem('userId');
+      }
+      if (!userId) {
+        userId = 'guest';
+      }
+
+      const response = await fetch(`${API_BASE}/api/app/live/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId: item.sessionId,
+          userId,
+        }),
+      });
+
+      if (!response.ok) {
+        Alert.alert('Error', 'Unable to join live session');
+        return;
+      }
+
+      const data = await response.json();
+      const params = {
+        sessionId: data.sessionId,
+        channelName: data.channelName,
+        token: data.token,
+        appId: data.appId,
+        type: data.type,
+        title: data.title,
+        userId,
+        role: 'viewer',
+        hostUserId: data.hostUserId,
+        hostUsername: data.hostUsername,
+        hostCountry: data.hostCountry,
+        hostProfileImage: data.hostProfileImage,
+        isFollowing: data.isFollowing,
+      };
+
+      if (type === 'video') {
+        router.push({ pathname: '/live/video', params });
+      } else {
+        router.push({ pathname: '/live/audio', params });
+      }
+    } catch {
+      Alert.alert('Error', 'Something went wrong while joining live');
+    }
+  };
+
+
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#f8f9fa' }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
@@ -113,11 +316,8 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/notification')}>
               <Ionicons name="notifications-outline" size={22} color={isDark ? 'black' : 'white'} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/settings')}>
-              <Ionicons name="settings-outline" size={22} color={isDark ? 'black' : 'white'} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/wallet')}>
-              <Ionicons name="wallet-outline" size={22} color={isDark ? 'black' : 'white'} />
+            <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/leaderboard')}>
+              <Ionicons name="trophy-outline" size={22} color={isDark ? 'black' : 'white'} />
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -149,27 +349,11 @@ export default function HomeScreen() {
             />
             <Text style={[styles.tabText, activeTab === 'audio' && styles.activeTabText, { color: activeTab === 'audio' ? (isDark ? 'black' : 'white') : (isDark ? '#F7C14D' : '#127d96') }]}>Audio Live</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.tab, { backgroundColor: isDark ? 'rgba(247,193,77,0.1)' : 'rgba(18,125,150,0.1)' }]}
-            onPress={() => router.push('/followers')}
-          >
-            <Ionicons name="people" size={18} color={isDark ? '#F7C14D' : '#127d96'} />
-            <Text style={[styles.tabText, { color: isDark ? '#F7C14D' : '#127d96' }]}>Followers</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.tab, { backgroundColor: isDark ? 'rgba(247,193,77,0.1)' : 'rgba(18,125,150,0.1)' }]}
-            onPress={() => router.push('/following')}
-          >
-            <Ionicons name="person-add" size={18} color={isDark ? '#F7C14D' : '#127d96'} />
-            <Text style={[styles.tabText, { color: isDark ? '#F7C14D' : '#127d96' }]}>Following</Text>
-          </TouchableOpacity>
         </ScrollView>
       </View>
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Featured Banner */}
+        {hasHero ? (
         <Animated.View style={[styles.bannerSection, { opacity: fadeAnim }]}>
           <ScrollView 
             ref={bannerScrollRef}
@@ -182,19 +366,48 @@ export default function HomeScreen() {
               setCurrentBannerIndex(newIndex);
             }}
           >
-            {bannerImages.map((image, index) => (
-              <View key={index} style={styles.featuredCard}>
-                <Image source={image} style={styles.featuredImage} />
-                <View style={[styles.playButton, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
-                  <Ionicons name="play" size={24} color="white" />
+            {heroItems.map((item: any, index: number) => {
+              const mediaUrl = resolveHeroMediaUrl(item.mediaUrl);
+              const isVideo = String(item.mediaType || '').toUpperCase() === 'VIDEO';
+              return (
+                <View key={item.id ?? index} style={styles.featuredCard}>
+                  {isVideo && mediaUrl ? (
+                    <Video
+                      source={{ uri: mediaUrl }}
+                      style={styles.featuredImage}
+                      resizeMode="cover"
+                      shouldPlay={index === currentBannerIndex}
+                      isLooping
+                      isMuted
+                    />
+                  ) : mediaUrl ? (
+                    <Image source={{ uri: mediaUrl }} style={styles.featuredImage} />
+                  ) : (
+                    <View style={[styles.featuredImage, styles.imagePlaceholder, { backgroundColor: isDark ? '#222' : '#e5e7eb' }]} />
+                  )}
+                  <View style={styles.heroOverlay}>
+                    {item.title ? (
+                      <Text style={styles.heroTitle}>{item.title}</Text>
+                    ) : null}
+                    {item.subtitle ? (
+                      <Text style={styles.heroSubtitle}>{item.subtitle}</Text>
+                    ) : null}
+                  </View>
+                  {isVideo ? (
+                    <View style={styles.featuredOverlay}>
+                      <View style={[styles.playButton, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
+                        <Ionicons name="play" size={24} color="white" />
+                      </View>
+                    </View>
+                  ) : null}
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </ScrollView>
           
           {/* Banner Indicators */}
           <View style={styles.bannerIndicators}>
-            {bannerImages.map((_, index) => (
+            {heroItems.map((_, index) => (
               <View 
                 key={index} 
                 style={[styles.indicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.3)' : 'rgba(18,125,150,0.3)' }, currentBannerIndex === index && { backgroundColor: isDark ? '#F7C14D' : '#127d96' }]} 
@@ -202,128 +415,84 @@ export default function HomeScreen() {
             ))}
           </View>
         </Animated.View>
+        ) : null}
         
         {/* Content Grid - Asymmetric Layout */}
         <Animated.View style={[styles.contentGrid, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <View style={styles.leftColumn}>
             {/* Large card on left */}
-            <TouchableOpacity 
-              style={[styles.largeCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-              onPress={() => {
-                const item = (activeTab === 'video' ? videos : audioStreams)[0];
-                if (activeTab === 'video') {
-                  router.push({
-                    pathname: '/live/video',
-                    params: {
-                      title: item.title,
-                      user: item.user,
-                      location: item.location,
-                      views: (item as any).views,
-                      image: JSON.stringify(item.image)
-                    }
-                  });
-                } else {
-                  router.push({
-                    pathname: '/live/audio',
-                    params: {
-                      title: item.title,
-                      user: item.user,
-                      location: item.location,
-                      listeners: (item as any).listeners,
-                      image: JSON.stringify(item.image)
-                    }
-                  });
-                }
-              }}
-            >
-              <View style={styles.largeCardImageContainer}>
-                <Image source={bannerImages[currentBannerIndex]} style={styles.largeCardImage} />
-                {activeTab === 'audio' && (
-                  <View style={[styles.audioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
-                    <Ionicons name="musical-notes" size={24} color="white" />
+            {primaryItem ? (
+              <TouchableOpacity 
+                style={[styles.largeCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
+                onPress={() => handleJoinFromHome(primaryItem, activeTab)}
+              >
+                <View style={styles.largeCardImageContainer}>
+                  {renderImage(resolveImage(primaryItem), styles.largeCardImage)}
+                  {activeTab === 'audio' && (
+                    <View style={[styles.audioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
+                      <Ionicons name="musical-notes" size={24} color="white" />
+                    </View>
+                  )}
+                  <View style={styles.liveTag}>
+                    <Text style={styles.liveTagText}>LIVE</Text>
                   </View>
-                )}
-                <View style={styles.liveTag}>
-                  <Text style={styles.liveTagText}>LIVE</Text>
+                  <View style={styles.viewerCount}>
+                    <Ionicons 
+                      name={activeTab === 'video' ? 'eye' : 'headset'} 
+                      size={14} 
+                      color="white" 
+                    />
+                    <Text style={styles.viewerText}>
+                      {activeTab === 'video'
+                        ? `${(primaryItem as any).views ?? 0}`
+                        : `${(primaryItem as any).listeners ?? 0}`}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.viewerCount}>
-                  <Ionicons 
-                    name={activeTab === 'video' ? 'eye' : 'headset'} 
-                    size={14} 
-                    color="white" 
-                  />
-                  <Text style={styles.viewerText}>
-                    {activeTab === 'video' ? (videos[0] as any).views : (audioStreams[0] as any).listeners}
-                  </Text>
-                </View>
-              </View>
-              
-              <View style={styles.largeCardContent}>
-                <Text style={[styles.largeCardTitle, { color: isDark ? 'white' : '#333' }]} numberOfLines={2}>
-                  {(activeTab === 'video' ? videos : audioStreams)[0].title}
-                </Text>
                 
-                <View style={styles.userSection}>
-                  <Image source={(activeTab === 'video' ? videos : audioStreams)[0].image} style={styles.userAvatar} />
-                  <View style={styles.userInfo}>
-                    <Text style={[styles.userName, { color: isDark ? '#ccc' : '#666' }]}>
-                      {(activeTab === 'video' ? videos : audioStreams)[0].user}
-                    </Text>
-                    <Text style={[styles.userLocation, { color: isDark ? '#888' : '#999' }]}>
-                      {(activeTab === 'video' ? videos : audioStreams)[0].location}
-                    </Text>
-                  </View>
+                <View style={styles.largeCardContent}>
+                  <Text style={[styles.largeCardTitle, { color: isDark ? 'white' : '#333' }]} numberOfLines={2}>
+                    {primaryItem.title}
+                  </Text>
                   
-                  <TouchableOpacity 
-                    style={[
-                      styles.followBtn,
-                      { backgroundColor: isDark ? '#F7C14D' : '#127d96' },
-                      followedUsers.includes((activeTab === 'video' ? videos : audioStreams)[0].id) && styles.followingBtn
-                    ]}
-                    onPress={() => handleFollow((activeTab === 'video' ? videos : audioStreams)[0].id)}
-                  >
-                    <Text style={[styles.followBtnText, { color: isDark ? 'black' : 'white' }]}>
-                      {followedUsers.includes((activeTab === 'video' ? videos : audioStreams)[0].id) ? 'Following' : 'Follow'}
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={styles.userSection}>
+                    {renderImage(resolveImage(primaryItem), styles.userAvatar)}
+                    <View style={styles.userInfo}>
+                      <Text style={[styles.userName, { color: isDark ? '#ccc' : '#666' }]}>
+                        {primaryItem.user}
+                      </Text>
+                      <Text style={[styles.userLocation, { color: isDark ? '#888' : '#999' }]}>
+                        {primaryItem.location}
+                      </Text>
+                    </View>
+                    
+                    <TouchableOpacity 
+                      style={[
+                        styles.followBtn,
+                        { backgroundColor: isDark ? '#F7C14D' : '#127d96' },
+                        followedKeys.includes((primaryItem as any).followKey || String(primaryItem.id)) && styles.followingBtn
+                      ]}
+                      onPress={() => handleFollow(primaryItem)}
+                    >
+                      <Text style={[styles.followBtnText, { color: isDark ? 'black' : 'white' }]}>
+                        {followedKeys.includes((primaryItem as any).followKey || String(primaryItem.id)) ? 'Following' : 'Follow'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            ) : null}
             
             {/* Two medium cards below large card */}
             <View style={styles.mediumCardsRow}>
-              {(activeTab === 'video' ? videos : audioStreams).slice(5, 7).map((item, index) => (
+              {currentList.slice(5, 7).map((item, index) => (
                 <TouchableOpacity 
-                  key={item.id} 
+                  key={item.id || item.sessionId || index} 
                   style={[styles.mediumCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-                  onPress={() => {
-                    if (activeTab === 'video') {
-                      router.push({
-                        pathname: '/live/video',
-                        params: {
-                          title: item.title,
-                          user: item.user,
-                          location: item.location,
-                          views: (item as any).views,
-                          image: JSON.stringify(item.image)
-                        }
-                      });
-                    } else {
-                      router.push({
-                        pathname: '/live/audio',
-                        params: {
-                          title: item.title,
-                          user: item.user,
-                          location: item.location,
-                          listeners: (item as any).listeners,
-                          image: JSON.stringify(item.image)
-                        }
-                      });
-                    }
-                  }}
+                  onPress={() => handleJoinFromHome(item, activeTab)}
                 >
                   <View style={styles.mediumCardImageContainer}>
-                    <Image source={item.image} style={styles.mediumCardImage} />
+                    {renderImage(resolveImage(item), styles.mediumCardImage)}
                     {activeTab === 'audio' && (
                       <View style={[styles.smallAudioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
                         <Ionicons name="musical-notes" size={16} color="white" />
@@ -348,38 +517,14 @@ export default function HomeScreen() {
             
             {/* Two additional medium cards below */}
             <View style={styles.mediumCardsRow}>
-              {(activeTab === 'video' ? videos : audioStreams).slice(7, 9).map((item, index) => (
+              {currentList.slice(7, 9).map((item, index) => (
                 <TouchableOpacity 
-                  key={item.id} 
+                  key={item.id || item.sessionId || index} 
                   style={[styles.mediumCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-                  onPress={() => {
-                    if (activeTab === 'video') {
-                      router.push({
-                        pathname: '/live/video',
-                        params: {
-                          title: item.title,
-                          user: item.user,
-                          location: item.location,
-                          views: (item as any).views,
-                          image: JSON.stringify(item.image)
-                        }
-                      });
-                    } else {
-                      router.push({
-                        pathname: '/live/audio',
-                        params: {
-                          title: item.title,
-                          user: item.user,
-                          location: item.location,
-                          listeners: (item as any).listeners,
-                          image: JSON.stringify(item.image)
-                        }
-                      });
-                    }
-                  }}
+                  onPress={() => handleJoinFromHome(item, activeTab)}
                 >
                   <View style={styles.mediumCardImageContainer}>
-                    <Image source={item.image} style={styles.mediumCardImage} />
+                    {renderImage(resolveImage(item), styles.mediumCardImage)}
                     {activeTab === 'audio' && (
                       <View style={[styles.smallAudioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
                         <Ionicons name="musical-notes" size={16} color="white" />
@@ -405,38 +550,14 @@ export default function HomeScreen() {
           
           <View style={styles.rightColumn}>
             {/* Three smaller cards on right */}
-            {(activeTab === 'video' ? videos : audioStreams).slice(1, 4).map((item, index) => (
+            {currentList.slice(1, 4).map((item, index) => (
               <TouchableOpacity 
-                key={item.id} 
+                key={item.id || item.sessionId || index} 
                 style={[styles.smallCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-                onPress={() => {
-                  if (activeTab === 'video') {
-                    router.push({
-                      pathname: '/live/video',
-                      params: {
-                        title: item.title,
-                        user: item.user,
-                        location: item.location,
-                        views: (item as any).views,
-                        image: JSON.stringify(item.image)
-                      }
-                    });
-                  } else {
-                    router.push({
-                      pathname: '/live/audio',
-                      params: {
-                        title: item.title,
-                        user: item.user,
-                        location: item.location,
-                        listeners: (item as any).listeners,
-                        image: JSON.stringify(item.image)
-                      }
-                    });
-                  }
-                }}
+                onPress={() => handleJoinFromHome(item, activeTab)}
               >
                 <View style={styles.smallCardImageContainer}>
-                  <Image source={item.image} style={styles.smallCardImage} />
+                  {renderImage(resolveImage(item), styles.smallCardImage)}
                   {activeTab === 'audio' && (
                     <View style={[styles.smallAudioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
                       <Ionicons name="musical-notes" size={16} color="white" />
@@ -462,96 +583,51 @@ export default function HomeScreen() {
             ))}
             
             {/* Music session card moved below */}
-            <TouchableOpacity 
-              style={[styles.smallCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-              onPress={() => {
-                const item = (activeTab === 'video' ? videos : audioStreams)[5]; // Music session
-                if (activeTab === 'video') {
-                  router.push({
-                    pathname: '/live/video',
-                    params: {
-                      title: item.title,
-                      user: item.user,
-                      location: item.location,
-                      views: (item as any).views,
-                      image: JSON.stringify(item.image)
-                    }
-                  });
-                } else {
-                  router.push({
-                    pathname: '/live/audio',
-                    params: {
-                      title: item.title,
-                      user: item.user,
-                      location: item.location,
-                      listeners: (item as any).listeners,
-                      image: JSON.stringify(item.image)
-                    }
-                  });
-                }
-              }}
-            >
-              <View style={styles.smallCardImageContainer}>
-                <Image source={(activeTab === 'video' ? videos : audioStreams)[5].image} style={styles.smallCardImage} />
-                {activeTab === 'audio' && (
-                  <View style={[styles.smallAudioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
-                    <Ionicons name="musical-notes" size={16} color="white" />
+            {extraItem ? (
+              <TouchableOpacity 
+                style={[styles.smallCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
+                onPress={() => handleJoinFromHome(extraItem, activeTab)}
+              >
+                <View style={styles.smallCardImageContainer}>
+                  {renderImage(resolveImage(extraItem), styles.smallCardImage)}
+                  {activeTab === 'audio' && (
+                    <View style={[styles.smallAudioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
+                      <Ionicons name="musical-notes" size={16} color="white" />
+                    </View>
+                  )}
+                  <View style={styles.smallLiveTag}>
+                    <Text style={styles.smallLiveTagText}>LIVE</Text>
                   </View>
-                )}
-                <View style={styles.smallLiveTag}>
-                  <Text style={styles.smallLiveTagText}>LIVE</Text>
                 </View>
-              </View>
-              
-              <View style={styles.smallCardContent}>
-                <Text style={[styles.smallCardTitle, { color: isDark ? 'white' : '#333' }]} numberOfLines={1}>
-                  {(activeTab === 'video' ? videos : audioStreams)[5].title}
-                </Text>
-                <Text style={[styles.smallUserName, { color: isDark ? '#ccc' : '#666' }]}>
-                  {(activeTab === 'video' ? videos : audioStreams)[5].user}
-                </Text>
-                <Text style={[styles.smallViewerText, { color: isDark ? '#888' : '#999' }]}>
-                  {activeTab === 'video' ? `${((activeTab === 'video' ? videos : audioStreams)[5] as any).views} views` : `${((activeTab === 'video' ? videos : audioStreams)[5] as any).listeners} listening`}
-                </Text>
-              </View>
-            </TouchableOpacity>
+                
+                <View style={styles.smallCardContent}>
+                  <Text style={[styles.smallCardTitle, { color: isDark ? 'white' : '#333' }]} numberOfLines={1}>
+                    {extraItem.title}
+                  </Text>
+                  <Text style={[styles.smallUserName, { color: isDark ? '#ccc' : '#666' }]}>
+                    {extraItem.user}
+                  </Text>
+                  <Text style={[styles.smallViewerText, { color: isDark ? '#888' : '#999' }]}>
+                    {activeTab === 'video'
+                      ? `${(extraItem as any).views} views`
+                      : `${(extraItem as any).listeners} listening`}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </Animated.View>
         
         {/* Bottom row - 1 card */}
         <Animated.View style={[styles.bottomRow, { opacity: fadeAnim }]}>
-          {(activeTab === 'video' ? videos : audioStreams).slice(7, 8).map((item, index) => (
+          {currentList.slice(7, 8).map((item, index) => (
             <TouchableOpacity 
-              key={item.id} 
+              key={item.id || item.sessionId || index} 
               style={[styles.bottomCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-              onPress={() => {
-                if (activeTab === 'video') {
-                  router.push({
-                    pathname: '/live/video',
-                    params: {
-                      title: item.title,
-                      user: item.user,
-                      location: item.location,
-                      views: (item as any).views,
-                      image: JSON.stringify(item.image)
-                    }
-                  });
-                } else {
-                  router.push({
-                    pathname: '/live/audio',
-                    params: {
-                      title: item.title,
-                      user: item.user,
-                      location: item.location,
-                      listeners: (item as any).listeners,
-                      image: JSON.stringify(item.image)
-                    }
-                  });
-                }
-              }}
+              onPress={() => handleJoinFromHome(item, activeTab)}
             >
               <View style={styles.bottomCardImageContainer}>
-                <Image source={item.image} style={styles.bottomCardImage} />
+                {renderImage(resolveImage(item), styles.bottomCardImage)}
                 {activeTab === 'audio' && (
                   <View style={[styles.audioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
                     <Ionicons name="musical-notes" size={20} color="white" />
@@ -578,7 +654,7 @@ export default function HomeScreen() {
                 </Text>
                 
                 <View style={styles.userSection}>
-                  <Image source={item.image} style={styles.userAvatar} />
+                  {renderImage(resolveImage(item), styles.userAvatar)}
                   <View style={styles.userInfo}>
                     <Text style={[styles.userName, { color: isDark ? '#ccc' : '#666' }]}>
                       {item.user}
@@ -592,12 +668,12 @@ export default function HomeScreen() {
                     style={[
                       styles.followBtn,
                       { backgroundColor: isDark ? '#F7C14D' : '#127d96' },
-                      followedUsers.includes(item.id) && styles.followingBtn
+                      followedKeys.includes((item as any).followKey || String(item.id)) && styles.followingBtn
                     ]}
-                    onPress={() => handleFollow(item.id)}
+                    onPress={() => handleFollow(item)}
                   >
                     <Text style={[styles.followBtnText, { color: isDark ? 'black' : 'white' }]}>
-                      {followedUsers.includes(item.id) ? 'Following' : 'Follow'}
+                      {followedKeys.includes((item as any).followKey || String(item.id)) ? 'Following' : 'Follow'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -660,6 +736,8 @@ const styles = StyleSheet.create({
   tabScrollContent: {
     paddingHorizontal: 20,
     gap: 15,
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   tab: {
     flexDirection: 'row',
@@ -705,6 +783,9 @@ const styles = StyleSheet.create({
     height: '100%',
     resizeMode: 'cover',
   },
+  imagePlaceholder: {
+    backgroundColor: '#e5e7eb',
+  },
   featuredOverlay: {
     position: 'absolute',
     top: '50%',
@@ -718,6 +799,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(18,125,150,0.9)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  heroOverlay: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
+  },
+  heroTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    color: 'white',
+    fontSize: 13,
+    fontWeight: '500',
   },
 
   bannerIndicators: {

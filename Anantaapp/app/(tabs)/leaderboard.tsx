@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
@@ -10,41 +10,99 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
+const API_BASE = 'http://localhost:8082';
+
+const avatars = [
+  require('@/assets/images/h1.png.png'),
+  require('@/assets/images/h2.png.png'),
+  require('@/assets/images/h3.png.png'),
+  require('@/assets/images/h4.png.png'),
+  require('@/assets/images/h1.png.png'),
+  require('@/assets/images/h2.png.png'),
+];
+
+type LeaderItem = {
+  userId: string;
+  username?: string;
+  fullName?: string;
+  profileImage?: string;
+  location?: string;
+  coins: number;
+  rank: number;
+};
 
 export default function LeaderboardScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const [activeTab, setActiveTab] = useState('earning');
   const [timeFilter, setTimeFilter] = useState('today');
+  const [earningData, setEarningData] = useState<LeaderItem[]>([]);
+  const [spentData, setSpentData] = useState<LeaderItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const earningData = [
-    { id: 1, name: 'Rachel James', location: 'Jamnagar, Gujarat, India', coins: 30600, rank: 1, color: '#D4AF37' },
-    { id: 2, name: 'Micale clarke', location: 'Gujarat, India', coins: 29000, rank: 2, color: '#C0C0C0' },
-    { id: 3, name: 'Sergio martin', location: 'Ahmedabad, Gujarat, India', coins: 24893, rank: 3, color: '#CD7F32' },
-    { id: 4, name: 'John Doe', location: 'Mumbai, India', coins: 22000, rank: 4, color: '#D4AF37' },
-    { id: 5, name: 'Jane Smith', location: 'Delhi, India', coins: 20000, rank: 5, color: '#D4AF37' },
-    { id: 6, name: 'Mike Wilson', location: 'Pune, India', coins: 18000, rank: 6, color: '#D4AF37' },
-  ];
+  const currentData = activeTab === 'earning' ? earningData : spentData;
 
-  const liveData = [
-    { id: 1, name: 'Alex Johnson', location: 'Bangalore, India', coins: 35000, rank: 1, color: '#D4AF37' },
-    { id: 2, name: 'Sarah Connor', location: 'Chennai, India', coins: 32000, rank: 2, color: '#C0C0C0' },
-    { id: 3, name: 'David Brown', location: 'Hyderabad, India', coins: 28000, rank: 3, color: '#CD7F32' },
-    { id: 4, name: 'Emma Davis', location: 'Kolkata, India', coins: 25000, rank: 4, color: '#D4AF37' },
-    { id: 5, name: 'Chris Evans', location: 'Surat, India', coins: 23000, rank: 5, color: '#D4AF37' },
-    { id: 6, name: 'Lisa Anderson', location: 'Jaipur, India', coins: 21000, rank: 6, color: '#D4AF37' },
-  ];
+  const getAvatarSource = (user: LeaderItem, index: number) => {
+    if (user.profileImage) {
+      let uri = user.profileImage.trim();
+      if (uri && !uri.startsWith('http') && !uri.startsWith('data:')) {
+        uri = `data:image/jpeg;base64,${uri}`;
+      }
+      return { uri };
+    }
+    return avatars[index % avatars.length];
+  };
 
-  const currentData = activeTab === 'earning' ? earningData : liveData;
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const [earningRes, spentRes] = await Promise.all([
+          fetch(`${API_BASE}/api/app/wallet/leaderboard/earning`),
+          fetch(`${API_BASE}/api/app/wallet/leaderboard/spent`),
+        ]);
 
-  const avatars = [
-    require('@/assets/images/h1.png.png'),
-    require('@/assets/images/h2.png.png'),
-    require('@/assets/images/h3.png.png'),
-    require('@/assets/images/h4.png.png'),
-    require('@/assets/images/h1.png.png'),
-    require('@/assets/images/h2.png.png'),
-  ];
+        if (earningRes.ok) {
+          const data = await earningRes.json();
+          if (Array.isArray(data)) {
+            setEarningData(
+              data.map((item: any) => ({
+                userId: String(item.userId || ''),
+                username: item.username || undefined,
+                fullName: item.fullName || undefined,
+                profileImage: item.profileImage || undefined,
+                location: item.location || undefined,
+                coins: Number(item.coins || 0),
+                rank: Number(item.rank || 0),
+              }))
+            );
+          }
+        }
+
+        if (spentRes.ok) {
+          const data = await spentRes.json();
+          if (Array.isArray(data)) {
+            setSpentData(
+              data.map((item: any) => ({
+                userId: String(item.userId || ''),
+                username: item.username || undefined,
+                fullName: item.fullName || undefined,
+                profileImage: item.profileImage || undefined,
+                location: item.location || undefined,
+                coins: Number(item.coins || 0),
+                rank: Number(item.rank || 0),
+              }))
+            );
+          }
+        }
+      } catch {
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
+  }, []);
 
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#f8f9fa' }]}>
@@ -85,25 +143,34 @@ export default function LeaderboardScreen() {
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.tab, { backgroundColor: isDark ? 'rgba(247,193,77,0.1)' : 'rgba(18,125,150,0.1)' }, activeTab === 'live' && { backgroundColor: isDark ? '#f7c14d' : '#127d96' }]}
-            onPress={() => setActiveTab('live')}
+            style={[styles.tab, { backgroundColor: isDark ? 'rgba(247,193,77,0.1)' : 'rgba(18,125,150,0.1)' }, activeTab === 'spent' && { backgroundColor: isDark ? '#f7c14d' : '#127d96' }]}
+            onPress={() => setActiveTab('spent')}
           >
             <Ionicons 
-              name="videocam" 
+              name="cash-outline" 
               size={18} 
-              color={activeTab === 'live' ? (isDark ? 'black' : 'white') : (isDark ? '#f7c14d' : '#127d96')} 
+              color={activeTab === 'spent' ? (isDark ? 'black' : 'white') : (isDark ? '#f7c14d' : '#127d96')} 
             />
-            <Text style={[styles.tabText, { color: activeTab === 'live' ? (isDark ? 'black' : 'white') : (isDark ? '#f7c14d' : '#127d96') }, activeTab === 'live' && styles.activeTabText]}>Live</Text>
+            <Text style={[styles.tabText, { color: activeTab === 'spent' ? (isDark ? 'black' : 'white') : (isDark ? '#f7c14d' : '#127d96') }, activeTab === 'spent' && styles.activeTabText]}>Spent</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {currentData.map((user, index) => (
-          <View key={user.id} style={styles.userCard}>
+        {currentData.map((user, index) => {
+          const displayName =
+            user.fullName ||
+            (user.username ? `@${user.username}` : user.userId) ||
+            'User';
+          const displayLocation = user.location || '';
+          const color = user.rank <= 3
+            ? (user.rank === 1 ? '#D4AF37' : user.rank === 2 ? '#C0C0C0' : '#CD7F32')
+            : '#D4AF37';
+          return (
+          <View key={user.userId + '_' + user.rank} style={styles.userCard}>
             {user.rank <= 3 ? (
               <LinearGradient
-                colors={[user.color, `${user.color}80`]}
+                colors={[color, `${color}80`]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
                 style={styles.gradientCard}
@@ -111,10 +178,12 @@ export default function LeaderboardScreen() {
                 <View style={styles.leftRankSection}>
                   <ThemedText style={styles.leftRankNumber}>{user.rank}</ThemedText>
                 </View>
-                <Image source={avatars[index]} style={styles.userImage} />
+                <Image source={getAvatarSource(user, index)} style={styles.userImage} />
                 <View style={styles.userInfo}>
-                  <ThemedText style={styles.userName}>@{user.name}</ThemedText>
-                  <ThemedText style={styles.userLocation}>{user.location}</ThemedText>
+                  <ThemedText style={styles.userName}>{displayName}</ThemedText>
+                  {displayLocation ? (
+                    <ThemedText style={styles.userLocation}>{displayLocation}</ThemedText>
+                  ) : null}
                   <View style={styles.coinBadge}>
                     <View style={styles.coinIcon}>
                       <ThemedText style={styles.dollarSign}>$</ThemedText>
@@ -131,11 +200,13 @@ export default function LeaderboardScreen() {
                 </View>
               </LinearGradient>
             ) : (
-              <View style={[styles.solidCard, { backgroundColor: user.color }]}>
-                <Image source={avatars[index]} style={styles.userImage} />
+              <View style={[styles.solidCard, { backgroundColor: color }]}>
+                <Image source={getAvatarSource(user, index)} style={styles.userImage} />
                 <View style={styles.userInfo}>
-                  <ThemedText style={styles.userName}>@{user.name}</ThemedText>
-                  <ThemedText style={styles.userLocation}>{user.location}</ThemedText>
+                  <ThemedText style={styles.userName}>{displayName}</ThemedText>
+                  {displayLocation ? (
+                    <ThemedText style={styles.userLocation}>{displayLocation}</ThemedText>
+                  ) : null}
                   <View style={styles.coinBadge}>
                     <View style={styles.coinIcon}>
                       <ThemedText style={styles.dollarSign}>$</ThemedText>
@@ -153,7 +224,8 @@ export default function LeaderboardScreen() {
               </View>
             )}
           </View>
-        ))}
+        );
+        })}
       </ScrollView>
     </View>
   );

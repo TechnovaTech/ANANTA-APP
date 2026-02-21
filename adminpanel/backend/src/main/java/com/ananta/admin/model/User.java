@@ -47,6 +47,10 @@ public class User {
 
     private String location;
 
+    @Lob
+    @Column(name = "profile_image")
+    private String profileImage;
+
     @Column(name = "is_blocked")
     private boolean isBlocked = false;
 

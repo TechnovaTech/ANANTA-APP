@@ -19,23 +19,31 @@ export default function UsersPage() {
       const response = await axios.get('/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setUsers(response.data.users);
-    } catch (error) {
-      console.error('Error fetching users:', error);
+      const list = Array.isArray(response.data?.users) ? response.data.users : [];
+      const normalized = list.map((u: any) => ({
+        ...u,
+        isBlocked: u?.isBlocked ?? u?.blocked ?? false,
+        isBanned: u?.isBanned ?? u?.banned ?? false,
+      }));
+      setUsers(normalized);
+    } catch (error: any) {
+      console.error('Error fetching users:', error?.response?.data || error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUserAction = async (userId: string, action: string, value: boolean) => {
+  const handleUserAction = async (userId: string, action: string, value: boolean, id?: number) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.patch('/api/admin/users', 
-        { userId, [action]: value },
+      await axios.patch(
+        '/api/admin/users',
+        { id, userId, [action]: value },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error updating user:', error?.response?.data || error);
       alert('Error updating user');
     }
   };
@@ -50,16 +58,19 @@ export default function UsersPage() {
         headers: { Authorization: `Bearer ${token}` }
       });
       fetchUsers();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error deleting user:', error?.response?.data || error);
       alert('Error deleting user');
     }
   };
 
-  const filteredUsers = users.filter((user: any) => 
-    user.username.toLowerCase().includes(search.toLowerCase()) ||
-    user.userId.toLowerCase().includes(search.toLowerCase()) ||
-    user.phone.includes(search)
-  );
+  const filteredUsers = users.filter((user: any) => {
+    const q = search.toLowerCase();
+    const username = (user.username || '').toLowerCase();
+    const id = (user.userId || '').toLowerCase();
+    const phone = user.phone || '';
+    return username.includes(q) || id.includes(q) || phone.includes(search);
+  });
 
   if (loading) {
     return (
@@ -200,7 +211,7 @@ export default function UsersPage() {
                         Delete
                       </button>
                       <button 
-                        onClick={() => handleUserAction(user.userId, 'isBlocked', !user.isBlocked)}
+                        onClick={() => handleUserAction(user.userId, 'isBlocked', !user.isBlocked, user.id)}
                         style={{
                           padding:'8px 16px',
                           border:'none',
@@ -216,7 +227,7 @@ export default function UsersPage() {
                         {user.isBlocked ? 'Unblock' : 'Block'}
                       </button>
                       <button 
-                        onClick={() => handleUserAction(user.userId, 'isBanned', !user.isBanned)}
+                        onClick={() => handleUserAction(user.userId, 'isBanned', !user.isBanned, user.id)}
                         style={{
                           padding:'8px 16px',
                           border:'none',

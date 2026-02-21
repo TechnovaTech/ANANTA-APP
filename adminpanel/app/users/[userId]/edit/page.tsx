@@ -81,12 +81,6 @@ export default function EditUserPage() {
           <Input label="Gender" value={user.gender || ''} onChange={(v) => handleChange('gender', v)} />
           <Input label="Birthday" value={user.birthday || ''} onChange={(v) => handleChange('birthday', v)} />
           <Input label="Bio" value={user.bio || ''} onChange={(v) => handleChange('bio', v)} full />
-          <Input label="Address Line 1" value={user.addressLine1 || ''} onChange={(v) => handleChange('addressLine1', v)} full />
-          <Input label="City" value={user.city || ''} onChange={(v) => handleChange('city', v)} />
-          <Input label="State" value={user.state || ''} onChange={(v) => handleChange('state', v)} />
-          <Input label="Country" value={user.country || ''} onChange={(v) => handleChange('country', v)} />
-          <Input label="PIN Code" value={user.pinCode || ''} onChange={(v) => handleChange('pinCode', v)} />
-          <Input label="Location" value={user.location || ''} onChange={(v) => handleChange('location', v)} full />
         </div>
         <div style={{display:'flex',justifyContent:'flex-end',gap:12}}>
           <button
@@ -158,4 +152,3 @@ function Input({
     </div>
   );
 }
-

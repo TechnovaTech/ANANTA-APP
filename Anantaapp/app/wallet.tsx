@@ -1,43 +1,269 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Dimensions, Platform, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
-
-interface Transaction {
-  id: string;
-  type: 'credit' | 'debit';
-  amount: number;
-  description: string;
-  date: string;
-  status: 'completed' | 'pending' | 'failed';
-}
+const API_BASE = 'http://localhost:8082';
 
 export default function WalletScreen() {
   const { isDark } = useTheme();
-  const [balance] = useState(2450);
-  const [transactions] = useState<Transaction[]>([
-    { id: '1', type: 'credit', amount: 600, description: 'Gold Plan Purchase', date: '2025-11-29', status: 'completed' },
-    { id: '2', type: 'debit', amount: 50, description: 'Gift Sent', date: '2025-11-28', status: 'completed' },
-    { id: '3', type: 'credit', amount: 250, description: 'Silver Plan Purchase', date: '2025-11-27', status: 'completed' },
-    { id: '4', type: 'debit', amount: 100, description: 'Live Stream Boost', date: '2025-11-26', status: 'completed' },
-    { id: '5', type: 'credit', amount: 1500, description: 'Platinum Plan Purchase', date: '2025-11-25', status: 'completed' },
-    { id: '6', type: 'debit', amount: 25, description: 'Super Chat', date: '2025-11-24', status: 'completed' },
-  ]);
+  const [balance, setBalance] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [amountText, setAmountText] = useState('');
+  const [errorText, setErrorText] = useState('');
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [withdrawName, setWithdrawName] = useState('');
+  const [withdrawBankName, setWithdrawBankName] = useState('');
+  const [withdrawAccountNumber, setWithdrawAccountNumber] = useState('');
+  const [withdrawIfsc, setWithdrawIfsc] = useState('');
+  const [withdrawBranch, setWithdrawBranch] = useState('');
+  const [submittingWithdraw, setSubmittingWithdraw] = useState(false);
+  const [withdrawError, setWithdrawError] = useState('');
+  const [withdrawCoinAmount, setWithdrawCoinAmount] = useState(100);
+  const [withdrawRupeeAmount, setWithdrawRupeeAmount] = useState(10);
 
-  const getTransactionIcon = (type: string, status: string) => {
-    if (status === 'pending') return 'time';
-    if (status === 'failed') return 'close-circle';
-    return type === 'credit' ? 'add-circle' : 'remove-circle';
+  useEffect(() => {
+    let userId: string | null = null;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      userId = window.localStorage.getItem('userId');
+    }
+    if (!userId) {
+      return;
+    }
+    setCurrentUserId(userId);
+    const fetchWallet = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/app/wallet/${userId}`);
+        if (!response.ok) {
+          return;
+        }
+        const data = await response.json();
+        const value = typeof data.balance === 'number' ? data.balance : Number(data.balance) || 0;
+        setBalance(value);
+      } catch (e) {
+      }
+    };
+    fetchWallet();
+    const fetchTransactions = async () => {
+      try {
+        setLoadingTransactions(true);
+        const response = await fetch(`${API_BASE}/api/app/wallet/${userId}/transactions`);
+        if (!response.ok) {
+          setLoadingTransactions(false);
+          return;
+        }
+        const data = await response.json();
+        if (Array.isArray(data)) {
+          setTransactions(data);
+        }
+        setLoadingTransactions(false);
+      } catch (e) {
+        setLoadingTransactions(false);
+      }
+    };
+    fetchTransactions();
+    const fetchWithdrawConfig = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/app/wallet/withdraw-config`);
+        if (!response.ok) {
+          return;
+        }
+        const data = await response.json();
+        if (typeof data.coinAmount === 'number') {
+          setWithdrawCoinAmount(data.coinAmount);
+        }
+        if (typeof data.rupeeAmount === 'number') {
+          setWithdrawRupeeAmount(data.rupeeAmount);
+        }
+      } catch (e) {
+      }
+    };
+    fetchWithdrawConfig();
+  }, []);
+
+  const openSendPopup = async () => {
+    if (!currentUserId) {
+      return;
+    }
+    try {
+      const [followersRes, followingRes] = await Promise.all([
+        fetch(`${API_BASE}/api/app/followers/${currentUserId}`),
+        fetch(`${API_BASE}/api/app/following/${currentUserId}`),
+      ]);
+      const followersJson = followersRes.ok ? await followersRes.json() : [];
+      const followingJson = followingRes.ok ? await followingRes.json() : [];
+      const combinedRaw = [...followersJson, ...followingJson];
+      const seen: Record<string, boolean> = {};
+      const combined: any[] = [];
+      combinedRaw.forEach((item: any) => {
+        const userId = String(item.userId);
+        if (!seen[userId]) {
+          seen[userId] = true;
+          combined.push({
+            userId,
+            name: item.fullName || item.username || 'User',
+            username: item.username ? `@${item.username}` : '@user',
+          });
+        }
+      });
+      setContacts(combined);
+      setSelectedUser(null);
+      setAmountText('');
+      setErrorText('');
+      setSending(true);
+    } catch {
+    }
   };
 
-  const getTransactionColor = (type: string, status: string) => {
-    if (status === 'pending') return '#FF9800';
-    if (status === 'failed') return '#f44336';
-    return type === 'credit' ? '#4CAF50' : '#f44336';
+  const openWithdrawPopup = () => {
+    if (!currentUserId) {
+      return;
+    }
+    setWithdrawAmount('');
+    setWithdrawName('');
+    setWithdrawBankName('');
+    setWithdrawAccountNumber('');
+    setWithdrawIfsc('');
+    setWithdrawBranch('');
+    setSubmittingWithdraw(false);
+    setWithdrawError('');
+    setWithdrawing(true);
+  };
+
+  const handleSubmitWithdraw = async () => {
+    if (!currentUserId) {
+      return;
+    }
+    const amount = Number(withdrawAmount);
+    if (!withdrawAmount || Number.isNaN(amount) || amount <= 0) {
+      setWithdrawError('Enter valid amount');
+      return;
+    }
+    const maxRupees = getMaxWithdrawRupees();
+    if (amount > maxRupees) {
+      setWithdrawError('Insufficient balance to withdraw');
+      return;
+    }
+    if (!withdrawName || !withdrawBankName || !withdrawAccountNumber || !withdrawIfsc || !withdrawBranch) {
+      return;
+    }
+    try {
+      setSubmittingWithdraw(true);
+      const res = await fetch(`${API_BASE}/api/app/wallet/withdraw`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: currentUserId,
+          amount,
+          accountHolderName: withdrawName,
+          bankName: withdrawBankName,
+          accountNumber: withdrawAccountNumber,
+          ifscCode: withdrawIfsc,
+          branchName: withdrawBranch,
+        }),
+      });
+      if (!res.ok) {
+        setSubmittingWithdraw(false);
+        setWithdrawError('Insufficient balance to withdraw');
+        return;
+      }
+      const data = await res.json();
+      if (typeof data.balance === 'number') {
+        setBalance(data.balance);
+      }
+      setWithdrawing(false);
+    } catch {
+      setSubmittingWithdraw(false);
+    }
+  };
+
+  const getCoinToRupeeRate = () => {
+    if (!withdrawCoinAmount || !withdrawRupeeAmount) {
+      return 0.5;
+    }
+    return withdrawRupeeAmount / withdrawCoinAmount;
+  };
+
+  const getMaxWithdrawRupees = () => {
+    const rate = getCoinToRupeeRate();
+    return balance * rate;
+  };
+
+  const handleConfirmSend = async () => {
+    if (!currentUserId || !selectedUser) {
+      return;
+    }
+    const amount = Number(amountText);
+    if (!amount || amount <= 0) {
+      setErrorText('Enter a valid amount');
+      return;
+    }
+    if (amount > balance) {
+      setErrorText('Amount greater than available balance');
+      return;
+    }
+    try {
+      const res = await fetch(`${API_BASE}/api/app/wallet/transfer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fromUserId: currentUserId,
+          toUserId: selectedUser.userId,
+          amount,
+        }),
+      });
+      if (!res.ok) {
+        setErrorText('Transfer failed');
+        return;
+      }
+      const data = await res.json();
+      if (typeof data.fromBalance === 'number') {
+        setBalance(data.fromBalance);
+      }
+      setSending(false);
+    } catch {
+      setErrorText('Transfer failed');
+    }
+  };
+
+  const getTransactionIcon = (credit: boolean) => {
+    return credit ? 'add-circle' : 'remove-circle';
+  };
+
+  const getTransactionColor = (credit: boolean) => {
+    return credit ? '#4CAF50' : '#f44336';
+  };
+
+  const formatTransactionTitle = (tx: any) => {
+    if (tx.note) {
+      return tx.note;
+    }
+    if (tx.type === 'RECHARGE') return 'Recharge';
+    if (tx.type === 'GIFT_SENT') return 'Gift sent';
+    if (tx.type === 'GIFT_RECEIVED') return 'Gift received';
+    if (tx.type === 'TRANSFER_SENT') return 'Coins sent';
+    if (tx.type === 'TRANSFER_RECEIVED') return 'Coins received';
+    return tx.type || 'Transaction';
+  };
+
+  const formatTransactionDate = (value: any) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString();
   };
 
   return (
@@ -75,7 +301,7 @@ export default function WalletScreen() {
             <Text style={[styles.balanceLabel, { color: isDark ? 'rgba(0,0,0,0.8)' : 'white' }]}>Total Balance</Text>
           </View>
           <Text style={[styles.balanceAmount, { color: isDark ? 'black' : 'white' }]}>{balance.toLocaleString()} Coins</Text>
-          <Text style={[styles.balanceSubtext, { color: isDark ? 'rgba(0,0,0,0.7)' : 'white' }]}>≈ ₹{(balance * 0.5).toLocaleString()}</Text>
+          <Text style={[styles.balanceSubtext, { color: isDark ? 'rgba(0,0,0,0.7)' : 'white' }]}>≈ ₹{(balance * getCoinToRupeeRate()).toFixed(2)}</Text>
         </LinearGradient>
 
         {/* Quick Actions */}
@@ -92,6 +318,7 @@ export default function WalletScreen() {
           
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
+            onPress={openSendPopup}
           >
             <View style={styles.actionIconContainer}>
               <Ionicons name="send" size={24} color="#2196F3" />
@@ -101,56 +328,13 @@ export default function WalletScreen() {
           
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
+            onPress={openWithdrawPopup}
           >
             <View style={styles.actionIconContainer}>
               <Ionicons name="card" size={24} color="#FF9800" />
             </View>
             <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Withdraw</Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Transaction History */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: isDark ? 'white' : '#333' }]}>Recent Transactions</Text>
-            <TouchableOpacity>
-              <Text style={[styles.viewAllText, { color: isDark ? '#F7C14D' : '#127d96' }]}>View All</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {transactions.map((transaction) => (
-            <TouchableOpacity key={transaction.id} style={[styles.transactionItem, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}>
-              <View style={styles.transactionLeft}>
-                <View style={[styles.transactionIcon, { backgroundColor: getTransactionColor(transaction.type, transaction.status) + '20' }]}>
-                  <Ionicons 
-                    name={getTransactionIcon(transaction.type, transaction.status)} 
-                    size={20} 
-                    color={getTransactionColor(transaction.type, transaction.status)} 
-                  />
-                </View>
-                <View style={styles.transactionDetails}>
-                  <Text style={[styles.transactionDescription, { color: isDark ? 'white' : '#333' }]}>
-                    {transaction.description}
-                  </Text>
-                  <Text style={[styles.transactionDate, { color: isDark ? '#888' : '#666' }]}>
-                    {transaction.date}
-                  </Text>
-                </View>
-              </View>
-              
-              <View style={styles.transactionRight}>
-                <Text style={[
-                  styles.transactionAmount,
-                  { color: getTransactionColor(transaction.type, transaction.status) }
-                ]}>
-                  {transaction.type === 'credit' ? '+' : '-'}{transaction.amount}
-                </Text>
-                <Text style={[styles.transactionStatus, { color: isDark ? '#888' : '#666' }]}>
-                  {transaction.status}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
         </View>
 
         {/* Wallet Stats */}
@@ -174,7 +358,319 @@ export default function WalletScreen() {
             </View>
           </View>
         </View>
+
+        {/* Transaction History */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: isDark ? 'white' : '#333' }]}>Recent Transactions</Text>
+            <TouchableOpacity>
+              <Text style={[styles.viewAllText, { color: isDark ? '#F7C14D' : '#127d96' }]}>View All</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {loadingTransactions ? (
+            <Text style={[styles.transactionDate, { color: isDark ? '#888' : '#666' }]}>
+              Loading...
+            </Text>
+          ) : transactions.length === 0 ? (
+            <Text style={[styles.transactionDate, { color: isDark ? '#888' : '#666' }]}>
+              No recent transactions
+            </Text>
+          ) : (
+            transactions.map((tx: any) => {
+              const amount = typeof tx.amount === 'number' ? tx.amount : Number(tx.amount) || 0;
+              const credit = !!tx.credit;
+              return (
+                <TouchableOpacity
+                  key={tx.id}
+                  style={[styles.transactionItem, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
+                >
+                  <View style={styles.transactionLeft}>
+                    <View
+                      style={[
+                        styles.transactionIcon,
+                        { backgroundColor: getTransactionColor(credit) + '20' },
+                      ]}
+                    >
+                      <Ionicons 
+                        name={getTransactionIcon(credit)} 
+                        size={20} 
+                        color={getTransactionColor(credit)} 
+                      />
+                    </View>
+                    <View style={styles.transactionDetails}>
+                      <Text style={[styles.transactionDescription, { color: isDark ? 'white' : '#333' }]}>
+                        {formatTransactionTitle(tx)}
+                      </Text>
+                      <Text style={[styles.transactionDate, { color: isDark ? '#888' : '#666' }]}>
+                        {formatTransactionDate(tx.createdAt)}
+                      </Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.transactionRight}>
+                    <Text
+                      style={[
+                        styles.transactionAmount,
+                        { color: getTransactionColor(credit) },
+                      ]}
+                    >
+                      {credit ? '+' : '-'}
+                      {amount}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
+          )}
+        </View>
       </ScrollView>
+      <Modal
+        visible={sending}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSending(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}>
+            <Text style={[styles.modalTitle, { color: isDark ? 'white' : '#333' }]}>
+              Send coins
+            </Text>
+            {!selectedUser && (
+              <ScrollView style={styles.modalList}>
+                {contacts.map(item => (
+                  <TouchableOpacity
+                    key={item.userId}
+                    style={styles.modalUserItem}
+                    onPress={() => {
+                      setSelectedUser(item);
+                      setErrorText('');
+                    }}
+                  >
+                    <Text style={[styles.modalUserName, { color: isDark ? 'white' : '#333' }]}>
+                      {item.name}
+                    </Text>
+                    <Text style={[styles.modalUserUsername, { color: isDark ? '#aaa' : '#666' }]}>
+                      {item.username}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {contacts.length === 0 && (
+                  <Text style={[styles.modalEmptyText, { color: isDark ? '#777' : '#999' }]}>
+                    No followers or following users found.
+                  </Text>
+                )}
+              </ScrollView>
+            )}
+            {selectedUser && (
+              <View>
+                <Text style={[styles.modalLabel, { color: isDark ? '#ccc' : '#555' }]}>
+                  To: {selectedUser.name} ({selectedUser.username})
+                </Text>
+                <Text style={[styles.modalBalance, { color: isDark ? '#f7c14d' : '#127d96' }]}>
+                  Available: {balance} coins
+                </Text>
+                <TextInput
+                  style={[
+                    styles.modalInput,
+                    {
+                      color: isDark ? 'white' : '#333',
+                      borderColor: isDark ? '#444' : '#ccc',
+                      backgroundColor: isDark ? '#111' : '#f4f4f4',
+                    },
+                  ]}
+                  keyboardType="numeric"
+                  placeholder="Enter amount"
+                  placeholderTextColor={isDark ? '#777' : '#999'}
+                  value={amountText}
+                  onChangeText={text => {
+                    setAmountText(text);
+                    setErrorText('');
+                  }}
+                />
+                {errorText ? (
+                  <Text style={styles.modalError}>{errorText}</Text>
+                ) : null}
+                <View style={styles.modalButtonsRow}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, { backgroundColor: isDark ? '#333' : '#ddd' }]}
+                    onPress={() => setSending(false)}
+                  >
+                    <Text style={[styles.modalButtonText, { color: isDark ? 'white' : '#333' }]}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, { backgroundColor: '#127d96' }]}
+                    onPress={handleConfirmSend}
+                  >
+                    <Text style={[styles.modalButtonText, { color: 'white' }]}>
+                      Send
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={withdrawing}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setWithdrawing(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}>
+            <Text style={[styles.modalTitle, { color: isDark ? 'white' : '#333' }]}>
+              Withdraw
+            </Text>
+            <ScrollView style={styles.modalList}>
+              <Text style={[styles.modalLabel, { color: isDark ? '#ccc' : '#555' }]}>
+                Amount (₹)
+              </Text>
+              <Text style={[styles.modalBalance, { color: isDark ? '#f7c14d' : '#127d96', marginBottom: 4 }]}>
+                Rate: {withdrawCoinAmount} coins = ₹{withdrawRupeeAmount}
+              </Text>
+              <Text style={[styles.modalBalance, { color: isDark ? '#ccc' : '#555', marginBottom: 8 }]}>
+                Available for withdraw: ₹{getMaxWithdrawRupees().toFixed(2)}
+              </Text>
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  {
+                    color: isDark ? 'white' : '#333',
+                    borderColor: withdrawError ? '#e53e3e' : isDark ? '#444' : '#ccc',
+                    backgroundColor: isDark ? '#111' : '#f4f4f4',
+                  },
+                ]}
+                keyboardType="numeric"
+                placeholder="Enter amount"
+                placeholderTextColor={withdrawError ? '#e53e3e' : isDark ? '#777' : '#999'}
+                value={withdrawAmount}
+                onChangeText={text => {
+                  setWithdrawAmount(text);
+                  setWithdrawError('');
+                }}
+              />
+              {withdrawError ? (
+                <Text style={styles.modalError}>{withdrawError}</Text>
+              ) : null}
+              <Text style={[styles.modalLabel, { color: isDark ? '#ccc' : '#555' }]}>
+                Name
+              </Text>
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  {
+                    color: isDark ? 'white' : '#333',
+                    borderColor: isDark ? '#444' : '#ccc',
+                    backgroundColor: isDark ? '#111' : '#f4f4f4',
+                  },
+                ]}
+                placeholder="Account holder name"
+                placeholderTextColor={isDark ? '#777' : '#999'}
+                value={withdrawName}
+                onChangeText={setWithdrawName}
+              />
+              <Text style={[styles.modalLabel, { color: isDark ? '#ccc' : '#555' }]}>
+                Bank name
+              </Text>
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  {
+                    color: isDark ? 'white' : '#333',
+                    borderColor: isDark ? '#444' : '#ccc',
+                    backgroundColor: isDark ? '#111' : '#f4f4f4',
+                  },
+                ]}
+                placeholder="Bank name"
+                placeholderTextColor={isDark ? '#777' : '#999'}
+                value={withdrawBankName}
+                onChangeText={setWithdrawBankName}
+              />
+              <Text style={[styles.modalLabel, { color: isDark ? '#ccc' : '#555' }]}>
+                Account number
+              </Text>
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  {
+                    color: isDark ? 'white' : '#333',
+                    borderColor: isDark ? '#444' : '#ccc',
+                    backgroundColor: isDark ? '#111' : '#f4f4f4',
+                  },
+                ]}
+                keyboardType="number-pad"
+                placeholder="Account number"
+                placeholderTextColor={isDark ? '#777' : '#999'}
+                value={withdrawAccountNumber}
+                onChangeText={setWithdrawAccountNumber}
+              />
+              <Text style={[styles.modalLabel, { color: isDark ? '#ccc' : '#555' }]}>
+                IFSC code
+              </Text>
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  {
+                    color: isDark ? 'white' : '#333',
+                    borderColor: isDark ? '#444' : '#ccc',
+                    backgroundColor: isDark ? '#111' : '#f4f4f4',
+                  },
+                ]}
+                autoCapitalize="characters"
+                placeholder="IFSC code"
+                placeholderTextColor={isDark ? '#777' : '#999'}
+                value={withdrawIfsc}
+                onChangeText={setWithdrawIfsc}
+              />
+              <Text style={[styles.modalLabel, { color: isDark ? '#ccc' : '#555' }]}>
+                Branch
+              </Text>
+              <TextInput
+                style={[
+                  styles.modalInput,
+                  {
+                    color: isDark ? 'white' : '#333',
+                    borderColor: isDark ? '#444' : '#ccc',
+                    backgroundColor: isDark ? '#111' : '#f4f4f4',
+                  },
+                ]}
+                placeholder="Branch name"
+                placeholderTextColor={isDark ? '#777' : '#999'}
+                value={withdrawBranch}
+                onChangeText={setWithdrawBranch}
+              />
+            </ScrollView>
+            <View style={styles.modalButtonsRow}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: isDark ? '#333' : '#ddd' }]}
+                onPress={() => setWithdrawing(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: isDark ? 'white' : '#333' }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: '#127d96' }]}
+                onPress={handleSubmitWithdraw}
+                disabled={submittingWithdraw}
+              >
+                {submittingWithdraw ? (
+                  <ActivityIndicator color="white" />
+                ) : (
+                  <Text style={[styles.modalButtonText, { color: 'white' }]}>
+                    Submit
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -356,6 +852,78 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalContainer: {
+    width: '100%',
+    borderRadius: 16,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  modalList: {
+    maxHeight: height * 0.5,
+  },
+  modalUserItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  modalUserName: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  modalUserUsername: {
+    fontSize: 12,
+  },
+  modalEmptyText: {
+    fontSize: 13,
+    paddingVertical: 8,
+    textAlign: 'center',
+  },
+  modalLabel: {
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  modalBalance: {
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: Platform.OS === 'ios' ? 10 : 6,
+    marginBottom: 6,
+  },
+  modalError: {
+    fontSize: 12,
+    color: '#f44336',
+    marginBottom: 8,
+  },
+  modalButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 8,
+    gap: 10,
+  },
+  modalButton: {
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   statsTitle: {
     fontSize: 18,
