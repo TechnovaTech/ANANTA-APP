@@ -188,6 +188,36 @@ export default function SettingsPage() {
         Manage recharge plans and coin pricing.
       </p>
 
+      <div style={{display:'flex',justifyContent:'flex-end',marginBottom:16}}>
+        <button
+          onClick={() =>
+            setPlans(prev => [
+              ...prev,
+              {
+                id: 0,
+                name: '',
+                coins: 0,
+                price: 0,
+                popular: false,
+                active: true,
+              },
+            ])
+          }
+          style={{
+            padding:'8px 14px',
+            borderRadius:6,
+            border:'none',
+            background:'#3182ce',
+            color:'white',
+            fontSize:13,
+            cursor:'pointer',
+            fontWeight:600,
+          }}
+        >
+          Add plan
+        </button>
+      </div>
+
       {loadingPlans ? (
         <p style={{color:'#718096'}}>Loading plans...</p>
       ) : (
