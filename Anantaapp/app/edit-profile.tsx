@@ -153,7 +153,7 @@ export default function EditProfileScreen() {
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
@@ -171,6 +171,9 @@ export default function EditProfileScreen() {
       return;
     }
     try {
+      console.log('Starting profile save...');
+      console.log('Profile image URI:', profileImage);
+      
       let imageToSend: string | null = profileImage;
       // Only convert to base64 if it's a local file or blob
       if (
@@ -179,13 +182,17 @@ export default function EditProfileScreen() {
         !profileImage.startsWith('data:') &&
         !profileImage.startsWith('/uploads/')
       ) {
+        console.log('Converting image to base64...');
         imageToSend = await toBase64(profileImage);
+        console.log('Base64 conversion result:', imageToSend ? `${imageToSend.substring(0, 50)}...` : 'null');
+        
         // Limit base64 size to 1MB
         if (imageToSend && imageToSend.length > 1000000) {
           Alert.alert('Error', 'Image too large. Please select a smaller image.');
           return;
         }
       }
+      
       const fullName = name && name.trim().length > 0 ? name.trim() : userName.trim();
       const payload: any = {
         userId,
@@ -201,20 +208,25 @@ export default function EditProfileScreen() {
         country: country || '',
         pinCode: pinCode || '',
       };
-      // Skip image for now - backend has issues
-      // if (imageToSend && imageToSend.startsWith('data:')) {
-      //   payload.profileImage = imageToSend;
-      // }
-      console.log('Sending payload:', { ...payload, profileImage: imageToSend ? `${imageToSend.substring(0, 50)}...` : null });
-      console.log('Full payload fields:', Object.keys(payload));
-      console.log('UserId:', payload.userId);
-      console.log('Username:', payload.username);
-      console.log('FullName:', payload.fullName);
+      
+      // Include image if it's base64
+      if (imageToSend && imageToSend.startsWith('data:')) {
+        console.log('Adding image to payload, size:', imageToSend.length);
+        payload.profileImage = imageToSend;
+      } else {
+        console.log('No base64 image to send');
+      }
+      
+      console.log('Sending payload with fields:', Object.keys(payload));
+      
       const response = await fetch(`${ENV.API_BASE_URL}/api/app/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
         const err = await response.json().catch(() => null);
         const message = err?.message || 'Failed to save profile';
@@ -222,6 +234,10 @@ export default function EditProfileScreen() {
         Alert.alert('Error', message);
         return;
       }
+      
+      const result = await response.json();
+      console.log('Save successful:', result);
+      
       const resolvedUri = resolveProfileUri(imageToSend) || profileImage;
       updateProfile({
         name: fullName,
@@ -238,8 +254,11 @@ export default function EditProfileScreen() {
         profileImage: resolvedUri || profileImage,
         profilePhoto: resolvedUri || profileImage,
       });
+      
+      Alert.alert('Success', 'Profile updated successfully');
       router.back();
-    } catch {
+    } catch (error) {
+      console.error('Save profile error:', error);
       Alert.alert('Error', 'Something went wrong while saving profile');
     }
   };
@@ -267,8 +286,8 @@ export default function EditProfileScreen() {
         {/* Profile Image */}
         <View style={[styles.profileImageSection, { backgroundColor: isDark ? '#2a2a2a' : 'white' }]}>
           <View style={styles.profileImageContainer}>
-            {profileImage && (profileImage.startsWith('http') || profileImage.startsWith('data:') || profileImage.startsWith('/uploads/')) ? (
-              <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            {profileImage && (profileImage.startsWith('http') || profileImage.startsWith('data:') || profileImage.startsWith('/uploads/') || profileImage.startsWith('blob:')) ? (
+              <Image source={{ uri: profileImage }} style={styles.profileImage} resizeMode="cover" />
             ) : (
               <View style={[styles.profileImage, { backgroundColor: isDark ? '#f7c14d' : '#127d96', justifyContent: 'center', alignItems: 'center' }]}>
                 <Ionicons name="person" size={50} color={isDark ? 'black' : 'white'} />
