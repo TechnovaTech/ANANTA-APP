@@ -20,10 +20,14 @@ import { useProfile } from '../../contexts/ProfileContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import * as SecureStore from 'expo-secure-store';
 
-import { ENV, getApiUrl, getImageUrl } from '@/config/env';
+import { ENV } from '@/config/env';
 
 const resolveProfileUri = (value: string | null | undefined) => {
-  return getImageUrl(value);
+  if (!value) return null;
+  if (value.startsWith('http') || value.startsWith('data:')) return value;
+  if (value.startsWith('/uploads/')) return `${ENV.API_BASE_URL}${value}`;
+  if (value.length > 100) return `data:image/jpeg;base64,${value}`;
+  return value;
 };
 
 export default function ProfileScreen() {
@@ -51,7 +55,7 @@ export default function ProfileScreen() {
 
   const loadProfile = async (userId: string) => {
     try {
-      const res = await fetch(getApiUrl(`/api/app/profile/${userId}`));
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${userId}`);
       if (!res.ok) {
         return;
       }
@@ -142,7 +146,7 @@ export default function ProfileScreen() {
         }
       }
 
-      await fetch(getApiUrl('/api/app/profile'), {
+      await fetch(`${ENV.API_BASE_URL}/api/app/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
