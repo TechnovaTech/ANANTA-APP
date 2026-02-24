@@ -46,6 +46,7 @@ D:\Office\ANANTA-APP\adminpanel\backend\src\main\java\com\ananta\admin\payload\U
 D:\Office\ANANTA-APP\adminpanel\backend\src\main\java\com\ananta\admin\payload\MessageResponse.java
 D:\Office\ANANTA-APP\adminpanel\backend\src\main\java\com\ananta\admin\repository\AdminRepository.java
 D:\Office\ANANTA-APP\adminpanel\backend\src\main\java\com\ananta\admin\config\SecurityConfig.java
+D:\Office\ANANTA-APP\adminpanel\backend\src\main\java\com\ananta\admin\config\GlobalExceptionHandler.java
 D:\Office\ANANTA-APP\adminpanel\backend\src\main\java\com\ananta\admin\controller\AppHeroController.java
 D:\Office\ANANTA-APP\adminpanel\backend\src\main\java\com\ananta\admin\controller\AdminKYCManagementController.java
 D:\Office\ANANTA-APP\adminpanel\backend\src\main\java\com\ananta\admin\model\Wallet.java

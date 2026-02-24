@@ -69,5 +69,6 @@ com\ananta\admin\model\KYC$DocumentType.class
 com\ananta\admin\controller\WithdrawController.class
 com\ananta\admin\model\Wallet.class
 com\ananta\admin\service\AgoraTokenService$RtcRole.class
+com\ananta\admin\config\GlobalExceptionHandler.class
 com\ananta\admin\controller\RechargeController.class
 com\ananta\admin\model\HeroItem.class

@@ -1,11 +1,12 @@
-const API_BASE = 'https://ecofuelglobal.com';
+const API_BASE = 'http://localhost:3000';
 
-const testUserId = 'ANAD2E8B50';
+const testUserId = 'AND6926A9B';
 
 const payload = {
   userId: testUserId,
-  username: 'Vivek',
-  fullName: 'Vivek Vora',
+  username: 'MJ Rajput',
+  fullName: 'MJ Rajput',
+  bio: 'Updated via test script',
 };
 
 async function main() {

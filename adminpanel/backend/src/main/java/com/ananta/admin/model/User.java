@@ -47,8 +47,7 @@ public class User {
 
     private String location;
 
-    @Lob
-    @Column(name = "profile_image")
+    @Column(name = "profile_image", columnDefinition = "TEXT")
     private String profileImage;
 
     @Column(name = "is_blocked")

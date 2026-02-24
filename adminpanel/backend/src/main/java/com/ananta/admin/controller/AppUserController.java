@@ -21,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -67,6 +68,15 @@ public class AppUserController {
             Files.createDirectories(Paths.get(UPLOAD_DIR));
         } catch (IOException e) {
         }
+    }
+
+    @GetMapping("/health")
+    public ResponseEntity<?> health() {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "OK");
+        response.put("timestamp", System.currentTimeMillis());
+        response.put("service", "ANANTA Backend");
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/verify-otp")
@@ -352,71 +362,113 @@ public class AppUserController {
     }
 
     @PostMapping("/profile")
+    @Transactional
     public ResponseEntity<?> updateProfile(@RequestBody UpdateProfileRequest request) {
-        System.out.println("POST /api/app/profile called with userId: " + (request.getUserId() != null ? request.getUserId() : "null"));
-        String normalizedUserId = request.getUserId() != null ? request.getUserId().trim() : "";
-        if (!StringUtils.hasText(normalizedUserId)) {
-            return ResponseEntity.badRequest().body(new MessageResponse("UserId is required"));
-        }
+        try {
+            System.out.println("=== Profile Update Request ===");
+            System.out.println("UserId: " + request.getUserId());
+            System.out.println("Username: " + request.getUsername());
+            System.out.println("FullName: " + request.getFullName());
+            
+            String normalizedUserId = request.getUserId() != null ? request.getUserId().trim() : "";
+            if (!StringUtils.hasText(normalizedUserId)) {
+                return ResponseEntity.badRequest().body(new MessageResponse("UserId is required"));
+            }
 
-        String compactUserId = normalizedUserId.replaceAll("[^A-Za-z0-9]", "");
-        Optional<User> userOpt = userRepository.findByUserId(normalizedUserId);
-        if (userOpt.isEmpty()) {
-            userOpt = userRepository.findByUserIdTrimmed(normalizedUserId);
-        }
-        if (userOpt.isEmpty() && StringUtils.hasText(compactUserId)) {
-            userOpt = userRepository.findByUserIdNormalized(compactUserId);
-        }
-        if (userOpt.isEmpty() && StringUtils.hasText(compactUserId)) {
-            userOpt = userRepository.findFirstByUserIdLikeNormalized(compactUserId);
-        }
+            String compactUserId = normalizedUserId.replaceAll("[^A-Za-z0-9]", "");
+            Optional<User> userOpt = userRepository.findByUserId(normalizedUserId);
+            if (userOpt.isEmpty()) {
+                userOpt = userRepository.findByUserIdTrimmed(normalizedUserId);
+            }
+            if (userOpt.isEmpty() && StringUtils.hasText(compactUserId)) {
+                userOpt = userRepository.findByUserIdNormalized(compactUserId);
+            }
+            if (userOpt.isEmpty() && StringUtils.hasText(compactUserId)) {
+                userOpt = userRepository.findFirstByUserIdLikeNormalized(compactUserId);
+            }
 
-        User user = userOpt.orElseThrow(() -> new RuntimeException("User not found"));
+            if (userOpt.isEmpty()) {
+                System.out.println("ERROR: User not found");
+                return ResponseEntity.status(404).body(new MessageResponse("User not found"));
+            }
 
-        if (StringUtils.hasText(request.getUsername())) {
-            user.setUsername(request.getUsername().trim());
-        }
-        if (StringUtils.hasText(request.getFullName())) {
-            user.setFullName(request.getFullName().trim());
-        }
-        if (request.getBio() != null) {
-            user.setBio(request.getBio());
-        }
-        if (request.getLocation() != null) {
-            user.setLocation(request.getLocation());
-        }
-        if (request.getGender() != null) {
-            user.setGender(request.getGender());
-        }
-        if (request.getBirthday() != null) {
-            user.setBirthday(request.getBirthday());
-        }
-        if (request.getAddressLine1() != null) {
-            user.setAddressLine1(request.getAddressLine1());
-        }
-        if (request.getCity() != null) {
-            user.setCity(request.getCity());
-        }
-        if (request.getState() != null) {
-            user.setState(request.getState());
-        }
-        if (request.getCountry() != null) {
-            user.setCountry(request.getCountry());
-        }
-        if (request.getPinCode() != null) {
-            user.setPinCode(request.getPinCode());
-        }
+            User user = userOpt.get();
+            System.out.println("Found user: " + user.getUserId());
 
-        String profileImagePath = saveBase64Image(request.getProfileImage(), "profile", user.getUserId());
-        if (StringUtils.hasText(profileImagePath)) {
-            user.setProfileImage(profileImagePath);
-        } else if (StringUtils.hasText(request.getProfileImage())) {
-            user.setProfileImage(request.getProfileImage());
+            // Update basic fields
+            if (StringUtils.hasText(request.getUsername())) {
+                user.setUsername(request.getUsername().trim());
+            }
+            if (StringUtils.hasText(request.getFullName())) {
+                user.setFullName(request.getFullName().trim());
+            }
+            if (request.getBio() != null) {
+                user.setBio(request.getBio());
+            }
+            if (request.getLocation() != null) {
+                user.setLocation(request.getLocation());
+            }
+            if (request.getGender() != null) {
+                user.setGender(request.getGender());
+            }
+            if (request.getBirthday() != null) {
+                user.setBirthday(request.getBirthday());
+            }
+            if (request.getAddressLine1() != null) {
+                user.setAddressLine1(request.getAddressLine1());
+            }
+            if (request.getCity() != null) {
+                user.setCity(request.getCity());
+            }
+            if (request.getState() != null) {
+                user.setState(request.getState());
+            }
+            if (request.getCountry() != null) {
+                user.setCountry(request.getCountry());
+            }
+            if (request.getPinCode() != null) {
+                user.setPinCode(request.getPinCode());
+            }
+
+            // Save without image first
+            userRepository.save(user);
+            System.out.println("=== Profile Updated Successfully (without image) ===");
+
+            // Try to update image separately
+            if (StringUtils.hasText(request.getProfileImage())) {
+                try {
+                    String imageToSave = request.getProfileImage();
+                    if (imageToSave.startsWith("data:image")) {
+                        String savedPath = saveBase64Image(imageToSave, "profile", user.getUserId());
+                        if (StringUtils.hasText(savedPath)) {
+                            // Update only image using native query to avoid LOB issues
+                            entityManager.createNativeQuery(
+                                "UPDATE users SET profile_image = :img WHERE user_id = :uid")
+                                .setParameter("img", savedPath)
+                                .setParameter("uid", user.getUserId())
+                                .executeUpdate();
+                            System.out.println("Image updated: " + savedPath);
+                        }
+                    } else if (imageToSave.startsWith("/uploads/") || imageToSave.startsWith("http")) {
+                        entityManager.createNativeQuery(
+                            "UPDATE users SET profile_image = :img WHERE user_id = :uid")
+                            .setParameter("img", imageToSave)
+                            .setParameter("uid", user.getUserId())
+                            .executeUpdate();
+                        System.out.println("Image path updated: " + imageToSave);
+                    }
+                } catch (Exception e) {
+                    System.out.println("Image update failed (non-critical): " + e.getMessage());
+                }
+            }
+
+            return ResponseEntity.ok(new MessageResponse("Profile updated successfully"));
+        } catch (Exception e) {
+            System.out.println("=== ERROR ===");
+            System.out.println("Message: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(new MessageResponse("Server error: " + e.getMessage()));
         }
-
-        userRepository.save(user);
-
-        return ResponseEntity.ok(new MessageResponse("Profile updated successfully"));
     }
 
     @RequestMapping(value = "/profile", method = RequestMethod.OPTIONS)
