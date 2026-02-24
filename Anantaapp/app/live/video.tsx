@@ -383,13 +383,24 @@ export default function VideoLiveScreen() {
       keyboardVerticalOffset={0}
     >
       <View style={styles.backgroundImage}>
-        {Platform.OS !== 'web' && joined && (
+        {Platform.OS === 'web' ? (
+          <View style={styles.webPlaceholder}>
+            <Text style={styles.webPlaceholderText}>📹</Text>
+            <Text style={styles.webPlaceholderSubtext}>Live video works only in mobile app</Text>
+            <Text style={styles.webPlaceholderHint}>Download the app to go live</Text>
+          </View>
+        ) : joined ? (
           <RtcSurfaceView
             canvas={{
               uid: role === 'host' ? 0 : (remoteUid != null ? remoteUid : 0),
             }}
             style={styles.videoSurface}
           />
+        ) : (
+          <View style={styles.webPlaceholder}>
+            <Text style={styles.webPlaceholderText}>📹</Text>
+            <Text style={styles.webPlaceholderSubtext}>Connecting...</Text>
+          </View>
         )}
       </View>
       
@@ -594,6 +605,26 @@ const styles = StyleSheet.create({
   },
   videoSurface: {
     flex: 1,
+  },
+  webPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
+  },
+  webPlaceholderText: {
+    fontSize: 80,
+    marginBottom: 20,
+  },
+  webPlaceholderSubtext: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  webPlaceholderHint: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
   },
   overlay: {
     flex: 1,

@@ -41,11 +41,7 @@ import java.util.stream.Collectors;
 public class AppUserController {
 
     private static final String FIXED_OTP = "12345";
-    private static final String UPLOAD_DIR = Paths.get(System.getProperty("user.dir"))
-            .getParent()
-            .resolve("public")
-            .resolve("uploads")
-            .toString();
+    private static final String UPLOAD_DIR = System.getProperty("user.dir") + "/public/uploads";
 
     @Autowired
     private UserRepository userRepository;
