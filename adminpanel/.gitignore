@@ -34,3 +34,6 @@ pids
 # Build outputs
 dist/
 build/
+
+# Backend config (do not commit local secrets)
+backend/src/main/resources/application.properties

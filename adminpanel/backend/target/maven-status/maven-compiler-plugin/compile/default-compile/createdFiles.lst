@@ -24,6 +24,7 @@ com\ananta\admin\model\KYC.class
 com\ananta\admin\config\SecurityConfig$1.class
 com\ananta\admin\config\AuthTokenFilter.class
 com\ananta\admin\repository\FollowRepository.class
+com\ananta\admin\payload\UpdateProfileRequest.class
 com\ananta\admin\controller\AppLiveController.class
 com\ananta\admin\controller\KYCController.class
 com\ananta\admin\repository\LiveSessionRepository.class
