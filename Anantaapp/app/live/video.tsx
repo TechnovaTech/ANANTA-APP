@@ -358,7 +358,7 @@ export default function VideoLiveScreen() {
   const endLive = async () => {
     try {
       if (role === 'host' && sessionId && userId) {
-        await fetch(`${API_BASE}/api/app/live/end`, {
+        await fetch(`${ENV.API_BASE_URL}/api/app/live/end`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -386,7 +386,7 @@ export default function VideoLiveScreen() {
         {Platform.OS !== 'web' && joined && (
           <RtcSurfaceView
             canvas={{
-              uid: role === 'viewer' && remoteUid != null ? remoteUid : 0,
+              uid: role === 'host' ? 0 : (remoteUid != null ? remoteUid : 0),
             }}
             style={styles.videoSurface}
           />
