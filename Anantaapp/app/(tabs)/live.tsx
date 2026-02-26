@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import { ENV } from '@/config/env';
+import * as SecureStore from 'expo-secure-store';
 
 const { width, height } = Dimensions.get('window');
 
@@ -23,9 +24,14 @@ export default function LiveScreen() {
     let userId: string | null = null;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       userId = window.localStorage.getItem('userId');
+    } else {
+      try {
+        userId = await SecureStore.getItemAsync('userId');
+      } catch { }
     }
     if (!userId) {
-      userId = 'guest';
+      Alert.alert('Error', 'Please login first to start live streaming');
+      return;
     }
 
     try {
@@ -48,16 +54,24 @@ export default function LiveScreen() {
       }
 
       const data = await response.json();
+      console.log('Start live response:', data);
+
       const params = {
-        sessionId: data.sessionId,
-        channelName: data.channelName,
-        token: data.token,
-        appId: data.appId,
-        type: data.type,
-        title: data.title,
-        userId,
+        sessionId: String(data.sessionId),
+        channelName: String(data.channelName),
+        token: String(data.token),
+        appId: String(data.appId),
+        type: String(data.type),
+        title: String(data.title),
+        userId: String(userId),
         role: 'host',
+        hostUserId: String(data.hostUserId || userId),
+        hostUsername: String(data.hostUsername || ''),
+        hostCountry: String(data.hostCountry || ''),
+        hostProfileImage: String(data.hostProfileImage || ''),
       };
+
+      console.log('Navigating with params:', params);
 
       if (selectedType === 'video') {
         router.push({ pathname: '/live/video', params });
@@ -100,9 +114,13 @@ export default function LiveScreen() {
     let userId: string | null = null;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       userId = window.localStorage.getItem('userId');
+    } else {
+      try {
+        userId = await SecureStore.getItemAsync('userId');
+      } catch { }
     }
     if (!userId) {
-      userId = 'guest';
+      return;
     }
     if (!session.hostUserId) {
       return;
@@ -133,9 +151,14 @@ export default function LiveScreen() {
       let userId: string | null = null;
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         userId = window.localStorage.getItem('userId');
+      } else {
+        try {
+          userId = await SecureStore.getItemAsync('userId');
+        } catch { }
       }
       if (!userId) {
-        userId = 'guest';
+        Alert.alert('Error', 'Please login first to join live streaming');
+        return;
       }
 
       const response = await fetch(`${ENV.API_BASE_URL}/api/app/live/join`, {
@@ -155,21 +178,26 @@ export default function LiveScreen() {
       }
 
       const data = await response.json();
+      console.log('Join live response:', data);
+
       const params = {
-        sessionId: data.sessionId,
-        channelName: data.channelName,
-        token: data.token,
-        appId: data.appId,
-        type: data.type,
-        title: data.title,
-        userId,
+        sessionId: String(data.sessionId),
+        channelName: String(data.channelName),
+        token: String(data.token),
+        appId: String(data.appId),
+        type: String(data.type),
+        title: String(data.title),
+        userId: String(userId),
         role: 'viewer',
-        hostUserId: data.hostUserId,
-        hostUsername: data.hostUsername,
-        hostCountry: data.hostCountry,
-        hostProfileImage: data.hostProfileImage,
-        isFollowing: data.isFollowing,
+        hostUserId: String(data.hostUserId || ''),
+        hostUid: String(data.hostUid || '0'),
+        hostUsername: String(data.hostUsername || ''),
+        hostCountry: String(data.hostCountry || ''),
+        hostProfileImage: String(data.hostProfileImage || ''),
+        isFollowing: String(data.isFollowing || false),
       };
+
+      console.log('Navigating with params:', params);
 
       router.push({ pathname: '/live/video', params });
     } catch {
@@ -279,7 +307,7 @@ export default function LiveScreen() {
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#f8f9fa' }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
-      
+
       {/* Modern Header */}
       <LinearGradient
         colors={isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7']}
@@ -291,12 +319,12 @@ export default function LiveScreen() {
           </View>
         </View>
       </LinearGradient>
-      
+
 
 
       <View style={styles.content}>
         <View style={styles.liveOptions}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.liveOption, selectedType === 'video' && styles.selectedOption]}
             onPress={() => setSelectedType('video')}
           >
@@ -318,7 +346,7 @@ export default function LiveScreen() {
             </ThemedText>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[styles.liveOption, selectedType === 'audio' && styles.selectedOption]}
             onPress={() => setSelectedType('audio')}
           >
@@ -341,7 +369,7 @@ export default function LiveScreen() {
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.startLiveButtonContainer}
           onPress={handleStartLive}
           disabled={starting}
@@ -478,5 +506,129 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '600',
+  },
+  sessionsScroll: {
+    flex: 1,
+    width: '100%',
+    marginTop: 20,
+  },
+  sessionsLoading: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  sessionsEmpty: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  sessionsContainer: {
+    width: '100%',
+  },
+  mainCard: {
+    width: '100%',
+    marginBottom: 15,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  smallCard: {
+    width: '48%',
+    marginBottom: 15,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardImageWrapper: {
+    position: 'relative',
+  },
+  mainCardImage: {
+    width: '100%',
+    height: 200,
+    resizeMode: 'cover',
+  },
+  smallCardImage: {
+    width: '100%',
+    height: 120,
+    resizeMode: 'cover',
+  },
+  liveBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: '#ff4444',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  liveBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  viewsBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewsBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  cardInfo: {
+    padding: 12,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  cardUserRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  cardUserName: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  cardCountry: {
+    fontSize: 10,
+    color: '#999',
+    marginTop: 2,
+  },
+  cardFollowButton: {
+    backgroundColor: '#127d96',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  cardFollowText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  smallCardsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
   },
 });

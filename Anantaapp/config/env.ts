@@ -1,5 +1,5 @@
 export const ENV = {
-  API_BASE_URL: 'http://localhost:3000',
+  API_BASE_URL: 'https://ecofuelglobal.com',
 };
 
 export const getApiUrl = (endpoint: string) => {

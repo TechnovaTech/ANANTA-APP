@@ -20,8 +20,11 @@ import java.util.stream.Collectors;
         origins = {
                 "http://localhost:8081",
                 "http://localhost:19006",
-                "http://localhost:3000"
+                "http://localhost:3000",
+                "https://ecofuelglobal.com",
+                "http://ecofuelglobal.com"
         },
+        allowedHeaders = "*",
         maxAge = 3600
 )
 @RestController
@@ -67,7 +70,8 @@ public class AppLiveController {
 
         liveSessionRepository.save(session);
 
-        int uid = 0;
+        // Deterministic host UID based on userId (never 0)
+        int uid = Math.abs(userId.hashCode()) % 1_000_000 + 1;
         String token = agoraTokenService.buildRtcToken(
                 channelName,
                 uid,
@@ -81,6 +85,19 @@ public class AppLiveController {
         response.put("appId", agoraTokenService.getAppId());
         response.put("type", normalizedType);
         response.put("title", title);
+        response.put("hostUserId", userId);
+        response.put("hostUid", uid);
+        
+        // Add host user info
+        Optional<User> hostOpt = userRepository.findByUserId(userId);
+        hostOpt.ifPresent(user -> {
+            response.put("hostUsername", user.getUsername());
+            response.put("hostCountry", user.getCountry());
+            try {
+                response.put("hostProfileImage", user.getProfileImage());
+            } catch (Exception ignored) {}
+        });
+        
         return ResponseEntity.ok(response);
     }
 
@@ -115,10 +132,12 @@ public class AppLiveController {
                 return ResponseEntity.badRequest().body(Collections.singletonMap("message", "Channel name is missing"));
             }
 
-            int uid = 0;
+            // Host UID is deterministic; viewer gets a random UID
+            int hostUid = Math.abs(session.getHostUserId().hashCode()) % 1_000_000 + 1;
+            int viewerUid = new java.util.Random().nextInt(1_000_000) + 100_000;
             String token = agoraTokenService.buildRtcToken(
                     channelName,
-                    uid,
+                    viewerUid,
                     AgoraTokenService.RtcRole.SUBSCRIBER.getValue()
             );
 
@@ -140,6 +159,7 @@ public class AppLiveController {
             response.put("type", session.getType());
             response.put("title", session.getTitle());
             response.put("hostUserId", hostUserId);
+            response.put("hostUid", hostUid);
             response.put("viewerCount", session.getViewerCount());
             response.put("isFollowing", isFollowing);
             hostOpt.ifPresent(user -> {
@@ -168,9 +188,8 @@ public class AppLiveController {
                 if (session == null) {
                     continue;
                 }
-                String status = session.getStatus();
-                boolean liveStatus = status != null && "LIVE".equalsIgnoreCase(status.trim());
-                if (!(session.getEndedAt() == null || liveStatus)) {
+                // Only show actively LIVE sessions
+                if (!"LIVE".equalsIgnoreCase(session.getStatus())) {
                     continue;
                 }
                 try {
@@ -229,6 +248,27 @@ public class AppLiveController {
         return ResponseEntity.ok(Collections.singletonMap("message", "Live ended"));
     }
 
+    @PostMapping("/leave")
+    @Transactional
+    public ResponseEntity<?> leaveLive(@RequestBody Map<String, Object> payload) {
+        String sessionId = asString(payload.get("sessionId"));
+        if (!StringUtils.hasText(sessionId)) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "sessionId is required"));
+        }
+        try {
+            LiveSession session = liveSessionRepository.findBySessionId(sessionId).orElse(null);
+            if (session != null) {
+                int current = session.getViewerCount() != null ? session.getViewerCount() : 0;
+                if (current > 0) {
+                    session.setViewerCount(current - 1);
+                    liveSessionRepository.save(session);
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return ResponseEntity.ok(Collections.singletonMap("message", "left"));
+    }
+
     @GetMapping("/history/{userId}")
     public ResponseEntity<?> getLiveHistory(@PathVariable String userId) {
         if (!StringUtils.hasText(userId)) {
@@ -250,6 +290,25 @@ public class AppLiveController {
         }).collect(Collectors.toList());
 
         return ResponseEntity.ok(items);
+    }
+
+    @GetMapping("/stats/{sessionId}")
+    public ResponseEntity<?> getSessionStats(@PathVariable String sessionId) {
+        if (!StringUtils.hasText(sessionId)) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "sessionId is required"));
+        }
+
+        Optional<LiveSession> sessionOpt = liveSessionRepository.findBySessionId(sessionId);
+        if (!sessionOpt.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        LiveSession session = sessionOpt.get();
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("viewerCount", session.getViewerCount() != null ? session.getViewerCount() : 0);
+        stats.put("likes", 0);
+        stats.put("status", session.getStatus());
+        return ResponseEntity.ok(stats);
     }
 
     private String asString(Object value) {

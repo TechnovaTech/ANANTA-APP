@@ -27,19 +27,24 @@ export default function VideoLiveScreen() {
   const { isDark } = useTheme();
   const params = useLocalSearchParams();
   const title = (params.title as string) || 'Live session';
-  const hostUsername = (params.hostUsername as string) || (params.user as string) || 'Micale clarke';
+  const hostUsername = (params.hostUsername as string) || (params.user as string) || 'User';
   const hostProfileImage = (params.hostProfileImage as string) || '';
   const hostUserId = (params.hostUserId as string) || '';
-  const location = (params.location as string) || 'Location';
-  const views = (params.views as string) || '20';
+  const hostCountry = (params.hostCountry as string) || '';
   const sessionId = params.sessionId as string | undefined;
   const channelName = params.channelName as string | undefined;
   const token = params.token as string | undefined;
-  const appId = params.appId as string | undefined;
+  const appId = String(params.appId || '').trim();
   const userId = params.userId as string | undefined;
-  
-  const [likes, setLikes] = useState(15000);
+  // hostUid is the Agora UID the backend assigned to the host.
+  // Viewers need it to subscribe to exactly the host's video stream.
+  const hostUid = params.hostUid ? Number(params.hostUid) : 0;
+
+  console.log('Video params:', { appId, channelName, token: token?.substring(0, 20), sessionId, hostUid });
+
+  const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [viewerCount, setViewerCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(() => {
     const value = params.isFollowing as string | undefined;
     if (value === undefined) return false;
@@ -57,15 +62,15 @@ export default function VideoLiveScreen() {
   const [showGifts, setShowGifts] = useState(false);
   const [loadingGifts, setLoadingGifts] = useState(false);
   const resolvedHostProfileImage = resolveProfileImageUrl(hostProfileImage);
-  
+
   const engineRef = useRef<any | null>(null);
   const role = (params.role as string) || 'host';
-  
+
   const [liveComments, setLiveComments] = useState<any[]>([]);
   const [messageText, setMessageText] = useState('');
-  const animatedValues = useRef<{[key: number]: Animated.Value}>({});
+  const animatedValues = useRef<{ [key: number]: Animated.Value }>({});
   const [remoteUid, setRemoteUid] = useState<number | null>(null);
-  
+
   const comments: any[] = [];
 
   const addFloatingHeart = () => {
@@ -75,7 +80,7 @@ export default function VideoLiveScreen() {
       right: Math.random() * 50 + 20,
     };
     setFloatingHearts(prev => [...prev, newHeart]);
-    
+
     setTimeout(() => {
       setFloatingHearts(prev => prev.filter(heart => heart.id !== newHeart.id));
     }, 3000);
@@ -212,13 +217,13 @@ export default function VideoLiveScreen() {
       setIsFollowing(prev => !prev);
     }
   };
-  
+
   const handleLike = () => {
     setLikes(prev => prev + 1);
     setIsLiked(true);
     addFloatingHeart();
   };
-  
+
   const sendMessage = () => {
     if (messageText.trim()) {
       const newComment = {
@@ -252,80 +257,64 @@ export default function VideoLiveScreen() {
   };
 
   const initAgora = async () => {
-    console.log('=== AGORA INIT DEBUG ===');
-    console.log('Raw params:', params);
-    console.log('appId:', appId, 'type:', typeof appId);
-    console.log('token:', token ? 'exists' : 'missing');
-    console.log('channelName:', channelName);
-    console.log('========================');
-    
-    if (!appId || appId === 'undefined' || !token || !channelName) {
-      console.error('Missing Agora params:', { appId, token: !!token, channelName });
-      Alert.alert('Error', `Missing required parameters. AppId: ${appId || 'MISSING'}`);
+    if (!appId || appId === 'undefined' || appId === 'null' || !token || !channelName) {
+      console.error('Missing params:', { appId, token: !!token, channelName });
+      Alert.alert('Error', `Missing Agora credentials. AppId: ${appId || 'MISSING'}`);
       return;
     }
     try {
       const hasPermission = await requestMediaPermissions();
       if (!hasPermission) {
-        Alert.alert('Permission required', 'Camera and microphone permissions are needed for live.');
+        Alert.alert('Permission required', 'Camera and microphone permissions are needed.');
         return;
       }
+
+      console.log('Creating Agora engine with appId:', appId);
       const engine = await createAgoraEngine(appId);
       if (!engine) {
         Alert.alert('Error', 'Unable to initialize video engine');
         return;
       }
       engineRef.current = engine;
-      
-      await engine.enableVideo();
+
+      // IMPORTANT: Set role BEFORE enableVideo so that agoraClient.web.ts
+      // knows the role when deciding whether to create camera/mic tracks.
+      // Viewers (audience) must NOT open camera/mic — it causes a publish
+      // error that prevents onJoinChannelSuccess from ever firing.
       await engine.setChannelProfile(ChannelProfileType.ChannelProfileLiveBroadcasting);
-      
       const clientRole = role === 'viewer' ? ClientRoleType.ClientRoleAudience : ClientRoleType.ClientRoleBroadcaster;
       await engine.setClientRole(clientRole);
-      
+
+      // enableVideo now skips camera/mic creation for audience role
+      await engine.enableVideo();
+
       if (role === 'host') {
         await engine.startPreview();
       }
-      
+
       engine.registerEventHandler({
         onJoinChannelSuccess: () => {
-          console.log('Agora: Join channel success');
           setJoined(true);
         },
-        onUserJoined: (connection, uid) => {
-          console.log('Agora: User joined', uid);
+        onUserJoined: (_connection: any, uid: number) => {
           setRemoteUid(uid);
         },
-        onUserOffline: (connection, uid) => {
-          console.log('Agora: User offline', uid);
+        onUserOffline: (_connection: any, uid: number) => {
           setRemoteUid(prev => (prev === uid ? null : prev));
         },
-        onError: (err) => {
-          console.error('Agora error:', err);
-        },
       });
-      
+
+      console.log('Joining channel:', channelName);
       await engine.joinChannel(token, channelName, 0, {
         clientRoleType: clientRole,
       });
-      
-      // Force joined state for viewers immediately
-      if (role === 'viewer') {
-        console.log('Force setting joined to true for viewer immediately');
-        setJoined(true);
-        setRemoteUid(12345);
-      }
-      
-      // Force joined state for hosts after a delay
+
       if (role === 'host') {
-        setTimeout(() => {
-          console.log('Force setting joined to true for host');
-          setJoined(true);
-        }, 2000);
+        setTimeout(() => setJoined(true), 1000);
       }
-    } catch (e) {
-      console.error('Agora init error:', e);
-      Alert.alert('Error', 'Unable to start video live');
+    } catch (e: any) {
+      console.error('Agora error:', e);
+      Alert.alert('Error', e.message || 'Unable to start video live');
     }
   };
 
@@ -342,12 +331,41 @@ export default function VideoLiveScreen() {
     }
   };
 
+  const statsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
     initAgora();
+    loadSessionStats();
+    statsIntervalRef.current = setInterval(loadSessionStats, 5000);
     return () => {
+      if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
       cleanupAgora();
     };
   }, [appId, token, channelName]);
+
+  const loadSessionStats = async () => {
+    if (!sessionId) return;
+    try {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/live/stats/${sessionId}`);
+      if (res.status === 404) {
+        // Session not found on this backend — stop polling to avoid console spam
+        if (statsIntervalRef.current) {
+          clearInterval(statsIntervalRef.current);
+          statsIntervalRef.current = null;
+        }
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.viewerCount === 'number') {
+          setViewerCount(data.viewerCount);
+        }
+        if (typeof data.likes === 'number') {
+          setLikes(data.likes);
+        }
+      }
+    } catch { }
+  };
 
   const toggleMute = async () => {
     const engine = engineRef.current;
@@ -384,6 +402,13 @@ export default function VideoLiveScreen() {
             userId,
           }),
         });
+      } else if (role === 'viewer' && sessionId) {
+        // Decrement viewer count when viewer leaves
+        await fetch(`${ENV.API_BASE_URL}/api/app/live/leave`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        });
       }
     } catch {
     } finally {
@@ -393,7 +418,7 @@ export default function VideoLiveScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
@@ -402,7 +427,8 @@ export default function VideoLiveScreen() {
         {joined ? (
           <RtcSurfaceView
             canvas={{
-              uid: role === 'host' ? 0 : (remoteUid || 0),
+              // Host renders local preview (uid=0), viewer renders host's specific uid
+              uid: role === 'host' ? 0 : (hostUid || remoteUid || 0),
             }}
             style={styles.videoSurface}
           />
@@ -413,13 +439,13 @@ export default function VideoLiveScreen() {
           </View>
         )}
       </View>
-      
+
       <View style={styles.overlay}>
         <View style={styles.header}>
           {role === 'viewer' && (
             <>
               <View style={styles.userInfo}>
-                <Image 
+                <Image
                   source={
                     resolvedHostProfileImage
                       ? { uri: resolvedHostProfileImage }
@@ -432,15 +458,15 @@ export default function VideoLiveScreen() {
                   <ThemedText style={styles.liveText}>{title}</ThemedText>
                 </View>
               </View>
-              
+
               <View style={styles.headerRight}>
                 <TouchableOpacity style={[styles.followButton, { backgroundColor: isDark ? '#FFD700' : Colors.light.primary }, isFollowing && styles.followingButton]} onPress={handleFollow}>
                   <ThemedText style={[styles.followText, { color: isDark ? 'black' : 'white' }, isFollowing && styles.followingText]}>
                     {isFollowing ? 'Following' : 'Follow'}
                   </ThemedText>
                 </TouchableOpacity>
-                
-                <TouchableOpacity 
+
+                <TouchableOpacity
                   style={styles.closeButton}
                   onPress={endLive}
                 >
@@ -451,7 +477,7 @@ export default function VideoLiveScreen() {
           )}
           {role === 'host' && (
             <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'flex-end' }}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.closeButton}
                 onPress={endLive}
               >
@@ -464,16 +490,18 @@ export default function VideoLiveScreen() {
         <View style={styles.stats}>
           <View style={styles.statItem}>
             <ThemedText style={[styles.statIcon, { color: 'white' }]}>👁</ThemedText>
-            <ThemedText style={styles.statText}>{views} Viewers</ThemedText>
+            <ThemedText style={styles.statText}>{viewerCount} Viewers</ThemedText>
           </View>
           <View style={styles.statItem}>
             <ThemedText style={styles.statIcon}>💛</ThemedText>
             <ThemedText style={styles.statText}>{likes.toLocaleString()}</ThemedText>
           </View>
-          <View style={styles.statItem}>
-            <ThemedText style={styles.statIcon}>🎯</ThemedText>
-            <ThemedText style={styles.statText}>55</ThemedText>
-          </View>
+          {hostCountry && (
+            <View style={styles.statItem}>
+              <ThemedText style={styles.statIcon}>📍</ThemedText>
+              <ThemedText style={styles.statText}>{hostCountry}</ThemedText>
+            </View>
+          )}
         </View>
 
         <View style={styles.commentsSection}>
@@ -490,8 +518,8 @@ export default function VideoLiveScreen() {
 
         <View style={styles.floatingHeartsContainer}>
           {floatingHearts.map((heart) => (
-            <View 
-              key={heart.id} 
+            <View
+              key={heart.id}
               style={[
                 styles.floatingHeart,
                 { bottom: heart.bottom, right: heart.right }
@@ -516,7 +544,7 @@ export default function VideoLiveScreen() {
               <ThemedText style={styles.sendIcon}>▶</ThemedText>
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.actionButtons}>
             {role === 'host' ? (
               <>
