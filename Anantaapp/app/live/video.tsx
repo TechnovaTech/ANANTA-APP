@@ -252,7 +252,18 @@ export default function VideoLiveScreen() {
   };
 
   const initAgora = async () => {
-    if (!appId || !token || !channelName) return;
+    console.log('=== AGORA INIT DEBUG ===');
+    console.log('Raw params:', params);
+    console.log('appId:', appId, 'type:', typeof appId);
+    console.log('token:', token ? 'exists' : 'missing');
+    console.log('channelName:', channelName);
+    console.log('========================');
+    
+    if (!appId || appId === 'undefined' || !token || !channelName) {
+      console.error('Missing Agora params:', { appId, token: !!token, channelName });
+      Alert.alert('Error', `Missing required parameters. AppId: ${appId || 'MISSING'}`);
+      return;
+    }
     try {
       const hasPermission = await requestMediaPermissions();
       if (!hasPermission) {

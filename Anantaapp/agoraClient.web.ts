@@ -1,202 +1,166 @@
-// Web implementation with cross-platform stream sharing
+// Real Agora Web SDK implementation
 const isBrowser = typeof window !== 'undefined';
-let localStream: MediaStream | null = null;
-let currentRole: string = 'viewer';
+let agoraClient: any = null;
+let localVideoTrack: any = null;
+let localAudioTrack: any = null;
+let remoteUsers: Map<number, { videoTrack?: any, audioTrack?: any }> = new Map();
 let eventHandlers: any = null;
-let currentChannelName: string = '';
-
-// Cross-platform stream sharing using localStorage and polling
-const streamStore = {
-  setHostStream: (channelName: string, isActive: boolean) => {
-    if (isBrowser) {
-      localStorage.setItem(`host_stream_${channelName}`, JSON.stringify({
-        active: isActive,
-        timestamp: Date.now()
-      }));
-      // Trigger storage event for same-origin tabs
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: `host_stream_${channelName}`,
-        newValue: JSON.stringify({ active: isActive, timestamp: Date.now() })
-      }));
-    }
-  },
-  getHostStream: (channelName: string) => {
-    if (isBrowser) {
-      const data = localStorage.getItem(`host_stream_${channelName}`);
-      if (data) {
-        const parsed = JSON.parse(data);
-        // Check if stream is recent (within 30 seconds)
-        if (Date.now() - parsed.timestamp < 30000) {
-          return parsed.active;
-        }
-      }
-    }
-    return false;
-  }
-};
+let AgoraRTC: any = null;
+let storedAppId: string = '';
 
 export async function createAgoraEngine(appId: string): Promise<any> {
-  if (!isBrowser) {
-    return null;
+  if (!isBrowser) return null;
+  
+  console.log('=== CREATE AGORA ENGINE ===');
+  console.log('Received appId:', appId);
+  console.log('appId type:', typeof appId);
+  console.log('appId length:', appId?.length);
+  console.log('===========================');
+  
+  // Handle string "undefined" or "null"
+  if (!appId || appId === 'undefined' || appId === 'null' || appId.trim() === '') {
+    console.error('INVALID APP ID:', appId);
+    throw new Error(`Invalid Agora App ID: "${appId}". Please check backend configuration.`);
   }
+  
+  storedAppId = appId.trim();
+  console.log('Stored appId:', storedAppId);
+  
+  if (!AgoraRTC) {
+    AgoraRTC = (await import('agora-rtc-sdk-ng')).default;
+  }
+  
+  agoraClient = AgoraRTC.createClient({ mode: 'live', codec: 'vp8' });
+  
+  agoraClient.on('user-published', async (user, mediaType) => {
+    await agoraClient!.subscribe(user, mediaType);
+    
+    if (mediaType === 'video') {
+      remoteUsers.set(user.uid as number, { 
+        ...remoteUsers.get(user.uid as number), 
+        videoTrack: user.videoTrack 
+      });
+      eventHandlers?.onUserJoined?.(null, user.uid);
+    }
+    if (mediaType === 'audio' && user.audioTrack) {
+      remoteUsers.set(user.uid as number, { 
+        ...remoteUsers.get(user.uid as number), 
+        audioTrack: user.audioTrack 
+      });
+      user.audioTrack.play();
+    }
+  });
+  
+  agoraClient.on('user-unpublished', (user) => {
+    remoteUsers.delete(user.uid as number);
+    eventHandlers?.onUserOffline?.(user.uid);
+  });
   
   return {
     initialize: () => Promise.resolve(),
     enableVideo: async () => {
-      if (currentRole === 'host') {
-        try {
-          localStream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: true
-          });
-          // Mark host as active
-          streamStore.setHostStream(currentChannelName, true);
-        } catch (e) {
-          console.error('Failed to get media stream:', e);
+      try {
+        localVideoTrack = await AgoraRTC.createCameraVideoTrack();
+        localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+      } catch (error: any) {
+        console.error('Camera/Mic access error:', error);
+        if (error.code === 'NOT_READABLE') {
+          throw new Error('Camera is in use by another app. Please close other apps using camera and try again.');
         }
+        throw error;
       }
     },
     setChannelProfile: () => Promise.resolve(),
-    setClientRole: (role: any) => {
-      currentRole = role === 1 ? 'host' : 'viewer';
-      return Promise.resolve();
+    setClientRole: async (role: any) => {
+      await agoraClient?.setClientRole(role === 1 ? 'host' : 'audience');
     },
     startPreview: () => Promise.resolve(),
     registerEventHandler: (handlers: any) => {
       eventHandlers = handlers;
-      setTimeout(() => {
-        handlers.onJoinChannelSuccess?.();
-        if (currentRole === 'viewer') {
-          // Check for host stream periodically
-          const checkHostStream = () => {
-            if (streamStore.getHostStream(currentChannelName)) {
-              handlers.onUserJoined?.(null, 12345);
-            } else {
-              setTimeout(checkHostStream, 1000);
-            }
-          };
-          setTimeout(checkHostStream, 500);
-        }
-      }, 1000);
     },
-    joinChannel: (token: string, channelName: string) => {
-      currentChannelName = channelName;
-      return Promise.resolve();
+    joinChannel: async (token: string, channelName: string, uid?: number, options?: any) => {
+      try {
+        const finalAppId = storedAppId || appId;
+        console.log('Joining channel:', { appId: finalAppId, channelName, token: token?.substring(0, 20), uid });
+        
+        if (!finalAppId || finalAppId === 'undefined' || finalAppId === 'null') {
+          throw new Error('App ID is not set. Cannot join channel.');
+        }
+        
+        await agoraClient?.join(finalAppId, channelName, token || null, uid || null);
+        if (localVideoTrack && localAudioTrack) {
+          await agoraClient?.publish([localVideoTrack, localAudioTrack]);
+        }
+        eventHandlers?.onJoinChannelSuccess?.();
+      } catch (error: any) {
+        console.error('Join channel error:', error);
+        
+        // Check if it's an invalid App ID error
+        if (error?.message?.includes('invalid vendor key') || error?.message?.includes('can not find appid')) {
+          const helpMessage = 'Invalid Agora App ID. Please:\n' +
+            '1. Go to https://console.agora.io/\n' +
+            '2. Get your App ID and Certificate\n' +
+            '3. Update backend/src/main/resources/application.properties\n' +
+            '4. Restart the backend server';
+          console.error('\n' + helpMessage);
+          eventHandlers?.onError?.(new Error(helpMessage));
+        } else {
+          eventHandlers?.onError?.(error);
+        }
+        throw error;
+      }
     },
     muteLocalAudioStream: async (mute: boolean) => {
-      if (localStream) {
-        const audioTracks = localStream.getAudioTracks();
-        audioTracks.forEach(track => {
-          track.enabled = !mute;
-        });
-      }
+      await localAudioTrack?.setEnabled(!mute);
     },
     switchCamera: () => Promise.resolve(),
-    leaveChannel: () => {
-      if (currentRole === 'host') {
-        streamStore.setHostStream(currentChannelName, false);
-      }
-      return Promise.resolve();
+    leaveChannel: async () => {
+      await agoraClient?.leave();
     },
-    release: () => {
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        localStream = null;
-      }
-      if (currentRole === 'host') {
-        streamStore.setHostStream(currentChannelName, false);
-      }
+    release: async () => {
+      localVideoTrack?.close();
+      localAudioTrack?.close();
+      localVideoTrack = null;
+      localAudioTrack = null;
+      remoteUsers.clear();
       eventHandlers = null;
-      return Promise.resolve();
     }
   };
 }
 
 export function RtcSurfaceView({ canvas, style }: { canvas: { uid: number }, style: any }) {
-  if (!isBrowser) {
-    return null;
-  }
+  if (!isBrowser) return null;
   
   const React = require('react');
-  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
   
   React.useEffect(() => {
-    if (!videoRef.current) return;
+    if (!containerRef.current) return;
     
-    if (canvas.uid === 0 && localStream && currentRole === 'host') {
-      // Host's own video
-      videoRef.current.srcObject = localStream;
-      videoRef.current.play().catch(e => console.error('Video play failed:', e));
-    } else if (canvas.uid !== 0 && currentRole === 'viewer') {
-      // Viewer - show host video simulation
-      const createHostVideoSimulation = () => {
-        const canvas2d = document.createElement('canvas');
-        canvas2d.width = 640;
-        canvas2d.height = 480;
-        const ctx = canvas2d.getContext('2d');
-        
-        let frame = 0;
-        const drawFrame = () => {
-          if (ctx && streamStore.getHostStream(currentChannelName)) {
-            // Create dynamic background
-            const gradient = ctx.createLinearGradient(0, 0, 640, 480);
-            gradient.addColorStop(0, `hsl(${(frame * 1.5) % 360}, 60%, 25%)`);
-            gradient.addColorStop(1, `hsl(${(frame * 1.5 + 120) % 360}, 60%, 15%)`);
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, 640, 480);
-            
-            // Add pulsing effect
-            const pulse = Math.sin(frame * 0.1) * 0.3 + 0.7;
-            ctx.globalAlpha = pulse;
-            
-            // Host indicator
-            ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 32px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('🎥 LIVE', 320, 180);
-            
-            ctx.font = 'bold 24px Arial';
-            ctx.fillText('', 320, 220);
-            
-            ctx.font = '18px Arial';
-            ctx.fillStyle = '#ff4444';
-            ctx.fillText('● STREAMING NOW', 320, 260);
-            
-            ctx.globalAlpha = 1;
-            frame++;
-          } else {
-            // No host stream
-            ctx.fillStyle = '#1a1a1a';
-            ctx.fillRect(0, 0, 640, 480);
-            ctx.fillStyle = '#666';
-            ctx.font = '20px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Waiting for host...', 320, 240);
-          }
-          requestAnimationFrame(drawFrame);
-        };
-        drawFrame();
-        
-        const stream = canvas2d.captureStream(30);
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(e => console.error('Video play failed:', e));
-        }
-      };
-      
-      createHostVideoSimulation();
+    if (canvas.uid === 0 && localVideoTrack) {
+      localVideoTrack.play(containerRef.current);
+    } else if (canvas.uid !== 0) {
+      const remoteUser = remoteUsers.get(canvas.uid);
+      if (remoteUser?.videoTrack) {
+        remoteUser.videoTrack.play(containerRef.current);
+      }
     }
-  }, [canvas.uid, localStream, currentRole]);
+    
+    return () => {
+      if (canvas.uid === 0) {
+        localVideoTrack?.stop();
+      } else {
+        const remoteUser = remoteUsers.get(canvas.uid);
+        remoteUser?.videoTrack?.stop();
+      }
+    };
+  }, [canvas.uid, localVideoTrack, remoteUsers]);
   
-  return React.createElement('video', {
-    ref: videoRef,
-    autoPlay: true,
-    muted: currentRole === 'host',
-    playsInline: true,
+  return React.createElement('div', {
+    ref: containerRef,
     style: {
       width: '100%',
       height: '100%',
-      objectFit: 'cover',
       backgroundColor: '#000',
       ...style
     }
