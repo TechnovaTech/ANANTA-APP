@@ -1,6 +1,7 @@
 import {
   createAgoraRtcEngine,
-  RtcEngineContext,
+  ChannelProfileType,
+  ClientRoleType,
   type IRtcEngine,
   RtcSurfaceView,
 } from 'react-native-agora';
@@ -8,13 +9,12 @@ import {
 export async function createAgoraEngine(appId: string): Promise<IRtcEngine | null> {
   try {
     const engine = createAgoraRtcEngine();
-    const context = new RtcEngineContext();
-    context.appId = appId;
-    engine.initialize(context);
+    engine.initialize({ appId });
     return engine;
-  } catch {
+  } catch (e) {
+    console.error('Agora engine creation failed:', e);
     return null;
   }
 }
 
-export { RtcSurfaceView };
+export { RtcSurfaceView, ChannelProfileType, ClientRoleType };

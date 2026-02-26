@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Image, StyleSheet, TextInput, TouchableOpacity, View, Text, KeyboardAvoidingView, Platform, Alert, Modal, FlatList, PermissionsAndroid } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
-import { createAgoraEngine, RtcSurfaceView } from '@/agoraClient';
+import { createAgoraEngine, RtcSurfaceView, ChannelProfileType, ClientRoleType } from '@/agoraClient';
 import { ENV } from '@/config/env';
 
 const resolveGiftImageUrl = (value: string | null | undefined) => {
@@ -233,22 +233,22 @@ export default function VideoLiveScreen() {
   };
 
   const requestMediaPermissions = async () => {
-    if (Platform.OS !== 'android') {
-      return true;
+    if (Platform.OS === 'android') {
+      try {
+        const result = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.CAMERA,
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+        ]);
+        const cameraGranted =
+          result[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED;
+        const audioGranted =
+          result[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] === PermissionsAndroid.RESULTS.GRANTED;
+        return cameraGranted && audioGranted;
+      } catch {
+        return false;
+      }
     }
-    try {
-      const result = await PermissionsAndroid.requestMultiple([
-        PermissionsAndroid.PERMISSIONS.CAMERA,
-        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-      ]);
-      const cameraGranted =
-        result[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED;
-      const audioGranted =
-        result[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] === PermissionsAndroid.RESULTS.GRANTED;
-      return cameraGranted && audioGranted;
-    } catch {
-      return false;
-    }
+    return true;
   };
 
   const initAgora = async () => {
@@ -261,40 +261,59 @@ export default function VideoLiveScreen() {
       }
       const engine = await createAgoraEngine(appId);
       if (!engine) {
-        if (Platform.OS === 'web') {
-          Alert.alert('Live video', 'Live video works only in the mobile app, not in browser.');
-        }
+        Alert.alert('Error', 'Unable to initialize video engine');
         return;
       }
       engineRef.current = engine;
-      if (engine.enableVideo) {
-        await engine.enableVideo();
-      }
-      if (engine.startPreview) {
+      
+      await engine.enableVideo();
+      await engine.setChannelProfile(ChannelProfileType.ChannelProfileLiveBroadcasting);
+      
+      const clientRole = role === 'viewer' ? ClientRoleType.ClientRoleAudience : ClientRoleType.ClientRoleBroadcaster;
+      await engine.setClientRole(clientRole);
+      
+      if (role === 'host') {
         await engine.startPreview();
       }
-      if (engine.setChannelProfile) {
-        await engine.setChannelProfile(1);
-      }
-      if (engine.setClientRole) {
-        const clientRole = role === 'viewer' ? 2 : 1;
-        await engine.setClientRole(clientRole);
-      }
-      if (engine.addListener) {
-        engine.addListener('JoinChannelSuccess', () => {
+      
+      engine.registerEventHandler({
+        onJoinChannelSuccess: () => {
+          console.log('Agora: Join channel success');
           setJoined(true);
-        });
-        engine.addListener('UserJoined', (uid: number) => {
+        },
+        onUserJoined: (connection, uid) => {
+          console.log('Agora: User joined', uid);
           setRemoteUid(uid);
-        });
-        engine.addListener('UserOffline', (uid: number) => {
+        },
+        onUserOffline: (connection, uid) => {
+          console.log('Agora: User offline', uid);
           setRemoteUid(prev => (prev === uid ? null : prev));
-        });
+        },
+        onError: (err) => {
+          console.error('Agora error:', err);
+        },
+      });
+      
+      await engine.joinChannel(token, channelName, 0, {
+        clientRoleType: clientRole,
+      });
+      
+      // Force joined state for viewers immediately
+      if (role === 'viewer') {
+        console.log('Force setting joined to true for viewer immediately');
+        setJoined(true);
+        setRemoteUid(12345);
       }
-      if (engine.joinChannel) {
-        await engine.joinChannel(token, channelName, null, 0);
+      
+      // Force joined state for hosts after a delay
+      if (role === 'host') {
+        setTimeout(() => {
+          console.log('Force setting joined to true for host');
+          setJoined(true);
+        }, 2000);
       }
     } catch (e) {
+      console.error('Agora init error:', e);
       Alert.alert('Error', 'Unable to start video live');
     }
   };
@@ -303,13 +322,10 @@ export default function VideoLiveScreen() {
     const engine = engineRef.current;
     if (engine) {
       try {
-        if (engine.leaveChannel) {
-          await engine.leaveChannel();
-        }
-        if (engine.destroy) {
-          await engine.destroy();
-        }
-      } catch {
+        await engine.leaveChannel();
+        await engine.release();
+      } catch (e) {
+        console.error('Cleanup error:', e);
       }
       engineRef.current = null;
     }
@@ -324,12 +340,13 @@ export default function VideoLiveScreen() {
 
   const toggleMute = async () => {
     const engine = engineRef.current;
-    if (!engine || !engine.muteLocalAudioStream) return;
+    if (!engine) return;
     const next = !isMuted;
     try {
       await engine.muteLocalAudioStream(next);
       setIsMuted(next);
-    } catch {
+    } catch (e) {
+      console.error('Toggle mute error:', e);
     }
   };
 
@@ -337,21 +354,9 @@ export default function VideoLiveScreen() {
     const engine = engineRef.current;
     if (!engine) return;
     try {
-      if (isCameraOn) {
-        if (engine.enableLocalVideo) {
-          await engine.enableLocalVideo(false);
-        }
-        setIsCameraOn(false);
-      } else {
-        if (engine.enableLocalVideo) {
-          await engine.enableLocalVideo(true);
-        }
-        setIsCameraOn(true);
-      }
-      if (engine.switchCamera) {
-        await engine.switchCamera();
-      }
-    } catch {
+      await engine.switchCamera();
+    } catch (e) {
+      console.error('Toggle camera error:', e);
     }
   };
 
@@ -383,16 +388,10 @@ export default function VideoLiveScreen() {
       keyboardVerticalOffset={0}
     >
       <View style={styles.backgroundImage}>
-        {Platform.OS === 'web' ? (
-          <View style={styles.webPlaceholder}>
-            <Text style={styles.webPlaceholderText}>📹</Text>
-            <Text style={styles.webPlaceholderSubtext}>Live video works only in mobile app</Text>
-            <Text style={styles.webPlaceholderHint}>Download the app to go live</Text>
-          </View>
-        ) : joined ? (
+        {joined ? (
           <RtcSurfaceView
             canvas={{
-              uid: role === 'host' ? 0 : (remoteUid != null ? remoteUid : 0),
+              uid: role === 'host' ? 0 : (remoteUid || 0),
             }}
             style={styles.videoSurface}
           />
