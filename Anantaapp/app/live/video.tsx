@@ -364,7 +364,7 @@ export default function VideoLiveScreen() {
       if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
       cleanupAgora();
     };
-  }, [appId, token, channelName]);
+  }, []);
 
   const loadSessionStats = async () => {
     if (!sessionId) return;
