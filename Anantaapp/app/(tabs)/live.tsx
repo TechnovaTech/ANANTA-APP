@@ -36,7 +36,7 @@ export default function LiveScreen() {
 
     try {
       setStarting(true);
-      const response = await fetch(`${ENV.API_BASE_URL}/api/app/live/start`, {
+      const response = await fetch(`${ENV.API_BASE_URL}/api/app/live/start?t=${Date.now()}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

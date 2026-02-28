@@ -1,5 +1,6 @@
 export const ENV = {
-  API_BASE_URL: 'http://localhost:3000',
+  API_BASE_URL: 'https://ecofuelglobal.com',
+  AGORA_APP_ID: '188a8077960b4ea08c2ee25b028c8f3a',
 };
 
 export const getApiUrl = (endpoint: string) => {

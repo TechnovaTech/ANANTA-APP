@@ -29,6 +29,7 @@ export async function createAgoraEngine(appId: string): Promise<any> {
   console.log('Received appId:', appId);
   console.log('appId type:', typeof appId);
   console.log('appId length:', appId?.length);
+  console.log('appId characters:', appId.split('').map(c => c.charCodeAt(0)));
   console.log('===========================');
 
   // Handle string "undefined" or "null"

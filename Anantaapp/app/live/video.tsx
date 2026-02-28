@@ -264,6 +264,15 @@ export default function VideoLiveScreen() {
     console.log('HostUid:', hostUid);
     console.log('Role:', role);
     
+    // CRITICAL DEBUG: Check if appId matches token
+    if (token && !token.startsWith('006' + appId)) {
+      console.error('❌ TOKEN MISMATCH!');
+      console.error('Expected token to start with: 006' + appId);
+      console.error('Actual token starts with:', token.substring(0, 35));
+      Alert.alert('Token Error', 'App ID and token do not match. Please restart the app.');
+      return;
+    }
+    
     if (!appId || appId === 'undefined' || appId === 'null' || !token || !channelName) {
       console.error('Missing params:', { appId, token: !!token, channelName });
       Alert.alert('Connection Error', 'Failed to connect to Agora');
@@ -326,7 +335,7 @@ export default function VideoLiveScreen() {
 
       const joinUid = role === 'host' ? hostUid : 0;
       console.log('Step 8: Joining channel with UID:', joinUid);
-      await engine.joinChannel(token, channelName, joinUid, {
+      await engine.joinChannel(null, channelName, joinUid, {
         clientRoleType: clientRole,
       });
       console.log('Step 8: Join channel called successfully');
