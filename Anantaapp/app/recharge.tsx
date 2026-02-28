@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getUserId } from '../utils/storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -49,35 +50,38 @@ export default function RechargeScreen() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 5;
-  const [rechargePlans, setRechargePlans] = useState<RechargePlan[]>([
-    { id: '1', name: 'Basic', price: 50, coins: 100 },
-    { id: '2', name: 'Silver', price: 100, coins: 250, popular: true },
-    { id: '3', name: 'Gold', price: 200, coins: 600 },
-    { id: '4', name: 'Platinum', price: 500, coins: 1500 },
-    { id: '5', name: 'Diamond', price: 1000, coins: 3500 },
-  ]);
+  const [rechargePlans, setRechargePlans] = useState<RechargePlan[]>([]);
 
-  const rechargeHistory: RechargeHistory[] = [
-    { id: '1', date: '2025-11-29', planName: 'Gold', amount: 200, status: 'Success', coinsAdded: 600 },
-    { id: '2', date: '2025-11-28', planName: 'Silver', amount: 100, status: 'Failed', coinsAdded: 0 },
-    { id: '3', date: '2025-11-27', planName: 'Basic', amount: 50, status: 'Success', coinsAdded: 100 },
-    { id: '4', date: '2025-11-26', planName: 'Platinum', amount: 500, status: 'Success', coinsAdded: 1500 },
-    { id: '5', date: '2025-11-25', planName: 'Silver', amount: 100, status: 'Success', coinsAdded: 250 },
-  ];
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.async = true;
+      document.body.appendChild(script);
+      return () => {
+        document.body.removeChild(script);
+      };
+    }
+  }, []);
+
+  const rechargeHistory: RechargeHistory[] = [];
 
   useEffect(() => {
     const fetchPlans = async () => {
       try {
         const response = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/plans`);
         if (!response.ok) {
+          console.error('Failed to fetch plans');
           return;
         }
         const data = await response.json();
-        const list: RechargePlan[] = data.plans || data || [];
+        console.log('Plans API response:', data);
+        const list: RechargePlan[] = data.plans || [];
         if (Array.isArray(list) && list.length > 0) {
           setRechargePlans(list);
         }
       } catch (e) {
+        console.error('Error fetching plans:', e);
       }
     };
     fetchPlans();
@@ -89,7 +93,126 @@ export default function RechargeScreen() {
 
   const handleProceedToPayment = () => {
     if (!selectedPlan) return;
-    setCurrentStep('payment');
+    handleCreateRazorpayOrder();
+  };
+
+  const handleCreateRazorpayOrder = async () => {
+    if (!selectedPlan) return;
+
+    const userId = await getUserId();
+
+    if (!userId) {
+      Alert.alert('Error', 'Please login to continue', [
+        { text: 'Login', onPress: () => router.push('/auth/login') }
+      ]);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/razorpay/create-order`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId,
+          planId: selectedPlan.id,
+        }),
+      });
+
+      if (!response.ok) {
+        Alert.alert('Error', 'Failed to create order');
+        setLoading(false);
+        return;
+      }
+
+      const orderData = await response.json();
+      if (Platform.OS === 'web') {
+        openRazorpay(orderData, userId);
+      } else {
+        Alert.alert('Info', 'Razorpay is only supported on web. Please use web version for payment.');
+        setLoading(false);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to create order');
+      setLoading(false);
+    }
+  };
+
+  const openRazorpay = (orderData: any, userId: string) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const options = {
+        key: orderData.key,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'Ananta App',
+        description: `Recharge ${selectedPlan?.coins} coins`,
+        order_id: orderData.orderId,
+        handler: async function (response: any) {
+          await verifyPayment(response, userId, orderData.planId, orderData.coins);
+        },
+        prefill: {
+          name: '',
+          email: '',
+          contact: ''
+        },
+        theme: {
+          color: isDark ? '#f7c14d' : '#127d96'
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        setLoading(false);
+        Alert.alert('Payment Failed', 'Your payment could not be processed.');
+      });
+      rzp.open();
+      setLoading(false);
+    } else {
+      Alert.alert('Error', 'Razorpay is only supported on web platform');
+      setLoading(false);
+    }
+  };
+
+  const verifyPayment = async (razorpayResponse: any, userId: string, planId: any, coins: number) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/razorpay/verify-payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          razorpay_order_id: razorpayResponse.razorpay_order_id,
+          razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+          razorpay_signature: razorpayResponse.razorpay_signature,
+          userId,
+          planId,
+        }),
+      });
+
+      if (!response.ok) {
+        setPaymentSuccess(false);
+        setCurrentStep('complete');
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setPaymentSuccess(true);
+        setCurrentStep('complete');
+      } else {
+        setPaymentSuccess(false);
+        setCurrentStep('complete');
+      }
+    } catch (error) {
+      setPaymentSuccess(false);
+      setCurrentStep('complete');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreateOrder = async () => {
@@ -111,10 +234,7 @@ export default function RechargeScreen() {
   const handleCompletePayment = async () => {
     if (!selectedPlan) return;
 
-    let userId: string | null = null;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      userId = window.localStorage.getItem('userId');
-    }
+    const userId = await getUserId();
 
     if (!userId) {
       Alert.alert('Error', 'User not identified. Please login again.');
@@ -154,7 +274,13 @@ export default function RechargeScreen() {
     <View style={styles.section}>
       <Text style={[styles.sectionTitle, { color: isDark ? 'white' : '#333' }]}>Choose Your Plan</Text>
       
-      {rechargePlans.map((plan) => (
+      {rechargePlans.length === 0 ? (
+        <View style={{ padding: 20, alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={isDark ? '#f7c14d' : '#127d96'} />
+          <Text style={[{ marginTop: 10, color: isDark ? '#ccc' : '#666' }]}>Loading plans...</Text>
+        </View>
+      ) : (
+        rechargePlans.map((plan) => (
         <TouchableOpacity
           key={plan.id}
           style={[
@@ -202,16 +328,27 @@ export default function RechargeScreen() {
             </View>
           </View>
         </TouchableOpacity>
-      ))}
+      ))
+      )}
       
       {selectedPlan && (
-        <TouchableOpacity style={styles.proceedButtonContainer} onPress={handleProceedToPayment}>
+        <TouchableOpacity 
+          style={styles.proceedButtonContainer} 
+          onPress={handleProceedToPayment}
+          disabled={loading}
+        >
           <LinearGradient
-            colors={isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7']}
+            colors={loading ? ['#ccc', '#999'] : (isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7'])}
             style={styles.proceedButton}
           >
-            <Text style={[styles.proceedButtonText, { color: isDark ? 'black' : 'white' }]}>Proceed to Payment</Text>
-            <Ionicons name="arrow-forward" size={20} color={isDark ? 'black' : 'white'} />
+            {loading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Text style={[styles.proceedButtonText, { color: isDark ? 'black' : 'white' }]}>Proceed to Payment</Text>
+                <Ionicons name="arrow-forward" size={20} color={isDark ? 'black' : 'white'} />
+              </>
+            )}
           </LinearGradient>
         </TouchableOpacity>
       )}
@@ -319,25 +456,25 @@ export default function RechargeScreen() {
           />
         </View>
         <Text style={[styles.successTitle, { color: isDark ? 'white' : '#333' }]}>
-          {paymentSuccess ? 'Request Submitted!' : 'Payment Failed'}
+          {paymentSuccess ? 'Payment Successful!' : 'Payment Failed'}
         </Text>
         
         {paymentSuccess && (
           <Text style={[styles.coinsAdded, { color: '#4CAF50' }]}>
-            {selectedPlan?.coins} coins request sent for approval
+            {selectedPlan?.coins} coins added to your wallet
           </Text>
         )}
         
         <TouchableOpacity 
           style={styles.proceedButtonContainer}
-          onPress={() => paymentSuccess ? router.back() : setCurrentStep('order')}
+          onPress={() => paymentSuccess ? router.back() : setCurrentStep('plans')}
         >
           <LinearGradient
             colors={isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7']}
             style={styles.proceedButton}
           >
             <Text style={[styles.proceedButtonText, { color: isDark ? 'black' : 'white' }]}>
-              {paymentSuccess ? 'Back to Wallet' : 'Retry Payment'}
+              {paymentSuccess ? 'Back to Wallet' : 'Try Again'}
             </Text>
             <Ionicons name={paymentSuccess ? "wallet" : "refresh"} size={20} color={isDark ? 'black' : 'white'} />
           </LinearGradient>
@@ -349,8 +486,6 @@ export default function RechargeScreen() {
   const renderContent = () => {
     switch (currentStep) {
       case 'plans': return renderPlansSection();
-      case 'payment': return renderPaymentSection();
-      case 'order': return renderOrderSection();
       case 'complete': return renderCompleteSection();
       default: return renderPlansSection();
     }

@@ -21,6 +21,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
+import com.razorpay.RazorpayClient;
+import com.razorpay.Order;
+import com.razorpay.Utils;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -234,6 +238,102 @@ public class AppWalletController {
         Map<String, Object> response = new HashMap<>();
         response.put("plans", plans);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/razorpay/create-order")
+    public ResponseEntity<?> createRazorpayOrder(@RequestBody Map<String, Object> payload) {
+        try {
+            Object userIdObj = payload.get("userId");
+            Object planIdObj = payload.get("planId");
+            if (userIdObj == null || planIdObj == null) {
+                return ResponseEntity.badRequest().body(new MessageResponse("userId and planId are required"));
+            }
+            String userId = userIdObj.toString();
+            Long planId = Long.parseLong(planIdObj.toString());
+
+            RechargePlan plan = rechargePlanRepository.findById(planId)
+                    .orElseThrow(() -> new RuntimeException("Plan not found"));
+
+            RazorpayClient razorpay = new RazorpayClient("rzp_test_RlUAkt1HzIvV4j", "sJTXltlLKxoz1f0tjwf8hdTM");
+            
+            JSONObject orderRequest = new JSONObject();
+            orderRequest.put("amount", (int)(plan.getPrice() * 100));
+            orderRequest.put("currency", "INR");
+            orderRequest.put("receipt", "rcpt_" + System.currentTimeMillis());
+            
+            Order order = razorpay.orders.create(orderRequest);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("orderId", order.get("id"));
+            response.put("amount", order.get("amount"));
+            response.put("currency", order.get("currency"));
+            response.put("key", "rzp_test_RlUAkt1HzIvV4j");
+            response.put("planId", planId);
+            response.put("coins", plan.getCoins());
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error creating order: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/razorpay/verify-payment")
+    public ResponseEntity<?> verifyRazorpayPayment(@RequestBody Map<String, Object> payload) {
+        try {
+            String razorpayOrderId = payload.get("razorpay_order_id").toString();
+            String razorpayPaymentId = payload.get("razorpay_payment_id").toString();
+            String razorpaySignature = payload.get("razorpay_signature").toString();
+            String userId = payload.get("userId").toString();
+            Long planId = Long.parseLong(payload.get("planId").toString());
+
+            JSONObject options = new JSONObject();
+            options.put("razorpay_order_id", razorpayOrderId);
+            options.put("razorpay_payment_id", razorpayPaymentId);
+            options.put("razorpay_signature", razorpaySignature);
+
+            boolean isValid = Utils.verifyPaymentSignature(options, "sJTXltlLKxoz1f0tjwf8hdTM");
+
+            if (isValid) {
+                RechargePlan plan = rechargePlanRepository.findById(planId)
+                        .orElseThrow(() -> new RuntimeException("Plan not found"));
+
+                Wallet wallet = walletRepository.findByUserId(userId)
+                        .orElseGet(() -> {
+                            Wallet w = new Wallet();
+                            w.setUserId(userId);
+                            return walletRepository.save(w);
+                        });
+
+                double currentBalance = wallet.getBalance() != null ? wallet.getBalance() : 0.0;
+                wallet.setBalance(currentBalance + plan.getCoins());
+                walletRepository.save(wallet);
+
+                WalletTransaction tx = new WalletTransaction();
+                tx.setUserId(userId);
+                tx.setAmount(plan.getCoins().doubleValue());
+                tx.setCredit(true);
+                tx.setType("RECHARGE");
+                tx.setNote("Razorpay recharge - " + plan.getName());
+                walletTransactionRepository.save(tx);
+
+                DailyRecharge recharge = new DailyRecharge();
+                recharge.setUserId(userId);
+                recharge.setAmount(plan.getPrice());
+                recharge.setCoins(plan.getCoins());
+                recharge.setPlanName(plan.getName());
+                recharge.setStatus(DailyRecharge.RechargeStatus.APPROVED);
+                dailyRechargeRepository.save(recharge);
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", true);
+                response.put("balance", wallet.getBalance());
+                response.put("coinsAdded", plan.getCoins());
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.badRequest().body(new MessageResponse("Invalid payment signature"));
+            }
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Error verifying payment: " + e.getMessage()));
+        }
     }
 
     @PostMapping("/topup")
