@@ -70,8 +70,10 @@ export default function VideoLiveScreen() {
   const [messageText, setMessageText] = useState('');
   const animatedValues = useRef<{ [key: number]: Animated.Value }>({});
   const [remoteUid, setRemoteUid] = useState<number | null>(null);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const messagesIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentUsername = (params.username as string) || 'User';
   const currentUserProfileImage = (params.profileImage as string) || '';
 
@@ -448,9 +450,13 @@ export default function VideoLiveScreen() {
     loadMessages();
     statsIntervalRef.current = setInterval(loadSessionStats, 5000);
     messagesIntervalRef.current = setInterval(loadMessages, 2000);
+    timerIntervalRef.current = setInterval(() => {
+      setElapsedTime(prev => prev + 1);
+    }, 1000);
     return () => {
       if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
       if (messagesIntervalRef.current) clearInterval(messagesIntervalRef.current);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
       cleanupAgora();
     };
   }, []);
@@ -648,6 +654,10 @@ export default function VideoLiveScreen() {
           <View style={styles.statItem}>
             <ThemedText style={styles.statIcon}>💛</ThemedText>
             <ThemedText style={styles.statText}>{likes.toLocaleString()}</ThemedText>
+          </View>
+          <View style={styles.statItem}>
+            <ThemedText style={styles.statIcon}>⏱</ThemedText>
+            <ThemedText style={styles.statText}>{Math.floor(elapsedTime / 60)}:{String(elapsedTime % 60).padStart(2, '0')}</ThemedText>
           </View>
           {hostCountry && (
             <View style={styles.statItem}>

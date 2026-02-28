@@ -6,53 +6,66 @@ import { Image, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, Text
 import { useTheme } from '../../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { createAgoraEngine } from '@/agoraClient';
+import { createAgoraEngine, ChannelProfileType, ClientRoleType } from '@/agoraClient';
 
 const { width, height } = Dimensions.get('window');
 import { ENV } from '@/config/env';
 
+const resolveProfileImageUrl = (value: string | null | undefined) => {
+  if (!value) return '';
+  if (value.startsWith('blob:')) return '';
+  if (value.startsWith('http') || value.startsWith('data:')) return value;
+  if (value.startsWith('/uploads/')) return `${ENV.API_BASE_URL}${value}`;
+  if (value.length > 100) return `data:image/jpeg;base64,${value}`;
+  return value;
+};
 
 export default function AudioLiveScreen() {
   const { isDark } = useTheme();
   const params = useLocalSearchParams();
-  const title = (params.title as string) || 'Morning Meditation';
-  const user = (params.user as string) || 'Sarah Wilson';
-  const location = (params.location as string) || 'India';
-  const listeners = (params.listeners as string) || '1.2K';
+  const title = (params.title as string) || 'Audio live session';
+  const hostUsername = (params.hostUsername as string) || (params.user as string) || 'User';
+  const hostProfileImage = (params.hostProfileImage as string) || '';
+  const hostUserId = (params.hostUserId as string) || '';
+  const hostCountry = (params.hostCountry as string) || '';
   const sessionId = params.sessionId as string | undefined;
   const channelName = params.channelName as string | undefined;
   const token = params.token as string | undefined;
-  const appId = params.appId as string | undefined;
+  const appId = String(params.appId || '').trim();
   const userId = params.userId as string | undefined;
+  const hostUid = params.hostUid ? Number(params.hostUid) : 0;
+  const role = (params.role as string) || 'host';
+  const currentUsername = (params.username as string) || 'User';
+  const currentUserProfileImage = (params.profileImage as string) || '';
+  const resolvedHostProfileImage = resolveProfileImageUrl(hostProfileImage);
   
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(() => {
+    const value = params.isFollowing as string | undefined;
+    if (value === undefined) return false;
+    if (typeof value === 'string') {
+      return value === 'true' || value === '1';
+    }
+    return false;
+  });
   const [isMuted, setIsMuted] = useState(false);
-  const [liveComments, setLiveComments] = useState<any[]>([
-    { id: 1, user: user, message: 'Welcome to my audio session! 🎵', avatar: 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', isHost: true },
-    { id: 2, user: 'Alex', message: 'This is so relaxing!', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50', isHost: false },
-    { id: 3, user: user, message: 'Thanks for joining! How are you feeling today?', avatar: 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500', isHost: true }
-  ]);
+  const [likes, setLikes] = useState(0);
+  const [viewerCount, setViewerCount] = useState(0);
+  const [liveComments, setLiveComments] = useState<any[]>([]);
   const [messageText, setMessageText] = useState('');
   const [floatingHearts, setFloatingHearts] = useState<any[]>([]);
-  const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+  const [joined, setJoined] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const engineRef = useRef<any | null>(null);
+  const statsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const messagesIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const waveAnim1 = useRef(new Animated.Value(0)).current;
   const waveAnim2 = useRef(new Animated.Value(0)).current;
   const waveAnim3 = useRef(new Animated.Value(0)).current;
-
-  const hostMessages = [
-    'Great to have you here! 🎶',
-    'What do you think of this vibe?',
-    'Any song requests?',
-    'Thanks for listening! ❤️',
-    'How\'s your day going?',
-    'Love this energy!',
-    'You have great taste in music!'
-  ];
 
   useEffect(() => {
     // Pulse animation for profile image
@@ -77,8 +90,31 @@ export default function AudioLiveScreen() {
     ).start();
   }, []);
 
-  const handleFollow = () => {
-    setIsFollowing(!isFollowing);
+  const handleFollow = async () => {
+    if (role !== 'viewer') return;
+    if (!userId || !hostUserId) {
+      setIsFollowing(prev => !prev);
+      return;
+    }
+    try {
+      const response = await fetch(`${ENV.API_BASE_URL}/api/app/follow/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ followerId: userId, followeeId: hostUserId }),
+      });
+      if (!response.ok) {
+        setIsFollowing(prev => !prev);
+        return;
+      }
+      const data = await response.json();
+      if (typeof data.isFollowing === 'boolean') {
+        setIsFollowing(data.isFollowing);
+      } else {
+        setIsFollowing(prev => !prev);
+      }
+    } catch {
+      setIsFollowing(prev => !prev);
+    }
   };
 
   const addFloatingHeart = () => {
@@ -94,59 +130,85 @@ export default function AudioLiveScreen() {
     }, 3000);
   };
 
-  const sendMessage = () => {
-    if (messageText.trim()) {
-      const newComment = {
-        id: Date.now(),
-        user: 'You',
-        message: messageText.trim(),
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50',
-        isHost: false
-      };
-      setLiveComments(prev => {
-        const updated = [...prev, newComment];
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-        return updated;
+  const sendMessage = async () => {
+    if (!messageText.trim() || !sessionId) return;
+    try {
+      await fetch(`${ENV.API_BASE_URL}/api/app/live/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          username: currentUsername,
+          message: messageText.trim(),
+          avatar: resolveProfileImageUrl(currentUserProfileImage) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50'
+        }),
       });
       setMessageText('');
       Keyboard.dismiss();
-      
-      // Host responds after 2-3 seconds
-      setTimeout(() => {
-        const randomHostMessage = hostMessages[Math.floor(Math.random() * hostMessages.length)];
-        const hostResponse = {
-          id: Date.now() + 1,
-          user: user,
-          message: randomHostMessage,
-          avatar: 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
-          isHost: true
-        };
-        setLiveComments(prev => {
-          const updated = [...prev, hostResponse];
-          setTimeout(() => {
-            scrollViewRef.current?.scrollToEnd({ animated: true });
-          }, 100);
-          return updated;
-        });
-      }, Math.random() * 2000 + 2000);
+    } catch (e) {
+      console.error('Send message error:', e);
     }
   };
 
-  useEffect(() => {
-    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
-      setKeyboardVisible(true);
-    });
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      setKeyboardVisible(false);
-    });
+  const handleLike = async () => {
+    setLikes(prev => prev + 1);
+    addFloatingHeart();
+    if (sessionId) {
+      try {
+        await fetch(`${ENV.API_BASE_URL}/api/app/live/like`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        });
+      } catch (e) {
+        console.error('Like error:', e);
+      }
+    }
+  };
 
-    return () => {
-      keyboardDidShowListener.remove();
-      keyboardDidHideListener.remove();
-    };
-  }, []);
+  const loadSessionStats = async () => {
+    if (!sessionId) return;
+    try {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/live/stats/${sessionId}`);
+      if (res.status === 404) {
+        if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
+        if (messagesIntervalRef.current) clearInterval(messagesIntervalRef.current);
+        if (role === 'viewer') {
+          await cleanupAgora();
+          Alert.alert('Live Ended', 'The host has ended this live session.', [
+            { text: 'OK', onPress: () => router.back() }
+          ]);
+        }
+        return;
+      }
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.viewerCount === 'number') setViewerCount(data.viewerCount);
+        if (typeof data.likes === 'number') setLikes(data.likes);
+        if (role === 'viewer' && data.status === 'ended') {
+          if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
+          if (messagesIntervalRef.current) clearInterval(messagesIntervalRef.current);
+          await cleanupAgora();
+          Alert.alert('Live Ended', 'The host has ended this live session.', [
+            { text: 'OK', onPress: () => router.back() }
+          ]);
+        }
+      }
+    } catch { }
+  };
+
+  const loadMessages = async () => {
+    if (!sessionId) return;
+    try {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/live/messages/${sessionId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setLiveComments(data.slice(-5));
+        }
+      }
+    } catch { }
+  };
 
   const requestAudioPermission = async () => {
     if (Platform.OS !== 'android') {
@@ -171,25 +233,26 @@ export default function AudioLiveScreen() {
         return;
       }
       const engine = await createAgoraEngine(appId);
-      if (!engine) {
-        if (Platform.OS === 'web') {
-          Alert.alert('Live audio', 'Live audio works only in the mobile app, not in browser.');
-        }
-        return;
-      }
       engineRef.current = engine;
-      if (engine.enableAudio) {
-        await engine.enableAudio();
-      }
-      if (engine.setChannelProfile) {
-        await engine.setChannelProfile(1);
-      }
-      if (engine.setClientRole) {
-        await engine.setClientRole(1);
-      }
-      if (engine.joinChannel) {
-        await engine.joinChannel(token, channelName, null, 0);
-      }
+      await engine.setChannelProfile(ChannelProfileType.ChannelProfileLiveBroadcasting);
+      const clientRole = role === 'viewer' ? ClientRoleType.ClientRoleAudience : ClientRoleType.ClientRoleBroadcaster;
+      await engine.setClientRole(clientRole);
+      engine.registerEventHandler({
+        onJoinChannelSuccess: () => setJoined(true),
+        onUserOffline: (_connection: any, uid: number) => {
+          const offlineUid = typeof uid === 'number' ? uid : _connection;
+          if (role === 'viewer' && offlineUid === hostUid) {
+            if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
+            cleanupAgora().then(() => {
+              Alert.alert('Live Ended', 'The host has left the session.', [
+                { text: 'OK', onPress: () => router.back() }
+              ]);
+            });
+          }
+        },
+      });
+      const joinUid = role === 'host' ? hostUid : 0;
+      await engine.joinChannel(null, channelName, joinUid, { clientRoleType: clientRole });
     } catch (e) {
       Alert.alert('Error', 'Unable to start audio live');
     }
@@ -202,8 +265,8 @@ export default function AudioLiveScreen() {
         if (engine.leaveChannel) {
           await engine.leaveChannel();
         }
-        if (engine.destroy) {
-          await engine.destroy();
+        if (engine.release) {
+          await engine.release();
         }
       } catch {
       }
@@ -213,37 +276,46 @@ export default function AudioLiveScreen() {
 
   useEffect(() => {
     initAgora();
+    loadSessionStats();
+    loadMessages();
+    statsIntervalRef.current = setInterval(loadSessionStats, 5000);
+    messagesIntervalRef.current = setInterval(loadMessages, 2000);
+    timerIntervalRef.current = setInterval(() => {
+      setElapsedTime(prev => prev + 1);
+    }, 1000);
     return () => {
+      if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
+      if (messagesIntervalRef.current) clearInterval(messagesIntervalRef.current);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
       cleanupAgora();
     };
   }, [appId, token, channelName]);
 
   const toggleMute = async () => {
     const engine = engineRef.current;
-    if (!engine || !engine.muteLocalAudioStream) {
-      setIsMuted(prev => !prev);
-      return;
-    }
+    if (!engine) return;
     const next = !isMuted;
     try {
       await engine.muteLocalAudioStream(next);
       setIsMuted(next);
-    } catch {
+    } catch (e) {
+      console.error('Toggle mute error:', e);
     }
   };
 
   const endLive = async () => {
     try {
-      if (sessionId && userId) {
+      if (role === 'host' && sessionId && userId) {
         await fetch(`${ENV.API_BASE_URL}/api/app/live/end`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            sessionId,
-            userId,
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, userId }),
+        });
+      } else if (role === 'viewer' && sessionId) {
+        await fetch(`${ENV.API_BASE_URL}/api/app/live/leave`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
         });
       }
     } catch {
@@ -286,7 +358,7 @@ export default function AudioLiveScreen() {
         
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>{title}</Text>
-          <Text style={styles.headerSubtitle}>@{user} • {location}</Text>
+          <Text style={styles.headerSubtitle}>@{hostUsername} • {hostCountry}</Text>
         </View>
         
         <TouchableOpacity 
@@ -303,15 +375,15 @@ export default function AudioLiveScreen() {
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
           <Ionicons name="headset" size={16} color="white" />
-          <Text style={styles.statText}>{listeners} listening</Text>
+          <Text style={styles.statText}>{viewerCount} listening</Text>
         </View>
         <View style={styles.statItem}>
           <Ionicons name="heart" size={16} color="#ff4444" />
-          <Text style={styles.statText}>2.5K</Text>
+          <Text style={styles.statText}>{likes}</Text>
         </View>
         <View style={styles.statItem}>
           <Ionicons name="time" size={16} color="white" />
-          <Text style={styles.statText}>12:34</Text>
+          <Text style={styles.statText}>{Math.floor(elapsedTime / 60)}:{String(elapsedTime % 60).padStart(2, '0')}</Text>
         </View>
       </View>
 
@@ -324,10 +396,16 @@ export default function AudioLiveScreen() {
         
         {/* Profile Image */}
         <Animated.View style={[styles.profileContainer, { transform: [{ scale: pulseAnim }] }]}>
-          <Image 
-            source={require('../../assets/images/audio image.webp')}
-            style={styles.profileImage}
-          />
+          {resolvedHostProfileImage ? (
+            <Image 
+              source={{ uri: resolvedHostProfileImage }}
+              style={styles.profileImage}
+            />
+          ) : (
+            <View style={[styles.profileImage, { backgroundColor: '#127d96', justifyContent: 'center', alignItems: 'center' }]}>
+              <Ionicons name="person" size={60} color="white" />
+            </View>
+          )}
           <View style={styles.liveIndicator}>
             <Text style={styles.liveText}>LIVE</Text>
           </View>
@@ -342,23 +420,11 @@ export default function AudioLiveScreen() {
         contentContainerStyle={styles.commentsContent}
       >
         {liveComments.map((comment) => (
-          <View key={comment.id} style={[
-            styles.commentItem,
-            comment.isHost ? styles.hostComment : styles.userComment
-          ]}>
+          <View key={comment.id} style={styles.commentItem}>
             <Image source={{ uri: comment.avatar }} style={styles.commentAvatar} />
-            <View style={[
-              styles.commentBubble,
-              comment.isHost ? styles.hostBubble : styles.userBubble
-            ]}>
-              <Text style={[
-                styles.commentUser,
-                comment.isHost ? styles.hostUserText : styles.userUserText
-              ]}>@{comment.user}</Text>
-              <Text style={[
-                styles.commentText,
-                comment.isHost ? styles.hostCommentText : styles.userCommentText
-              ]}>{comment.message}</Text>
+            <View style={styles.commentBubble}>
+              <Text style={styles.commentUser}>@{comment.user}</Text>
+              <Text style={styles.commentText}>{comment.message}</Text>
             </View>
           </View>
         ))}
@@ -414,7 +480,7 @@ export default function AudioLiveScreen() {
             <Ionicons name="stop-circle" size={20} color="#ff4444" />
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.actionButton} onPress={addFloatingHeart}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
             <Ionicons name="heart" size={20} color="#ff4444" />
           </TouchableOpacity>
         </View>
@@ -564,13 +630,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     alignItems: 'flex-start',
   },
-  hostComment: {
-    justifyContent: 'flex-start',
-  },
-  userComment: {
-    justifyContent: 'flex-end',
-    flexDirection: 'row-reverse',
-  },
   commentAvatar: {
     width: 28,
     height: 28,
@@ -581,35 +640,19 @@ const styles = StyleSheet.create({
     maxWidth: '70%',
     padding: 12,
     borderRadius: 16,
-  },
-  hostBubble: {
     backgroundColor: 'rgba(255,255,255,0.9)',
     borderBottomLeftRadius: 4,
-  },
-  userBubble: {
-    backgroundColor: 'rgba(18,125,150,0.9)',
-    borderBottomRightRadius: 4,
   },
   commentUser: {
     fontSize: 12,
     fontWeight: 'bold',
     marginBottom: 4,
-  },
-  hostUserText: {
     color: '#127d96',
-  },
-  userUserText: {
-    color: 'rgba(255,255,255,0.9)',
   },
   commentText: {
     fontSize: 14,
     lineHeight: 18,
-  },
-  hostCommentText: {
     color: '#333',
-  },
-  userCommentText: {
-    color: 'white',
   },
   floatingHeartsContainer: {
     position: 'absolute',
