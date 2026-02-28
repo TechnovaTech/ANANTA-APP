@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @CrossOrigin(
@@ -42,6 +43,8 @@ public class AppLiveController {
 
     @Autowired
     private FollowRepository followRepository;
+
+    private static final Map<String, List<Map<String, Object>>> sessionMessages = new ConcurrentHashMap<>();
 
     @PostMapping("/start")
     public ResponseEntity<?> startLive(@RequestBody Map<String, Object> payload) {
@@ -313,5 +316,43 @@ public class AppLiveController {
 
     private String asString(Object value) {
         return value == null ? null : value.toString();
+    }
+
+    @PostMapping("/message")
+    public ResponseEntity<?> sendMessage(@RequestBody Map<String, Object> payload) {
+        String sessionId = asString(payload.get("sessionId"));
+        String username = asString(payload.get("username"));
+        String message = asString(payload.get("message"));
+        String avatar = asString(payload.get("avatar"));
+
+        if (!StringUtils.hasText(sessionId) || !StringUtils.hasText(message)) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "sessionId and message are required"));
+        }
+
+        Map<String, Object> msg = new HashMap<>();
+        msg.put("id", System.currentTimeMillis());
+        msg.put("user", username != null ? username : "User");
+        msg.put("message", message);
+        msg.put("avatar", avatar != null ? avatar : "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50");
+        msg.put("timestamp", LocalDateTime.now());
+
+        sessionMessages.computeIfAbsent(sessionId, k -> new ArrayList<>()).add(msg);
+
+        List<Map<String, Object>> messages = sessionMessages.get(sessionId);
+        if (messages.size() > 50) {
+            messages.remove(0);
+        }
+
+        return ResponseEntity.ok(Collections.singletonMap("success", true));
+    }
+
+    @GetMapping("/messages/{sessionId}")
+    public ResponseEntity<?> getMessages(@PathVariable String sessionId) {
+        if (!StringUtils.hasText(sessionId)) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "sessionId is required"));
+        }
+
+        List<Map<String, Object>> messages = sessionMessages.getOrDefault(sessionId, new ArrayList<>());
+        return ResponseEntity.ok(messages);
     }
 }

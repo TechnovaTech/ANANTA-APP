@@ -16,9 +16,6 @@ export default function LiveScreen() {
   const { isDark } = useTheme();
   const [selectedType, setSelectedType] = useState<'video' | 'audio'>('video');
   const [starting, setStarting] = useState(false);
-  const [liveSessions, setLiveSessions] = useState<any[]>([]);
-  const [loadingSessions, setLoadingSessions] = useState(false);
-  const [followedSessionKeys, setFollowedSessionKeys] = useState<string[]>([]);
 
   const handleStartLive = async () => {
     let userId: string | null = null;
@@ -56,6 +53,27 @@ export default function LiveScreen() {
       const data = await response.json();
       console.log('Start live response:', data);
 
+      // Get current user profile info
+      let username = data.hostUsername || '';
+      let profileImage = data.hostProfileImage || '';
+      
+      console.log('Initial username:', username, 'profileImage:', profileImage);
+      
+      // Always fetch profile to ensure we have username and profileImage
+      try {
+        const profileRes = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${userId}`);
+        console.log('Profile fetch status:', profileRes.status);
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          console.log('Profile data:', profileData);
+          username = profileData.user?.username || username || 'User';
+          profileImage = profileData.user?.profileImage || profileImage || '';
+          console.log('Updated username:', username, 'profileImage:', profileImage);
+        }
+      } catch (e) {
+        console.error('Profile fetch error:', e);
+      }
+
       const params = {
         sessionId: String(data.sessionId),
         channelName: String(data.channelName),
@@ -67,9 +85,11 @@ export default function LiveScreen() {
         role: 'host',
         hostUserId: String(data.hostUserId || userId),
         hostUid: String(data.hostUid || '0'),
-        hostUsername: String(data.hostUsername || ''),
+        hostUsername: String(username),
         hostCountry: String(data.hostCountry || ''),
-        hostProfileImage: String(data.hostProfileImage || ''),
+        hostProfileImage: String(profileImage),
+        username: String(username),
+        profileImage: String(profileImage),
       };
 
       console.log('Navigating with params:', params);
@@ -84,225 +104,6 @@ export default function LiveScreen() {
     } finally {
       setStarting(false);
     }
-  };
-
-  const fetchLiveSessions = async () => {
-    try {
-      setLoadingSessions(true);
-      const response = await fetch(`${ENV.API_BASE_URL}/api/app/live/list`);
-      if (!response.ok) {
-        return;
-      }
-      const data = await response.json();
-      const sessions = Array.isArray(data.sessions) ? data.sessions : [];
-      const videoSessions = sessions.filter((s: any) => s.type === 'VIDEO');
-      setLiveSessions(videoSessions);
-    } catch {
-    } finally {
-      setLoadingSessions(false);
-    }
-  };
-
-  const handleCardFollow = async (session: any) => {
-    const followKey = session.sessionId || session.id;
-    if (!followKey) {
-      return;
-    }
-    const isFollowing = followedSessionKeys.includes(followKey);
-    setFollowedSessionKeys(prev =>
-      isFollowing ? prev.filter(key => key !== followKey) : [...prev, followKey]
-    );
-    let userId: string | null = null;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      userId = window.localStorage.getItem('userId');
-    } else {
-      try {
-        userId = await SecureStore.getItemAsync('userId');
-      } catch { }
-    }
-    if (!userId) {
-      return;
-    }
-    if (!session.hostUserId) {
-      return;
-    }
-    try {
-      await fetch(`${ENV.API_BASE_URL}/api/app/follow/toggle`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          followerId: userId,
-          followeeId: session.hostUserId,
-        }),
-      });
-    } catch {
-    }
-  };
-
-  useEffect(() => {
-    fetchLiveSessions();
-    const interval = setInterval(fetchLiveSessions, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleJoinLive = async (session: any) => {
-    try {
-      let userId: string | null = null;
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        userId = window.localStorage.getItem('userId');
-      } else {
-        try {
-          userId = await SecureStore.getItemAsync('userId');
-        } catch { }
-      }
-      if (!userId) {
-        Alert.alert('Error', 'Please login first to join live streaming');
-        return;
-      }
-
-      const response = await fetch(`${ENV.API_BASE_URL}/api/app/live/join`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sessionId: session.sessionId,
-          userId,
-        }),
-      });
-
-      if (!response.ok) {
-        Alert.alert('Error', 'Unable to join live session');
-        return;
-      }
-
-      const data = await response.json();
-      console.log('Join live response:', data);
-
-      const params = {
-        sessionId: String(data.sessionId),
-        channelName: String(data.channelName),
-        token: String(data.token),
-        appId: String(data.appId),
-        type: String(data.type),
-        title: String(data.title),
-        userId: String(userId),
-        role: 'viewer',
-        hostUserId: String(data.hostUserId || ''),
-        hostUid: String(data.hostUid || '0'),
-        hostUsername: String(data.hostUsername || ''),
-        hostCountry: String(data.hostCountry || ''),
-        hostProfileImage: String(data.hostProfileImage || ''),
-        isFollowing: String(data.isFollowing || false),
-      };
-
-      console.log('Navigating with params:', params);
-
-      router.push({ pathname: '/live/video', params });
-    } catch {
-      Alert.alert('Error', 'Something went wrong while joining live');
-    }
-  };
-
-  const renderLiveCards = () => {
-    if (loadingSessions) {
-      return (
-        <View style={styles.sessionsLoading}>
-          <ActivityIndicator color={isDark ? '#f7c14d' : Colors.light.primary} />
-        </View>
-      );
-    }
-
-    if (!liveSessions.length) {
-      return (
-        <View style={styles.sessionsEmpty}>
-          <ThemedText style={{ color: isDark ? 'white' : '#555' }}>
-            No video live sessions right now.
-          </ThemedText>
-        </View>
-      );
-    }
-
-    const sorted = [...liveSessions].sort((a, b) => (b.viewerCount || 0) - (a.viewerCount || 0));
-    const main = sorted[0];
-    const others = sorted.slice(1);
-
-    const resolveProfileImageSource = (value: string | null | undefined) => {
-      if (!value) return null;
-      if (value.startsWith('blob:')) return null;
-      if (value.startsWith('http') || value.startsWith('data:')) return { uri: value };
-      if (value.startsWith('/uploads/')) return { uri: `${ENV.API_BASE_URL}${value}` };
-      if (value.length > 100) return { uri: `data:image/jpeg;base64,${value}` };
-      return { uri: value };
-    };
-
-    const renderCard = (session: any, large: boolean) => {
-      const viewers = session.viewerCount || 0;
-      const username = session.username || session.hostUserId || 'User';
-      const country = session.country || '';
-      const hashtag = session.title || '';
-      const imageSource = resolveProfileImageSource(session.profileImage);
-      const followKey = session.sessionId || session.id;
-      const isFollowing = followKey ? followedSessionKeys.includes(followKey) : false;
-      return (
-        <TouchableOpacity
-          key={session.sessionId}
-          style={large ? styles.mainCard : styles.smallCard}
-          onPress={() => handleJoinLive(session)}
-        >
-          <View style={styles.cardImageWrapper}>
-            {imageSource ? (
-              <Image
-                source={imageSource}
-                style={large ? styles.mainCardImage : styles.smallCardImage}
-              />
-            ) : (
-              <View
-                style={[
-                  large ? styles.mainCardImage : styles.smallCardImage,
-                  { backgroundColor: '#222' },
-                ]}
-              />
-            )}
-            <View style={styles.liveBadge}>
-              <Text style={styles.liveBadgeText}>LIVE</Text>
-            </View>
-            <View style={styles.viewsBadge}>
-              <Ionicons name="eye" size={14} color="white" />
-              <Text style={styles.viewsBadgeText}>{viewers} viewers</Text>
-            </View>
-          </View>
-          <View style={styles.cardInfo}>
-            <Text style={styles.cardTitle} numberOfLines={1}>{hashtag}</Text>
-            <View style={styles.cardUserRow}>
-              <View>
-                <Text style={styles.cardUserName}>@{username}</Text>
-                {country ? (
-                  <Text style={styles.cardCountry}>{country}</Text>
-                ) : null}
-              </View>
-              <TouchableOpacity
-                style={styles.cardFollowButton}
-                onPress={() => handleCardFollow(session)}
-              >
-                <Text style={styles.cardFollowText}>{isFollowing ? 'Following' : 'Follow'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      );
-    };
-
-    return (
-      <View style={styles.sessionsContainer}>
-        {renderCard(main, true)}
-        <View style={styles.smallCardsRow}>
-          {others.map((s) => renderCard(s, false))}
-        </View>
-      </View>
-    );
   };
 
   return (
@@ -388,10 +189,6 @@ export default function LiveScreen() {
             )}
           </LinearGradient>
         </TouchableOpacity>
-
-        <ScrollView style={styles.sessionsScroll} contentContainerStyle={{ paddingBottom: 40 }}>
-          {selectedType === 'video' && renderLiveCards()}
-        </ScrollView>
       </View>
     </View>
   );
@@ -507,129 +304,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '600',
-  },
-  sessionsScroll: {
-    flex: 1,
-    width: '100%',
-    marginTop: 20,
-  },
-  sessionsLoading: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  sessionsEmpty: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  sessionsContainer: {
-    width: '100%',
-  },
-  mainCard: {
-    width: '100%',
-    marginBottom: 15,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  smallCard: {
-    width: '48%',
-    marginBottom: 15,
-    borderRadius: 12,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cardImageWrapper: {
-    position: 'relative',
-  },
-  mainCardImage: {
-    width: '100%',
-    height: 200,
-    resizeMode: 'cover',
-  },
-  smallCardImage: {
-    width: '100%',
-    height: 120,
-    resizeMode: 'cover',
-  },
-  liveBadge: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    backgroundColor: '#ff4444',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  liveBadgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  viewsBadge: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  viewsBadgeText: {
-    color: 'white',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  cardInfo: {
-    padding: 12,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
-  cardUserRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardUserName: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
-  cardCountry: {
-    fontSize: 10,
-    color: '#999',
-    marginTop: 2,
-  },
-  cardFollowButton: {
-    backgroundColor: '#127d96',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  cardFollowText: {
-    color: 'white',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  smallCardsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
   },
 });

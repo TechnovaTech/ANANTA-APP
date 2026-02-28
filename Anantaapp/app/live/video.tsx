@@ -71,6 +71,31 @@ export default function VideoLiveScreen() {
   const animatedValues = useRef<{ [key: number]: Animated.Value }>({});
   const [remoteUid, setRemoteUid] = useState<number | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const messagesIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const currentUsername = (params.username as string) || 'User';
+  const currentUserProfileImage = (params.profileImage as string) || '';
+
+  console.log('=== MESSAGE PARAMS ===');
+  console.log('currentUsername:', currentUsername);
+  console.log('currentUserProfileImage:', currentUserProfileImage);
+  console.log('All params:', params);
+  console.log('======================');
+
+  // Fallback: If username is still 'User', try to fetch profile directly
+  useEffect(() => {
+    if (currentUsername === 'User' && userId) {
+      console.log('Username is User, fetching profile for userId:', userId);
+      fetch(`${ENV.API_BASE_URL}/api/app/profile/${userId}`)
+        .then(res => res.json())
+        .then(data => {
+          console.log('Fetched profile in video screen:', data);
+          if (data.user?.username) {
+            console.log('Found username:', data.user.username);
+          }
+        })
+        .catch(e => console.error('Profile fetch error in video:', e));
+    }
+  }, []);
 
   const comments: any[] = [];
 
@@ -244,16 +269,23 @@ export default function VideoLiveScreen() {
     addFloatingHeart();
   };
 
-  const sendMessage = () => {
-    if (messageText.trim()) {
-      const newComment = {
-        id: Date.now(),
-        user: 'You',
-        message: messageText.trim(),
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50'
-      };
-      setLiveComments(prev => [...prev, newComment].slice(-5));
+  const sendMessage = async () => {
+    if (!messageText.trim() || !sessionId) return;
+    console.log('Sending message with username:', currentUsername, 'avatar:', currentUserProfileImage);
+    try {
+      await fetch(`${ENV.API_BASE_URL}/api/app/live/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          username: currentUsername,
+          message: messageText.trim(),
+          avatar: resolveProfileImageUrl(currentUserProfileImage) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50'
+        }),
+      });
       setMessageText('');
+    } catch (e) {
+      console.error('Send message error:', e);
     }
   };
 
@@ -400,9 +432,12 @@ export default function VideoLiveScreen() {
   useEffect(() => {
     initAgora();
     loadSessionStats();
+    loadMessages();
     statsIntervalRef.current = setInterval(loadSessionStats, 5000);
+    messagesIntervalRef.current = setInterval(loadMessages, 2000);
     return () => {
       if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
+      if (messagesIntervalRef.current) clearInterval(messagesIntervalRef.current);
       cleanupAgora();
     };
   }, []);
@@ -415,6 +450,10 @@ export default function VideoLiveScreen() {
         if (statsIntervalRef.current) {
           clearInterval(statsIntervalRef.current);
           statsIntervalRef.current = null;
+        }
+        if (messagesIntervalRef.current) {
+          clearInterval(messagesIntervalRef.current);
+          messagesIntervalRef.current = null;
         }
         if (role === 'viewer') {
           await cleanupAgora();
@@ -437,10 +476,27 @@ export default function VideoLiveScreen() {
             clearInterval(statsIntervalRef.current);
             statsIntervalRef.current = null;
           }
+          if (messagesIntervalRef.current) {
+            clearInterval(messagesIntervalRef.current);
+            messagesIntervalRef.current = null;
+          }
           await cleanupAgora();
           Alert.alert('Live Ended', 'The host has ended this live session.', [
             { text: 'OK', onPress: () => router.back() }
           ]);
+        }
+      }
+    } catch { }
+  };
+
+  const loadMessages = async () => {
+    if (!sessionId) return;
+    try {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/live/messages/${sessionId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setLiveComments(data.slice(-5));
         }
       }
     } catch { }

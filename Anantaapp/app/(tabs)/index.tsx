@@ -246,6 +246,19 @@ export default function HomeScreen() {
       }
 
       const data = await response.json();
+      
+      // Get current user profile info for messages
+      let username = '';
+      let profileImage = '';
+      try {
+        const profileRes = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${userId}`);
+        if (profileRes.ok) {
+          const profileData = await profileRes.json();
+          username = profileData.user?.username || '';
+          profileImage = profileData.user?.profileImage || '';
+        }
+      } catch { }
+      
       const params = {
         sessionId: data.sessionId,
         channelName: data.channelName,
@@ -260,6 +273,8 @@ export default function HomeScreen() {
         hostCountry: data.hostCountry,
         hostProfileImage: data.hostProfileImage,
         isFollowing: data.isFollowing,
+        username: String(username),
+        profileImage: String(profileImage),
       };
 
       if (type === 'video') {
