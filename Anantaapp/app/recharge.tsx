@@ -39,6 +39,7 @@ interface RechargeHistory {
 type PaymentMethod = 'UPI' | 'Card' | 'Wallet';
 type RechargeStep = 'plans' | 'payment' | 'order' | 'complete' | 'history';
 import { ENV } from '@/config/env';
+import RazorpayCheckout from 'react-native-razorpay';
 
 export default function RechargeScreen() {
   const { isDark } = useTheme();
@@ -128,12 +129,7 @@ export default function RechargeScreen() {
       }
 
       const orderData = await response.json();
-      if (Platform.OS === 'web') {
-        openRazorpay(orderData, userId);
-      } else {
-        Alert.alert('Info', 'Razorpay is only supported on web. Please use web version for payment.');
-        setLoading(false);
-      }
+      openRazorpay(orderData, userId);
     } catch (error) {
       Alert.alert('Error', 'Failed to create order');
       setLoading(false);
@@ -170,8 +166,30 @@ export default function RechargeScreen() {
       rzp.open();
       setLoading(false);
     } else {
-      Alert.alert('Error', 'Razorpay is only supported on web platform');
-      setLoading(false);
+      // Native mobile Razorpay
+      const options = {
+        key: orderData.key,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'Ananta App',
+        description: `Recharge ${selectedPlan?.coins} coins`,
+        order_id: orderData.orderId,
+        prefill: {
+          name: '',
+          email: '',
+          contact: ''
+        },
+        theme: { color: isDark ? '#f7c14d' : '#127d96' }
+      };
+
+      RazorpayCheckout.open(options)
+        .then(async (data: any) => {
+          await verifyPayment(data, userId, orderData.planId, orderData.coins);
+        })
+        .catch((error: any) => {
+          setLoading(false);
+          Alert.alert('Payment Failed', error.description || 'Payment could not be processed');
+        });
     }
   };
 

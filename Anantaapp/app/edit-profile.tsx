@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Alert,
   Image,
@@ -15,12 +15,16 @@ import {
   TouchableOpacity,
   View,
   Dimensions,
+  Modal,
+  Animated,
+  Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useProfile } from '../contexts/ProfileContext';
 import { useTheme } from '../contexts/ThemeContext';
 import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { ENV } from '@/config/env';
 
@@ -48,6 +52,16 @@ export default function EditProfileScreen() {
   const [pinCode, setPinCode] = useState(profileData.pinCode);
   const [userName, setUserName] = useState(profileData.UserName);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showImageSheet, setShowImageSheet] = useState(false);
+  const [showGenderSheet, setShowGenderSheet] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const [usernameError, setUsernameError] = useState('');
+  const [birthdayError, setBirthdayError] = useState('');
+  const usernameTimeout = useRef<NodeJS.Timeout | null>(null);
+  const slideAnim = useRef(new Animated.Value(300)).current;
+  const genderSlideAnim = useRef(new Animated.Value(300)).current;
 
   useEffect(() => {
     const init = async () => {
@@ -77,6 +91,11 @@ export default function EditProfileScreen() {
       }
       const data = await res.json();
       const user = data.user;
+      console.log('=== Profile Loaded ===');
+      console.log('UserId:', user.userId);
+      console.log('Username:', user.username);
+      console.log('Full Name:', user.fullName);
+      
       const profileUri = resolveProfileUri(user.profileImage);
       const coverUri = resolveProfileUri(user.coverImage);
       setProfileImage(profileUri);
@@ -153,7 +172,78 @@ export default function EditProfileScreen() {
     }
   };
 
-  const pickImage = async () => {
+  const openImageSheet = () => {
+    setShowImageSheet(true);
+    Animated.spring(slideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 11,
+    }).start();
+  };
+
+  const closeImageSheet = () => {
+    Animated.timing(slideAnim, {
+      toValue: 300,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => setShowImageSheet(false));
+  };
+
+  const openGenderSheet = () => {
+    setShowGenderSheet(true);
+    Animated.spring(genderSlideAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 65,
+      friction: 11,
+    }).start();
+  };
+
+  const closeGenderSheet = () => {
+    Animated.timing(genderSlideAnim, {
+      toValue: 300,
+      duration: 250,
+      useNativeDriver: true,
+    }).start(() => setShowGenderSheet(false));
+  };
+
+  const selectGender = (value: string) => {
+    setGender(value);
+    closeGenderSheet();
+  };
+
+  const onDateChange = (event: any, date?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (date) {
+      setSelectedDate(date);
+      const formatted = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+      validateBirthday(formatted);
+    }
+  };
+
+  const openDatePicker = () => {
+    // Parse existing birthday or set to 18 years ago
+    if (birthday) {
+      const parts = birthday.split('/');
+      if (parts.length === 3) {
+        const date = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        if (!isNaN(date.getTime())) {
+          setSelectedDate(date);
+        }
+      }
+    } else {
+      const eighteenYearsAgo = new Date();
+      eighteenYearsAgo.setFullYear(eighteenYearsAgo.getFullYear() - 18);
+      setSelectedDate(eighteenYearsAgo);
+    }
+    setShowDatePicker(true);
+  };
+
+  const pickFromGallery = async () => {
+    closeImageSheet();
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -161,9 +251,100 @@ export default function EditProfileScreen() {
       quality: 0.5,
       base64: false,
     });
-
     if (!result.canceled) {
       setProfileImage(result.assets[0].uri);
+    }
+  };
+
+  const takePhoto = async () => {
+    closeImageSheet();
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Camera permission is required');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+    if (!result.canceled) {
+      setProfileImage(result.assets[0].uri);
+    }
+  };
+
+  const removePhoto = () => {
+    closeImageSheet();
+    setProfileImage(null);
+  };
+
+  const validateUsername = (text: string) => {
+    // Convert to lowercase automatically
+    const lowercaseText = text.toLowerCase();
+    setUserName(lowercaseText);
+    setUsernameError('');
+    
+    if (lowercaseText.length < 3) {
+      setUsernameStatus('idle');
+      setUsernameError('Minimum 3 characters');
+      return;
+    }
+    if (lowercaseText.length > 20) {
+      setUsernameStatus('idle');
+      setUsernameError('Maximum 20 characters');
+      return;
+    }
+    if (!/^[a-z0-9_]+$/.test(lowercaseText)) {
+      setUsernameStatus('idle');
+      setUsernameError('Only lowercase, numbers & underscores');
+      return;
+    }
+    
+    // Check if username is same as current
+    if (profileData.UserName && lowercaseText === profileData.UserName.toLowerCase()) {
+      setUsernameStatus('available');
+      return;
+    }
+    
+    if (usernameTimeout.current) clearTimeout(usernameTimeout.current);
+    setUsernameStatus('checking');
+    
+    usernameTimeout.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`${ENV.API_BASE_URL}/api/app/check-username?username=${lowercaseText}&userId=${userId}`);
+        const data = await res.json();
+        setUsernameStatus(data.available ? 'available' : 'taken');
+        if (!data.available) setUsernameError('Username already taken');
+      } catch {
+        setUsernameStatus('idle');
+      }
+    }, 500);
+  };
+
+  const validateBirthday = (text: string) => {
+    setBirthday(text);
+    setBirthdayError('');
+    
+    const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = text.match(regex);
+    
+    if (!match) {
+      if (text.length >= 10) setBirthdayError('Invalid format (DD/MM/YYYY)');
+      return;
+    }
+    
+    const [, day, month, year] = match;
+    const birthDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    if (age < 18) {
+      setBirthdayError('Must be at least 18 years old');
     }
   };
 
@@ -184,6 +365,14 @@ export default function EditProfileScreen() {
   const saveProfile = async () => {
     if (!userId) {
       Alert.alert('Error', 'User information not found, please login again');
+      return;
+    }
+    if (usernameStatus === 'taken' || usernameError) {
+      Alert.alert('Error', 'Please fix username errors');
+      return;
+    }
+    if (birthdayError) {
+      Alert.alert('Error', 'Please fix birthday errors');
       return;
     }
     try {
@@ -355,7 +544,7 @@ export default function EditProfileScreen() {
                 <Ionicons name="person" size={50} color={isDark ? 'black' : 'white'} />
               </View>
             )}
-            <TouchableOpacity style={styles.editImageButton} onPress={pickImage}>
+            <TouchableOpacity style={styles.editImageButton} onPress={openImageSheet}>
               <Ionicons name="camera" size={16} color="white" />
             </TouchableOpacity>
           </View>
@@ -373,17 +562,37 @@ export default function EditProfileScreen() {
                 <Ionicons name="person" size={16} color={isDark ? '#f7c14d' : '#127d96'} />
                 <Text style={[styles.fieldLabel, { color: isDark ? '#ccc' : '#333' }]}>Username</Text>
               </View>
-              <TextInput
-                style={[styles.textInput, { 
-                  backgroundColor: isDark ? '#333' : '#f8f9fa',
-                  color: isDark ? 'white' : '#333',
-                  borderColor: isDark ? '#f7c14d' : '#127d96'
-                }]}
-                value={userName}
-                onChangeText={setUserName}
-                placeholder="Enter your username"
-                placeholderTextColor={isDark ? '#888' : '#666'}
-              />
+              <View>
+                <TextInput
+                  style={[styles.textInput, { 
+                    backgroundColor: isDark ? '#333' : '#f8f9fa',
+                    color: isDark ? 'white' : '#333',
+                    borderColor: usernameStatus === 'available' ? '#4CAF50' : usernameStatus === 'taken' ? '#f44336' : isDark ? '#f7c14d' : '#127d96'
+                  }]}
+                  value={userName}
+                  onChangeText={validateUsername}
+                  placeholder="Enter username (3-20 chars)"
+                  placeholderTextColor={isDark ? '#888' : '#666'}
+                  autoCapitalize="none"
+                />
+                <View style={styles.usernameStatus}>
+                  {usernameStatus === 'checking' && <Text style={styles.checkingText}>Checking...</Text>}
+                  {usernameStatus === 'available' && (
+                    <View style={styles.statusRow}>
+                      <Ionicons name="checkmark-circle" size={16} color="#4CAF50" />
+                      <Text style={styles.availableText}>Available</Text>
+                    </View>
+                  )}
+                  {usernameStatus === 'taken' && (
+                    <View style={styles.statusRow}>
+                      <Ionicons name="close-circle" size={16} color="#f44336" />
+                      <Text style={styles.takenText}>Taken</Text>
+                    </View>
+                  )}
+                  {usernameError && <Text style={styles.errorText}>{usernameError}</Text>}
+                  <Text style={[styles.charCount, { color: isDark ? '#888' : '#666' }]}>{userName.length}/20</Text>
+                </View>
+              </View>
             </View>
             
             {/* Name field hidden as requested; value still used in saveProfile */}
@@ -393,17 +602,18 @@ export default function EditProfileScreen() {
                 <Ionicons name="male-female" size={16} color={isDark ? '#f7c14d' : '#127d96'} />
                 <Text style={[styles.fieldLabel, { color: isDark ? '#ccc' : '#333' }]}>Gender</Text>
               </View>
-              <TextInput
-                style={[styles.textInput, { 
+              <TouchableOpacity
+                style={[styles.textInput, styles.dropdownInput, { 
                   backgroundColor: isDark ? '#333' : '#f8f9fa',
-                  color: isDark ? 'white' : '#333',
                   borderColor: isDark ? '#f7c14d' : '#127d96'
                 }]}
-                value={gender}
-                onChangeText={setGender}
-                placeholder="Enter your gender"
-                placeholderTextColor={isDark ? '#888' : '#666'}
-              />
+                onPress={openGenderSheet}
+              >
+                <Text style={[styles.dropdownText, { color: gender ? (isDark ? 'white' : '#333') : (isDark ? '#888' : '#666') }]}>
+                  {gender || 'Select your gender'}
+                </Text>
+                <Ionicons name="chevron-down" size={20} color={isDark ? '#f7c14d' : '#127d96'} />
+              </TouchableOpacity>
             </View>
             
             <View style={styles.fieldContainer}>
@@ -411,37 +621,52 @@ export default function EditProfileScreen() {
                 <Ionicons name="calendar" size={16} color={isDark ? '#f7c14d' : '#127d96'} />
                 <Text style={[styles.fieldLabel, { color: isDark ? '#ccc' : '#333' }]}>Birthday</Text>
               </View>
-              <TextInput
-                style={[styles.textInput, { 
-                  backgroundColor: isDark ? '#333' : '#f8f9fa',
-                  color: isDark ? 'white' : '#333',
-                  borderColor: isDark ? '#f7c14d' : '#127d96'
-                }]}
-                value={birthday}
-                onChangeText={setBirthday}
-                placeholder="Enter your birthday (DD/MM/YYYY)"
-                placeholderTextColor={isDark ? '#888' : '#666'}
-              />
+              <View>
+                <TouchableOpacity
+                  style={[styles.textInput, styles.dropdownInput, { 
+                    backgroundColor: isDark ? '#333' : '#f8f9fa',
+                    borderColor: birthdayError ? '#f44336' : isDark ? '#f7c14d' : '#127d96'
+                  }]}
+                  onPress={openDatePicker}
+                >
+                  <Text style={[styles.dropdownText, { color: birthday ? (isDark ? 'white' : '#333') : (isDark ? '#888' : '#666') }]}>
+                    {birthday || 'Select your birthday (Min age: 18)'}
+                  </Text>
+                  <Ionicons name="calendar-outline" size={20} color={isDark ? '#f7c14d' : '#127d96'} />
+                </TouchableOpacity>
+                {birthdayError && (
+                  <View style={styles.statusRow}>
+                    <Ionicons name="alert-circle" size={16} color="#f44336" />
+                    <Text style={styles.errorText}>{birthdayError}</Text>
+                  </View>
+                )}
+              </View>
             </View>
             
             <View style={styles.fieldContainer}>
               <View style={styles.fieldHeader}>
                 <Ionicons name="document-text" size={16} color={isDark ? '#f7c14d' : '#127d96'} />
-                <Text style={[styles.fieldLabel, { color: isDark ? '#ccc' : '#333' }]}>Bio</Text>
+                <Text style={[styles.fieldLabel, { color: isDark ? '#ccc' : '#333' }]}>Bio / Hashtags</Text>
               </View>
-              <TextInput
-                style={[styles.textInput, styles.bioInput, { 
-                  backgroundColor: isDark ? '#333' : '#f8f9fa',
-                  color: isDark ? 'white' : '#333',
-                  borderColor: isDark ? '#f7c14d' : '#127d96'
-                }]}
-                value={bio}
-                onChangeText={setBio}
-                placeholder="Enter your bio"
-                placeholderTextColor={isDark ? '#888' : '#666'}
-                multiline
-                numberOfLines={3}
-              />
+              <View>
+                <TextInput
+                  style={[styles.textInput, styles.bioInput, { 
+                    backgroundColor: isDark ? '#333' : '#f8f9fa',
+                    color: isDark ? 'white' : '#333',
+                    borderColor: isDark ? '#f7c14d' : '#127d96'
+                  }]}
+                  value={bio}
+                  onChangeText={(text) => text.length <= 250 && setBio(text)}
+                  placeholder="Tell us about yourself... #hashtags"
+                  placeholderTextColor={isDark ? '#888' : '#666'}
+                  multiline
+                  numberOfLines={4}
+                  maxLength={250}
+                />
+                <Text style={[styles.charCount, { color: bio.length > 200 ? '#ff9800' : isDark ? '#888' : '#666', alignSelf: 'flex-end', marginTop: 4 }]}>
+                  {bio.length}/250
+                </Text>
+              </View>
             </View>
           </View>
           
@@ -485,6 +710,101 @@ export default function EditProfileScreen() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
+
+      {/* Bottom Sheet for Image Options */}
+      <Modal
+        visible={showImageSheet}
+        transparent
+        animationType="fade"
+        onRequestClose={closeImageSheet}
+      >
+        <Pressable style={styles.modalOverlay} onPress={closeImageSheet}>
+          <Animated.View 
+            style={[
+              styles.bottomSheet,
+              { backgroundColor: isDark ? '#2a2a2a' : 'white', transform: [{ translateY: slideAnim }] }
+            ]}
+          >
+            <View style={styles.sheetHandle} />
+            <Text style={[styles.sheetTitle, { color: isDark ? 'white' : '#333' }]}>Profile Picture</Text>
+            
+            <TouchableOpacity style={styles.sheetOption} onPress={pickFromGallery}>
+              <Ionicons name="images" size={24} color={isDark ? '#f7c14d' : '#127d96'} />
+              <Text style={[styles.sheetOptionText, { color: isDark ? 'white' : '#333' }]}>Choose from Gallery</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.sheetOption} onPress={takePhoto}>
+              <Ionicons name="camera" size={24} color={isDark ? '#f7c14d' : '#127d96'} />
+              <Text style={[styles.sheetOptionText, { color: isDark ? 'white' : '#333' }]}>Take Photo</Text>
+            </TouchableOpacity>
+            
+            {profileImage && (
+              <TouchableOpacity style={styles.sheetOption} onPress={removePhoto}>
+                <Ionicons name="trash" size={24} color="#f44336" />
+                <Text style={[styles.sheetOptionText, { color: '#f44336' }]}>Remove Photo</Text>
+              </TouchableOpacity>
+            )}
+            
+            <TouchableOpacity style={[styles.sheetCancel, { backgroundColor: isDark ? '#333' : '#f0f0f0' }]} onPress={closeImageSheet}>
+              <Text style={[styles.sheetCancelText, { color: isDark ? 'white' : '#333' }]}>Cancel</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </Pressable>
+      </Modal>
+
+      {/* Bottom Sheet for Gender Selection */}
+      <Modal
+        visible={showGenderSheet}
+        transparent
+        animationType="fade"
+        onRequestClose={closeGenderSheet}
+      >
+        <Pressable style={styles.modalOverlay} onPress={closeGenderSheet}>
+          <Animated.View 
+            style={[
+              styles.bottomSheet,
+              { backgroundColor: isDark ? '#2a2a2a' : 'white', transform: [{ translateY: genderSlideAnim }] }
+            ]}
+          >
+            <View style={styles.sheetHandle} />
+            <Text style={[styles.sheetTitle, { color: isDark ? 'white' : '#333' }]}>Select Gender</Text>
+            
+            <TouchableOpacity style={styles.sheetOption} onPress={() => selectGender('Male')}>
+              <Ionicons name="male" size={24} color={isDark ? '#f7c14d' : '#127d96'} />
+              <Text style={[styles.sheetOptionText, { color: isDark ? 'white' : '#333' }]}>Male</Text>
+              {gender === 'Male' && <Ionicons name="checkmark" size={24} color="#4CAF50" style={{ marginLeft: 'auto' }} />}
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.sheetOption} onPress={() => selectGender('Female')}>
+              <Ionicons name="female" size={24} color={isDark ? '#f7c14d' : '#127d96'} />
+              <Text style={[styles.sheetOptionText, { color: isDark ? 'white' : '#333' }]}>Female</Text>
+              {gender === 'Female' && <Ionicons name="checkmark" size={24} color="#4CAF50" style={{ marginLeft: 'auto' }} />}
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.sheetOption} onPress={() => selectGender('Other')}>
+              <Ionicons name="transgender" size={24} color={isDark ? '#f7c14d' : '#127d96'} />
+              <Text style={[styles.sheetOptionText, { color: isDark ? 'white' : '#333' }]}>Other</Text>
+              {gender === 'Other' && <Ionicons name="checkmark" size={24} color="#4CAF50" style={{ marginLeft: 'auto' }} />}
+            </TouchableOpacity>
+            
+            <TouchableOpacity style={[styles.sheetCancel, { backgroundColor: isDark ? '#333' : '#f0f0f0' }]} onPress={closeGenderSheet}>
+              <Text style={[styles.sheetCancelText, { color: isDark ? 'white' : '#333' }]}>Cancel</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </Pressable>
+      </Modal>
+
+      {/* Date Picker */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={onDateChange}
+          maximumDate={new Date()}
+          minimumDate={new Date(1900, 0, 1)}
+        />
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -692,5 +1012,93 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheet: {
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+    paddingTop: 10,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#ccc',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  sheetOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 15,
+  },
+  sheetOptionText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  sheetCancel: {
+    marginTop: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  sheetCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  usernameStatus: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  checkingText: {
+    fontSize: 13,
+    color: '#ff9800',
+  },
+  availableText: {
+    fontSize: 13,
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  takenText: {
+    fontSize: 13,
+    color: '#f44336',
+    fontWeight: '500',
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#f44336',
+  },
+  charCount: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  dropdownInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownText: {
+    fontSize: 16,
+    flex: 1,
   },
 });

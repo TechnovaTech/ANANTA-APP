@@ -11,6 +11,7 @@ import {
   Modal,
   TextInput,
   Platform,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -33,6 +34,7 @@ const resolveProfileUri = (value: string | null | undefined) => {
 export default function ProfileScreen() {
   const { profileData, updateProfile, logout } = useProfile();
   const { isDark } = useTheme();
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -72,7 +74,7 @@ export default function ProfileScreen() {
       const profileUri = resolveProfileUri(user.profileImage);
       const coverUri = resolveProfileUri(user.coverImage);
       updateProfile({
-        name: user.fullName || user.username || '',
+        name: user.username || '',
         title: user.username || '',
         bio: user.bio || '',
         location: user.location || '',
@@ -92,6 +94,24 @@ export default function ProfileScreen() {
       });
     } catch {
     }
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    let storedUserId: string | null = null;
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      storedUserId = window.localStorage.getItem('userId');
+    } else {
+      try {
+        storedUserId = await SecureStore.getItemAsync('userId');
+      } catch {
+        storedUserId = null;
+      }
+    }
+    if (storedUserId) {
+      await loadProfile(storedUserId);
+    }
+    setRefreshing(false);
   };
 
   const pickImage = async () => {
@@ -166,7 +186,13 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: isDark ? '#1a1a1a' : '#f8f9fa' }]} showsVerticalScrollIndicator={false}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: isDark ? '#1a1a1a' : '#f8f9fa' }]} 
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#127d96']} tintColor="#127d96" />
+      }
+    >
       <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
       
       {/* Header with background image */}
@@ -214,7 +240,6 @@ export default function ProfileScreen() {
               <Text style={[styles.username, { color: isDark ? 'white' : '#333' }]}>{profileData.name}</Text>
               <Ionicons name="checkmark-circle" size={16} color="#127d96" />
             </View>
-            <Text style={[styles.userTitle, { color: isDark ? '#ccc' : '#666' }]}>{profileData.title}</Text>
             <Text style={[styles.userBio, { color: isDark ? '#aaa' : '#888' }]}>{profileData.bio}</Text>
           </View>
         </View>

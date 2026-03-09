@@ -79,6 +79,47 @@ public class AppUserController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/check-username")
+    public ResponseEntity<?> checkUsername(@RequestParam String username, @RequestParam(required = false) String userId) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            if (!StringUtils.hasText(username)) {
+                response.put("available", false);
+                response.put("username", username);
+                return ResponseEntity.ok(response);
+            }
+
+            String normalizedUsername = username.trim().toLowerCase();
+            Optional<User> existingUser = userRepository.findByUsername(normalizedUsername);
+            
+            // If user exists, check if it's the current user
+            if (existingUser.isPresent()) {
+                if (StringUtils.hasText(userId)) {
+                    String normalizedUserId = userId.trim();
+                    String existingUserId = existingUser.get().getUserId();
+                    String existingUsername = existingUser.get().getUsername();
+                    
+                    // Username is available if it belongs to the current user
+                    // Compare both userId and username (case-insensitive)
+                    boolean isSameUser = normalizedUserId.equals(existingUserId) || 
+                                        normalizedUsername.equalsIgnoreCase(existingUsername);
+                    response.put("available", isSameUser);
+                } else {
+                    response.put("available", false);
+                }
+            } else {
+                response.put("available", true);
+            }
+            
+            response.put("username", username);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("available", false);
+            response.put("username", username);
+            return ResponseEntity.ok(response);
+        }
+    }
+
     @PostMapping("/verify-otp")
     public ResponseEntity<?> verifyOtp(@RequestBody OtpVerifyRequest request) {
         if (!StringUtils.hasText(request.getPhone()) || !StringUtils.hasText(request.getOtp())) {
