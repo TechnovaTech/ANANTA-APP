@@ -33,7 +33,10 @@ export default function HeroPage() {
   const resolveMediaUrl = (value: string) => {
     if (!value) return '';
     if (value.startsWith('http') || value.startsWith('data:')) return value;
-    if (value.startsWith('/uploads/')) return `http://localhost:3000${value}`;
+    if (value.startsWith('/uploads/')) {
+      // Use the current domain instead of localhost
+      return `${window.location.protocol}//${window.location.host}${value}`;
+    }
     return value;
   };
 
@@ -106,7 +109,7 @@ export default function HeroPage() {
   };
 
   return (
-    <div style={{flex:1,marginLeft:280,padding:32}}>
+    <div>
       <div style={{marginBottom:24}}>
         <h1 style={{margin:0,fontSize:28,color:'#2d3748'}}>Hero Section</h1>
         <p style={{margin:0,marginTop:8,color:'#718096',fontSize:14}}>

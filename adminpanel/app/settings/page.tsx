@@ -458,7 +458,7 @@ export default function SettingsPage() {
   );
 
   return (
-    <div style={{flex:1,marginLeft:280,padding:32}}>
+    <div>
       <div style={{marginBottom:24}}>
         <h1 style={{margin:0,fontSize:28,color:'#2d3748'}}>Settings</h1>
         <p style={{margin:0,marginTop:8,color:'#718096',fontSize:14}}>
