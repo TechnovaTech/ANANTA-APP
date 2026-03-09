@@ -325,6 +325,49 @@ export default function ProfileScreen() {
             <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Recharge</Text>
           </TouchableOpacity>
         </View>
+        
+        {/* Third row - 3 icons */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/level-management')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#FF9800' }]}>
+              <Ionicons name="bar-chart" size={24} color="white" />
+            </View>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Level</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/daily-tasks')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#00BCD4' }]}>
+              <Ionicons name="checkmark-circle" size={24} color="white" />
+            </View>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Daily Tasks</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/room-admin')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#607D8B' }]}>
+              <Ionicons name="person" size={24} color="white" />
+            </View>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Room Admin</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Fourth row - 2 icons */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/back-pack')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#795548' }]}>
+              <Ionicons name="bag" size={24} color="white" />
+            </View>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Inventory</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/invitation-rewards')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#E91E63' }]}>
+              <Ionicons name="gift" size={24} color="white" />
+            </View>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Rewards</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.actionButton} />
+        </View>
       </View>
 
       <TouchableOpacity 
