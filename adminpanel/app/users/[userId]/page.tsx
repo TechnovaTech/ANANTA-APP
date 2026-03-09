@@ -7,7 +7,19 @@ const getImageSrc = (value: string | null | undefined) => {
   if (!value) return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
-  if (trimmed.startsWith('data:') || trimmed.startsWith('http') || trimmed.startsWith('/')) return trimmed;
+  
+  // If it's already a full URL or data URI, return it
+  if (trimmed.startsWith('data:') || trimmed.startsWith('http')) return trimmed;
+  
+  // If it's a path starting with /, prepend the current domain (client-side only)
+  if (trimmed.startsWith('/')) {
+    if (typeof window !== 'undefined') {
+      return `${window.location.protocol}//${window.location.host}${trimmed}`;
+    }
+    return trimmed; // Return as-is on server-side
+  }
+  
+  // Try to detect if it's base64 without data URI prefix
   const compact = trimmed.replace(/\s/g, '');
   if (compact.length < 50) return null;
   if (!/^[A-Za-z0-9+/=]+$/.test(compact)) return null;
