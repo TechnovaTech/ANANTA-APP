@@ -13,6 +13,7 @@ type HostTask = {
   minLevel: number;
   maxLevel: number;
   active: boolean;
+  difficulty: string;
 };
 
 type ViewerTask = {
@@ -25,6 +26,7 @@ type ViewerTask = {
   minLevel: number;
   maxLevel: number;
   active: boolean;
+  difficulty: string;
 };
 
 export default function DailyTasksPage() {
@@ -167,7 +169,7 @@ export default function DailyTasksPage() {
       <div style={{display:'flex',justifyContent:'flex-end',marginBottom:16}}>
         <button
           onClick={() => {
-            setEditingHostTask({ id: 0, title: '', description: '', triggerEvent: '', targetValue: 0, rewardCoins: 0, minLevel: 1, maxLevel: 99, active: true });
+            setEditingHostTask({ id: 0, title: '', description: '', triggerEvent: '', targetValue: 0, rewardCoins: 0, minLevel: 1, maxLevel: 99, active: true, difficulty: 'Easy' });
             setShowHostPopup(true);
           }}
           style={{padding:'8px 14px',borderRadius:6,border:'none',background:'#3182ce',color:'white',fontSize:13,cursor:'pointer',fontWeight:600}}
@@ -185,10 +187,9 @@ export default function DailyTasksPage() {
           <thead>
             <tr style={{background:'#f7fafc'}}>
               <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Title</th>
-              <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Trigger Event</th>
               <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Target</th>
               <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Reward</th>
-              <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Level Range</th>
+              <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Difficulty</th>
               <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Status</th>
               <th style={{textAlign:'right',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Actions</th>
             </tr>
@@ -197,10 +198,9 @@ export default function DailyTasksPage() {
             {hostTasks.map(task => (
               <tr key={task.id}>
                 <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.title}</td>
-                <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.triggerEvent}</td>
                 <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.targetValue}</td>
                 <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.rewardCoins} coins</td>
-                <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.minLevel}-{task.maxLevel}</td>
+                <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.difficulty || 'Easy'}</td>
                 <td style={{padding:12,fontSize:14,color:task.active ? '#38a169' : '#e53e3e',borderBottom:'1px solid #edf2f7'}}>
                   {task.active ? 'Active' : 'Inactive'}
                 </td>
@@ -239,7 +239,7 @@ export default function DailyTasksPage() {
       <div style={{display:'flex',justifyContent:'flex-end',marginBottom:16}}>
         <button
           onClick={() => {
-            setEditingViewerTask({ id: 0, title: '', description: '', triggerEvent: '', targetValue: 0, rewardCoins: 0, minLevel: 1, maxLevel: 99, active: true });
+            setEditingViewerTask({ id: 0, title: '', description: '', triggerEvent: '', targetValue: 0, rewardCoins: 0, minLevel: 1, maxLevel: 99, active: true, difficulty: 'Easy' });
             setShowViewerPopup(true);
           }}
           style={{padding:'8px 14px',borderRadius:6,border:'none',background:'#3182ce',color:'white',fontSize:13,cursor:'pointer',fontWeight:600}}
@@ -257,10 +257,9 @@ export default function DailyTasksPage() {
           <thead>
             <tr style={{background:'#f7fafc'}}>
               <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Title</th>
-              <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Trigger Event</th>
               <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Target</th>
               <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Reward</th>
-              <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Level Range</th>
+              <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Difficulty</th>
               <th style={{textAlign:'left',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Status</th>
               <th style={{textAlign:'right',padding:12,fontSize:13,color:'#4a5568',borderBottom:'1px solid #e2e8f0'}}>Actions</th>
             </tr>
@@ -269,10 +268,9 @@ export default function DailyTasksPage() {
             {viewerTasks.map(task => (
               <tr key={task.id}>
                 <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.title}</td>
-                <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.triggerEvent}</td>
                 <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.targetValue}</td>
                 <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.rewardCoins} coins</td>
-                <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.minLevel}-{task.maxLevel}</td>
+                <td style={{padding:12,fontSize:14,color:'#2d3748',borderBottom:'1px solid #edf2f7'}}>{task.difficulty || 'Easy'}</td>
                 <td style={{padding:12,fontSize:14,color:task.active ? '#38a169' : '#e53e3e',borderBottom:'1px solid #edf2f7'}}>
                   {task.active ? 'Active' : 'Inactive'}
                 </td>
@@ -337,7 +335,7 @@ export default function DailyTasksPage() {
             />
           </div>
           
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:16,marginBottom:16}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr',gap:16,marginBottom:16}}>
             <div>
               <label style={{display:'block',marginBottom:4,fontSize:13,color:'#4a5568'}}>Target Value</label>
               <input
@@ -373,6 +371,18 @@ export default function DailyTasksPage() {
                 onChange={e => handleHostTaskChange('maxLevel', Number(e.target.value))}
                 style={{width:'100%',padding:'8px 10px',borderRadius:6,border:'1px solid #e2e8f0',fontSize:14}}
               />
+            </div>
+            <div>
+              <label style={{display:'block',marginBottom:4,fontSize:13,color:'#4a5568'}}>Difficulty</label>
+              <select
+                value={editingHostTask.difficulty}
+                onChange={e => handleHostTaskChange('difficulty', e.target.value)}
+                style={{width:'100%',padding:'8px 10px',borderRadius:6,border:'1px solid #e2e8f0',fontSize:14}}
+              >
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
             </div>
           </div>
           
@@ -446,7 +456,7 @@ export default function DailyTasksPage() {
             />
           </div>
           
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:16,marginBottom:16}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr 1fr',gap:16,marginBottom:16}}>
             <div>
               <label style={{display:'block',marginBottom:4,fontSize:13,color:'#4a5568'}}>Target Value</label>
               <input
@@ -482,6 +492,18 @@ export default function DailyTasksPage() {
                 onChange={e => handleViewerTaskChange('maxLevel', Number(e.target.value))}
                 style={{width:'100%',padding:'8px 10px',borderRadius:6,border:'1px solid #e2e8f0',fontSize:14}}
               />
+            </div>
+            <div>
+              <label style={{display:'block',marginBottom:4,fontSize:13,color:'#4a5568'}}>Difficulty</label>
+              <select
+                value={editingViewerTask.difficulty}
+                onChange={e => handleViewerTaskChange('difficulty', e.target.value)}
+                style={{width:'100%',padding:'8px 10px',borderRadius:6,border:'1px solid #e2e8f0',fontSize:14}}
+              >
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
             </div>
           </div>
           

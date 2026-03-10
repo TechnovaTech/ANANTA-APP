@@ -34,6 +34,9 @@ public class HostTask {
     @Column(name = "active", nullable = false)
     private Boolean active = true;
 
+    @Column(name = "difficulty", nullable = false)
+    private String difficulty = "Easy";
+
     public Long getId() {
         return id;
     }
@@ -104,5 +107,13 @@ public class HostTask {
 
     public void setActive(Boolean active) {
         this.active = active;
+    }
+
+    public String getDifficulty() {
+        return difficulty;
+    }
+
+    public void setDifficulty(String difficulty) {
+        this.difficulty = difficulty;
     }
 }

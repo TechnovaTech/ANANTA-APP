@@ -57,6 +57,7 @@ public class AdminDailyTaskController {
         existing.setMinLevel(payload.getMinLevel());
         existing.setMaxLevel(payload.getMaxLevel());
         existing.setActive(payload.getActive());
+        existing.setDifficulty(payload.getDifficulty());
         HostTask saved = hostTaskRepository.save(existing);
         return ResponseEntity.ok(saved);
     }
@@ -97,6 +98,7 @@ public class AdminDailyTaskController {
         existing.setMinLevel(payload.getMinLevel());
         existing.setMaxLevel(payload.getMaxLevel());
         existing.setActive(payload.getActive());
+        existing.setDifficulty(payload.getDifficulty());
         ViewerTask saved = viewerTaskRepository.save(existing);
         return ResponseEntity.ok(saved);
     }
