@@ -114,6 +114,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 fontSize:15
               }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{marginRight:12}}>
+                  <path d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                </svg>
+                Wallet & Gifts
+              </Link>
+              
+              <Link href="/app-settings" style={{
+                display:'flex',
+                alignItems:'center',
+                padding:'12px 24px',
+                textDecoration:'none',
+                color: pathname==='/app-settings' ? '#3182ce' : '#4a5568',
+                background: pathname==='/app-settings' ? '#ebf8ff' : 'transparent',
+                borderRight: pathname==='/app-settings' ? '3px solid #3182ce' : '3px solid transparent',
+                fontWeight: pathname==='/app-settings' ? 600 : 500,
+                fontSize:15
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{marginRight:12}}>
                   <path d="M12 8a4 4 0 100 8 4 4 0 000-8z"/>
                   <path d="M4.93 6.21a1 1 0 011.32-.48l1.12.45a7.03 7.03 0 011.5-.87l.26-1.19A1 1 0 0110.1 3h3.8a1 1 0 01.98.79l.26 1.19a7.03 7.03 0 011.5.87l1.12-.45a1 1 0 011.32.48l1.9 3.29a1 1 0 01-.34 1.35l-1.03.66a6.96 6.96 0 010 1.74l1.03.66a1 1 0 01.34 1.35l-1.9 3.29a1 1 0 01-1.32.48l-1.12-.45a7.03 7.03 0 01-1.5.87l-.26 1.19a1 1 0 01-.98.79h-3.8a1 1 0 01-.98-.79l-.26-1.19a7.03 7.03 0 01-1.5-.87l-1.12.45a1 1 0 01-1.32-.48l-1.9-3.29a1 1 0 01.34-1.35l1.03-.66a6.96 6.96 0 010-1.74l-1.03-.66a1 1 0 01-.34-1.35l1.9-3.29z"/>
                 </svg>
