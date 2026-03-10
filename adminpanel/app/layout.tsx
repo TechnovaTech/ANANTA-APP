@@ -136,6 +136,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </svg>
                 App Settings
               </Link>
+              
+              <Link href="/level-management" style={{
+                display:'flex',
+                alignItems:'center',
+                padding:'12px 24px',
+                textDecoration:'none',
+                color: pathname==='/level-management' ? '#3182ce' : '#4a5568',
+                background: pathname==='/level-management' ? '#ebf8ff' : 'transparent',
+                borderRight: pathname==='/level-management' ? '3px solid #3182ce' : '3px solid transparent',
+                fontWeight: pathname==='/level-management' ? 600 : 500,
+                fontSize:15
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{marginRight:12}}>
+                  <path d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586l-2 2V5H5v14h14v-1.586l2-2V19a1 1 0 01-1 1H4a1 1 0 01-1-1V4z"/>
+                  <path d="M17.707 7.293a1 1 0 010 1.414L11.414 15l-2.121-2.121a1 1 0 111.414-1.414L12 12.757l5.293-5.293a1 1 0 011.414 0z"/>
+                </svg>
+                Level Management
+              </Link>
 
               <Link href="/hero" style={{
                 display:'flex',
