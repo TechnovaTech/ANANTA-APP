@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ImageBackground, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity, View, StatusBar, Dimensions, Alert } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { ENV } from '@/config/env';
 
@@ -77,8 +77,9 @@ export default function OTPScreen() {
           window.localStorage.setItem('userId', userId);
         } else {
           try {
-            await SecureStore.setItemAsync('userId', userId);
-          } catch {
+            await AsyncStorage.setItem('userId', userId);
+          } catch (e) {
+            console.error('Failed to save userId:', e);
           }
         }
       }

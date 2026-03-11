@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, StatusBar, Dimensions, Platform, Modal, TextInput, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ENV } from '@/config/env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -30,65 +31,119 @@ export default function WalletScreen() {
   const [withdrawError, setWithdrawError] = useState('');
   const [withdrawCoinAmount, setWithdrawCoinAmount] = useState(100);
   const [withdrawRupeeAmount, setWithdrawRupeeAmount] = useState(10);
+  const [monthlyEarned, setMonthlyEarned] = useState(0);
+  const [monthlySpent, setMonthlySpent] = useState(0);
+  const [monthlyTransactionCount, setMonthlyTransactionCount] = useState(0);
 
-  useEffect(() => {
-    let userId: string | null = null;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      userId = window.localStorage.getItem('userId');
-    }
-    if (!userId) {
-      return;
-    }
-    setCurrentUserId(userId);
-    const fetchWallet = async () => {
-      try {
-        const response = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/${userId}`);
-        if (!response.ok) {
-          return;
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadData = async () => {
+        try {
+          let userId: string | null = null;
+          if (Platform.OS === 'web' && typeof window !== 'undefined') {
+            userId = window.localStorage.getItem('userId');
+          } else {
+            userId = await AsyncStorage.getItem('userId');
+          }
+          
+          console.log('[Wallet] userId from storage:', userId);
+          
+          if (!userId) {
+            console.log('[Wallet] No userId found');
+            return;
+          }
+          setCurrentUserId(userId);
+          
+          const fetchWallet = async () => {
+            try {
+              console.log('[Wallet] Fetching profile for userId:', userId);
+              const response = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${userId}`);
+              if (!response.ok) {
+                console.log('[Wallet] Profile fetch failed:', response.status);
+                return;
+              }
+              const data = await response.json();
+              console.log('[Wallet] Profile data:', data);
+              const value = typeof data.coins === 'number' ? data.coins : Number(data.coins) || 0;
+              console.log('[Wallet] Setting balance to:', value);
+              setBalance(value);
+            } catch (e) {
+              console.error('[Wallet] Error fetching wallet:', e);
+            }
+          };
+          await fetchWallet();
+          
+          const fetchTransactions = async () => {
+            try {
+              setLoadingTransactions(true);
+              const response = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/${userId}/transactions`);
+              if (!response.ok) {
+                setLoadingTransactions(false);
+                return;
+              }
+              const data = await response.json();
+              if (Array.isArray(data)) {
+                setTransactions(data);
+                
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+                
+                let earned = 0;
+                let spent = 0;
+                let count = 0;
+                
+                data.forEach((tx: any) => {
+                  if (tx.createdAt) {
+                    const txDate = new Date(tx.createdAt);
+                    if (txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear) {
+                      count++;
+                      const amount = typeof tx.amount === 'number' ? tx.amount : Number(tx.amount) || 0;
+                      if (tx.credit) {
+                        earned += amount;
+                      } else {
+                        spent += amount;
+                      }
+                    }
+                  }
+                });
+                
+                setMonthlyEarned(earned);
+                setMonthlySpent(spent);
+                setMonthlyTransactionCount(count);
+              }
+              setLoadingTransactions(false);
+            } catch (e) {
+              setLoadingTransactions(false);
+            }
+          };
+          await fetchTransactions();
+          
+          const fetchWithdrawConfig = async () => {
+            try {
+              const response = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/withdraw-config`);
+              if (!response.ok) {
+                return;
+              }
+              const data = await response.json();
+              if (typeof data.coinAmount === 'number') {
+                setWithdrawCoinAmount(data.coinAmount);
+              }
+              if (typeof data.rupeeAmount === 'number') {
+                setWithdrawRupeeAmount(data.rupeeAmount);
+              }
+            } catch (e) {
+            }
+          };
+          await fetchWithdrawConfig();
+        } catch (error) {
+          console.error('[Wallet] Error in loadData:', error);
         }
-        const data = await response.json();
-        const value = typeof data.balance === 'number' ? data.balance : Number(data.balance) || 0;
-        setBalance(value);
-      } catch (e) {
-      }
-    };
-    fetchWallet();
-    const fetchTransactions = async () => {
-      try {
-        setLoadingTransactions(true);
-        const response = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/${userId}/transactions`);
-        if (!response.ok) {
-          setLoadingTransactions(false);
-          return;
-        }
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setTransactions(data);
-        }
-        setLoadingTransactions(false);
-      } catch (e) {
-        setLoadingTransactions(false);
-      }
-    };
-    fetchTransactions();
-    const fetchWithdrawConfig = async () => {
-      try {
-        const response = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/withdraw-config`);
-        if (!response.ok) {
-          return;
-        }
-        const data = await response.json();
-        if (typeof data.coinAmount === 'number') {
-          setWithdrawCoinAmount(data.coinAmount);
-        }
-        if (typeof data.rupeeAmount === 'number') {
-          setWithdrawRupeeAmount(data.rupeeAmount);
-        }
-      } catch (e) {
-      }
-    };
-    fetchWithdrawConfig();
-  }, []);
+      };
+      
+      loadData();
+    }, [])
+  );
 
   const openSendPopup = async () => {
     if (!currentUserId) {
@@ -343,17 +398,17 @@ export default function WalletScreen() {
           
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#4CAF50' }]}>+1,850</Text>
+              <Text style={[styles.statValue, { color: '#4CAF50' }]}>+{monthlyEarned.toLocaleString()}</Text>
               <Text style={[styles.statLabel, { color: isDark ? '#888' : '#666' }]}>Earned</Text>
             </View>
             
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#f44336' }]}>-175</Text>
+              <Text style={[styles.statValue, { color: '#f44336' }]}>-{monthlySpent.toLocaleString()}</Text>
               <Text style={[styles.statLabel, { color: isDark ? '#888' : '#666' }]}>Spent</Text>
             </View>
             
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: isDark ? '#F7C14D' : '#127d96' }]}>12</Text>
+              <Text style={[styles.statValue, { color: isDark ? '#F7C14D' : '#127d96' }]}>{monthlyTransactionCount}</Text>
               <Text style={[styles.statLabel, { color: isDark ? '#888' : '#666' }]}>Transactions</Text>
             </View>
           </View>

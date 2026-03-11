@@ -16,10 +16,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useProfile } from '../../contexts/ProfileContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ENV } from '@/config/env';
 
@@ -36,24 +36,26 @@ export default function ProfileScreen() {
   const { isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const init = async () => {
-      let storedUserId: string | null = null;
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        storedUserId = window.localStorage.getItem('userId');
-      } else {
-        try {
-          storedUserId = await SecureStore.getItemAsync('userId');
-        } catch {
-          storedUserId = null;
+  useFocusEffect(
+    React.useCallback(() => {
+      const init = async () => {
+        let storedUserId: string | null = null;
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          storedUserId = window.localStorage.getItem('userId');
+        } else {
+          try {
+            storedUserId = await AsyncStorage.getItem('userId');
+          } catch {
+            storedUserId = null;
+          }
         }
-      }
-      if (storedUserId) {
-        loadProfile(storedUserId);
-      }
-    };
-    init();
-  }, []);
+        if (storedUserId) {
+          await loadProfile(storedUserId);
+        }
+      };
+      init();
+    }, [])
+  );
 
   const loadProfile = async (userId: string) => {
     try {
@@ -103,7 +105,7 @@ export default function ProfileScreen() {
       storedUserId = window.localStorage.getItem('userId');
     } else {
       try {
-        storedUserId = await SecureStore.getItemAsync('userId');
+        storedUserId = await AsyncStorage.getItem('userId');
       } catch {
         storedUserId = null;
       }
@@ -138,7 +140,7 @@ export default function ProfileScreen() {
         storedUserId = window.localStorage.getItem('userId');
       } else {
         try {
-          storedUserId = await SecureStore.getItemAsync('userId');
+          storedUserId = await AsyncStorage.getItem('userId');
         } catch {
           storedUserId = null;
         }

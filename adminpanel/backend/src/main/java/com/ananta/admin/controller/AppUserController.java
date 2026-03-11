@@ -60,6 +60,12 @@ public class AppUserController {
     @Autowired
     private WalletRepository walletRepository;
 
+    @Autowired
+    private com.ananta.admin.repository.AppSettingsRepository appSettingsRepository;
+
+    @Autowired
+    private org.springframework.context.ApplicationContext applicationContext;
+
     @PersistenceContext
     private EntityManager entityManager;
 
@@ -268,6 +274,9 @@ public class AppUserController {
                 
                 userRepository.save(newUser);
                 
+                // Give signup bonus to new user
+                giveSignupBonus(newUser.getUserId());
+                
                 Map<String, Object> response = new HashMap<>();
                 response.put("userId", newUser.getUserId());
                 response.put("email", newUser.getEmail());
@@ -309,6 +318,9 @@ public class AppUserController {
                 u.setUsername("user_" + suffix);
                 u.setUserId(generateUserId());
                 user = userRepository.save(u);
+                
+                // Give signup bonus to new user
+                giveSignupBonus(user.getUserId());
             } catch (Exception ignored) {
             }
         }
@@ -1212,5 +1224,43 @@ public class AppUserController {
     private String generateUserId() {
         String suffix = UUID.randomUUID().toString().replaceAll("-", "").substring(0, 8).toUpperCase(Locale.ROOT);
         return "AN" + suffix;
+    }
+
+    private void giveSignupBonus(String userId) {
+        try {
+            // Get signup bonus from settings
+            com.ananta.admin.model.AppSettings settings = appSettingsRepository.findAll().stream().findFirst()
+                    .orElse(new com.ananta.admin.model.AppSettings());
+            Integer bonusCoins = settings.getSignupBonus();
+            
+            if (bonusCoins != null && bonusCoins > 0) {
+                // Create or update wallet with bonus
+                com.ananta.admin.model.Wallet wallet = walletRepository.findByUserId(userId)
+                        .orElseGet(() -> {
+                            com.ananta.admin.model.Wallet w = new com.ananta.admin.model.Wallet();
+                            w.setUserId(userId);
+                            w.setBalance(0.0);
+                            return w;
+                        });
+                
+                Double currentBalance = wallet.getBalance() != null ? wallet.getBalance() : 0.0;
+                wallet.setBalance(currentBalance + bonusCoins);
+                walletRepository.save(wallet);
+                
+                // Record transaction
+                com.ananta.admin.model.WalletTransaction tx = new com.ananta.admin.model.WalletTransaction();
+                tx.setUserId(userId);
+                tx.setAmount(bonusCoins.doubleValue());
+                tx.setCredit(true);
+                tx.setType("SIGNUP_BONUS");
+                tx.setNote("Welcome bonus - " + bonusCoins + " coins");
+                com.ananta.admin.repository.WalletTransactionRepository txRepo = 
+                    applicationContext.getBean(com.ananta.admin.repository.WalletTransactionRepository.class);
+                txRepo.save(tx);
+            }
+        } catch (Exception e) {
+            // Log error but don't fail user creation
+            System.err.println("Failed to give signup bonus: " + e.getMessage());
+        }
     }
 }
