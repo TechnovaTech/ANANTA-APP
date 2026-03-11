@@ -5,9 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "ananta",
+    "scheme": "com.techvivek32.ananta",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -30,7 +29,20 @@
         "RECORD_AUDIO",
         "INTERNET"
       ],
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "com.techvivek32.ananta",
+              "host": "redirect"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "output": "static",
@@ -53,12 +65,9 @@
       ],
       "expo-font",
       "expo-web-browser",
-      [
-        "@react-native-google-signin/google-signin",
-        {
-          "iosUrlScheme": "com.googleusercontent.apps.276328703341-bddjagcvkurna9s05qppc3bev2sfmop1"
-        }
-      ]
+      "@react-native-community/datetimepicker",
+      "expo-image",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -67,7 +76,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "6211b0c8-271c-4626-a3ac-e281070d9472"
+        "projectId": "f5f020a5-fb3c-47bc-a665-37c315f6873a"
       }
     }
   }

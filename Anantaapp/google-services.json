@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "276328703341",
+    "project_id": "ananta-489806",
+    "storage_bucket": "ananta-489806.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:276328703341:android:bddjagcvkurna9s05qppc3bev2sfmop1",
+        "android_client_info": {
+          "package_name": "com.techvivek32.Ananta"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "276328703341-bddjagcvkurna9s05qppc3bev2sfmop1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.techvivek32.Ananta"
+          }
+        },
+        {
+          "client_id": "276328703341-6hcs2f5fvt3i5lif4o2i9h4uqio3gakb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDEFAULT_KEY_PLACEHOLDER"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "276328703341-6hcs2f5fvt3i5lif4o2i9h4uqio3gakb.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
