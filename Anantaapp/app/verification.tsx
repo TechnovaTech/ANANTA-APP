@@ -17,7 +17,7 @@ export default function VerificationScreen() {
   const [backImage, setBackImage] = useState<string | null>(null);
   const [kycStatus, setKycStatus] = useState<'NONE' | 'PENDING' | 'APPROVED'>('NONE');
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({ fullName: '', email: '', documentNumber: '', dateOfBirth: '', address: '' });
+  const [formData, setFormData] = useState({ fullName: '', email: '', phone: '', gender: '', birthday: '', bio: '', documentNumber: '', dateOfBirth: '', address: '' });
 
   const accentColor = isDark ? '#f7c14d' : '#127d96';
   const accentText = isDark ? 'black' : 'white';
@@ -40,11 +40,21 @@ export default function VerificationScreen() {
         const user = data.user;
         if (kyc?.status === 'PENDING') setKycStatus('PENDING');
         if (kyc?.status === 'APPROVED') setKycStatus('APPROVED');
+        const base = {
+          fullName: user?.fullName || '',
+          email: user?.email || '',
+          phone: user?.phone || '',
+          gender: user?.gender || '',
+          birthday: user?.birthday || '',
+          bio: user?.bio || '',
+          dateOfBirth: user?.birthday || '',
+          address: [user?.addressLine1, user?.city, user?.state].filter(Boolean).join(', ') || '',
+        };
         if (kyc) {
           setSelectedDocType((kyc.documentType || '').toLowerCase().includes('aadhar') ? 'aadhar' : 'license');
-          setFormData(prev => ({ ...prev, fullName: user?.fullName || '', email: user?.email || '', documentNumber: kyc.documentNumber || '' }));
+          setFormData(prev => ({ ...prev, ...base, documentNumber: kyc.documentNumber || '' }));
         } else if (user) {
-          setFormData(prev => ({ ...prev, fullName: user.fullName || '', email: user.email || '' }));
+          setFormData(prev => ({ ...prev, ...base }));
         }
       } catch {}
     };
@@ -115,6 +125,10 @@ export default function VerificationScreen() {
           username: formData.fullName,
           fullName: formData.fullName,
           email: formData.email,
+          phone: formData.phone,
+          gender: formData.gender,
+          birthday: formData.birthday,
+          bio: formData.bio,
           documentType: docTypeMap[selectedDocType] || selectedDocType,
           documentNumber: formData.documentNumber,
           documentFrontImage: frontBase64,
