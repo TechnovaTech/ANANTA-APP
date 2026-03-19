@@ -337,9 +337,9 @@ export default function ProfileScreen() {
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/verification')}>
             <View style={[styles.actionIcon, { backgroundColor: isDark ? '#f7c14d' : '#127d96' }]}>
-              <Ionicons name="checkmark-circle" size={24} color={isDark ? 'black' : 'white'} />
+              <Ionicons name="shield-checkmark" size={24} color={isDark ? 'black' : 'white'} />
             </View>
-            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Verify</Text>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>KYC</Text>
           </TouchableOpacity>
           
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/wallet')}>

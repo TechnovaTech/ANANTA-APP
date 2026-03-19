@@ -23,7 +23,8 @@ const { width, height } = Dimensions.get('window');
 export default function VerificationScreen() {
   const { isDark } = useTheme();
   const [selectedDocType, setSelectedDocType] = useState('');
-  const [documentImage, setDocumentImage] = useState<string | null>(null);
+  const [frontImage, setFrontImage] = useState<string | null>(null);
+  const [backImage, setBackImage] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     fullName: '',
     documentNumber: '',
@@ -73,7 +74,7 @@ export default function VerificationScreen() {
     { id: 'license', name: 'Driving License', icon: 'car-outline' },
   ];
 
-  const pickDocument = async () => {
+  const pickDocument = async (side: 'front' | 'back') => {
     if (!selectedDocType) {
       Alert.alert('Error', 'Please select document type first');
       return;
@@ -87,13 +88,14 @@ export default function VerificationScreen() {
     });
 
     if (!result.canceled) {
-      setDocumentImage(result.assets[0].uri);
+      if (side === 'front') setFrontImage(result.assets[0].uri);
+      else setBackImage(result.assets[0].uri);
     }
   };
 
   const submitVerification = () => {
-    if (!selectedDocType || !documentImage || !formData.fullName || !formData.documentNumber) {
-      Alert.alert('Error', 'Please fill all required fields and upload document');
+    if (!selectedDocType || !frontImage || !formData.fullName || !formData.documentNumber) {
+      Alert.alert('Error', 'Please fill all required fields and upload document front image');
       return;
     }
     Alert.alert('Success', 'Document submitted for verification!', [
@@ -152,31 +154,55 @@ export default function VerificationScreen() {
           </View>
         </View>
 
-        {/* Upload Document */}
+        {/* Fields shown only after doc type is selected */}
+        {selectedDocType !== '' && (
+          <>
         <View style={[styles.section, { backgroundColor: isDark ? '#2a2a2a' : 'white' }]}>
           <View style={styles.sectionHeader}>
             <Ionicons name="cloud-upload" size={20} color={isDark ? '#f7c14d' : '#127d96'} />
             <Text style={[styles.sectionTitle, { color: isDark ? 'white' : '#333' }]}>Upload Document</Text>
           </View>
-          <TouchableOpacity style={styles.uploadArea} onPress={pickDocument}>
-            {documentImage ? (
+
+          {/* Front Side */}
+          <Text style={[styles.uploadLabel, { color: isDark ? '#ccc' : '#555' }]}>Front Side *</Text>
+          <TouchableOpacity style={styles.uploadArea} onPress={() => pickDocument('front')}>
+            {frontImage ? (
               <View style={styles.uploadedContainer}>
-                <Image source={{ uri: documentImage }} style={styles.uploadedImage} />
-                <View style={styles.changeImageOverlay}>
-                  <Ionicons name="camera" size={20} color="white" />
-                  <Text style={styles.changeImageText}>Tap to change</Text>
-                </View>
+                <Image source={{ uri: frontImage }} style={styles.uploadedImage} />
+                <TouchableOpacity style={styles.changeImageOverlay} onPress={() => setFrontImage(null)}>
+                  <Ionicons name="close" size={16} color="white" />
+                  <Text style={styles.changeImageText}>Remove</Text>
+                </TouchableOpacity>
               </View>
             ) : (
-              <View style={[styles.uploadPlaceholder, { 
-                borderColor: isDark ? '#555' : '#dee2e6',
-                backgroundColor: isDark ? '#333' : '#f8f9fa'
-              }]}>
+              <View style={[styles.uploadPlaceholder, { borderColor: isDark ? '#555' : '#dee2e6', backgroundColor: isDark ? '#333' : '#f8f9fa' }]}>
                 <View style={styles.uploadIcon}>
-                  <Ionicons name="cloud-upload-outline" size={40} color={isDark ? '#f7c14d' : '#127d96'} />
+                  <Ionicons name="cloud-upload-outline" size={36} color={isDark ? '#f7c14d' : '#127d96'} />
                 </View>
-                <Text style={[styles.uploadText, { color: isDark ? '#ccc' : '#666' }]}>Tap to upload document</Text>
-                <Text style={[styles.uploadSubtext, { color: isDark ? '#888' : '#999' }]}>JPG, PNG or PDF (Max 5MB)</Text>
+                <Text style={[styles.uploadText, { color: isDark ? '#ccc' : '#666' }]}>Tap to upload front</Text>
+                <Text style={[styles.uploadSubtext, { color: isDark ? '#888' : '#999' }]}>JPG, PNG (Max 5MB)</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Back Side */}
+          <Text style={[styles.uploadLabel, { color: isDark ? '#ccc' : '#555', marginTop: 20 }]}>Back Side *</Text>
+          <TouchableOpacity style={styles.uploadArea} onPress={() => pickDocument('back')}>
+            {backImage ? (
+              <View style={styles.uploadedContainer}>
+                <Image source={{ uri: backImage }} style={styles.uploadedImage} />
+                <TouchableOpacity style={styles.changeImageOverlay} onPress={() => setBackImage(null)}>
+                  <Ionicons name="close" size={16} color="white" />
+                  <Text style={styles.changeImageText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={[styles.uploadPlaceholder, { borderColor: isDark ? '#555' : '#dee2e6', backgroundColor: isDark ? '#333' : '#f8f9fa' }]}>
+                <View style={styles.uploadIcon}>
+                  <Ionicons name="cloud-upload-outline" size={36} color={isDark ? '#f7c14d' : '#127d96'} />
+                </View>
+                <Text style={[styles.uploadText, { color: isDark ? '#ccc' : '#666' }]}>Tap to upload back</Text>
+                <Text style={[styles.uploadSubtext, { color: isDark ? '#888' : '#999' }]}>JPG, PNG (Max 5MB)</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -263,6 +289,8 @@ export default function VerificationScreen() {
             <Text style={[styles.submitButtonText, { color: isDark ? 'black' : 'white' }]}>Submit for Verification</Text>
           </LinearGradient>
         </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -352,6 +380,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginLeft: 6,
     fontWeight: '600',
+  },
+  uploadLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 10,
   },
   uploadArea: {
     borderRadius: 15,
