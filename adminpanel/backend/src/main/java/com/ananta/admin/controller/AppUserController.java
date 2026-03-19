@@ -1280,8 +1280,8 @@ public class AppUserController {
                 response.put("message", "followerId and followeeId are required");
                 return ResponseEntity.ok(response);
             }
-            String followerId = normalizeUserIdValue(followerIdRaw);
-            String followeeId = normalizeUserIdValue(followeeIdRaw);
+            String followerId = followerIdRaw.trim();
+            String followeeId = followeeIdRaw.trim();
             if (followerId.equals(followeeId)) {
                 response.put("isFollowing", false);
                 response.put("message", "User cannot follow themselves");

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, FlatList, Image, TouchableOpacity, StatusBar, Platform } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Image, TouchableOpacity, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { ENV } from '@/config/env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 const resolveAvatarUri = (value: string | null | undefined) => {
@@ -16,13 +17,6 @@ const resolveAvatarUri = (value: string | null | undefined) => {
   if (trimmed.length > 100) return `data:image/jpeg;base64,${trimmed}`;
   return trimmed;
 };
-
-const initialFollowing = [
-  { id: '1', name: 'Alex Brown', username: '@alexb', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop&crop=face', isFollowing: true },
-  { id: '2', name: 'Emma Davis', username: '@emmad', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face', isFollowing: true },
-  { id: '3', name: 'Chris Wilson', username: '@chrisw', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face', isFollowing: true },
-  { id: '4', name: 'Lisa Garcia', username: '@lisag', avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=100&h=100&fit=crop&crop=face', isFollowing: true },
-];
 
 export default function FollowingScreen() {
   const { isDark } = useTheme();
@@ -45,13 +39,8 @@ export default function FollowingScreen() {
   };
 
   const fetchFollowing = async () => {
-    let userId: string | null = null;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      userId = window.localStorage.getItem('userId');
-    }
-    if (!userId) {
-      userId = 'guest';
-    }
+    const userId = await AsyncStorage.getItem('userId');
+    if (!userId) return;
     console.log('[Following] fetchFollowing for userId:', userId);
     try {
       const res = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${userId}`);
@@ -74,17 +63,8 @@ export default function FollowingScreen() {
   };
 
   useEffect(() => {
-    let userId: string | null = null;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      userId = window.localStorage.getItem('userId');
-    }
-    if (!userId) {
-      userId = 'guest';
-    }
-    setCurrentUserId(userId);
+    AsyncStorage.getItem('userId').then(uid => { if (uid) setCurrentUserId(uid); });
     fetchFollowing();
-    const interval = setInterval(fetchFollowing, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   const handleToggleFollow = async (targetUserId: string) => {
@@ -113,11 +93,9 @@ export default function FollowingScreen() {
         return;
       }
       setFollowing(prev =>
-        prev.map(f =>
-          String(f.id) === String(targetUserId)
-            ? { ...f, isFollowing: data.isFollowing }
-            : f
-        )
+        data.isFollowing
+          ? prev.map(f => String(f.id) === String(targetUserId) ? { ...f, isFollowing: true } : f)
+          : prev.filter(f => String(f.id) !== String(targetUserId))
       );
     } catch {
     }
@@ -134,7 +112,7 @@ export default function FollowingScreen() {
         style={[
           styles.unfollowButton,
           {
-            backgroundColor: item.isFollowing ? (isDark ? '#f7c14d' : '#e9ecef') : 'transparent',
+            backgroundColor: item.isFollowing ? (isDark ? '#f7c14d' : '#127d96') : 'transparent',
             borderWidth: 1,
             borderColor: isDark ? '#f7c14d' : '#127d96',
           },
@@ -144,10 +122,10 @@ export default function FollowingScreen() {
         <Text
           style={[
             styles.unfollowText,
-            { color: item.isFollowing ? (isDark ? 'black' : '#333') : (isDark ? '#f7c14d' : '#127d96') },
+            { color: item.isFollowing ? (isDark ? 'black' : 'white') : (isDark ? '#f7c14d' : '#127d96') },
           ]}
         >
-          {item.isFollowing ? 'Unfollow' : 'Follow'}
+          {item.isFollowing ? 'Following' : 'Follow'}
         </Text>
       </TouchableOpacity>
     </View>

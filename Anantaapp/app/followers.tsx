@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, FlatList, Image, TouchableOpacity, StatusBar, Platform } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Image, TouchableOpacity, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { ENV } from '@/config/env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 const resolveAvatarUri = (value: string | null | undefined) => {
@@ -16,15 +17,6 @@ const resolveAvatarUri = (value: string | null | undefined) => {
   if (trimmed.length > 100) return `data:image/jpeg;base64,${trimmed}`;
   return trimmed;
 };
-
-const initialFollowers = [
-  { id: '1', name: 'Raj Patel', username: '@rajpatel', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face', isFollowing: true },
-  { id: '2', name: 'Priya Shah', username: '@priyashah', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=face', isFollowing: false },
-  { id: '3', name: 'Arjun Modi', username: '@arjunmodi', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face', isFollowing: true },
-  { id: '4', name: 'Kavya Joshi', username: '@kavyajoshi', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop&crop=face', isFollowing: false },
-  { id: '5', name: 'Dhruv Sharma', username: '@dhruvsharma', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face', isFollowing: true },
-  { id: '6', name: 'Riya Mehta', username: '@riyamehta', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&h=100&fit=crop&crop=face', isFollowing: false },
-];
 
 export default function FollowersScreen() {
   const { isDark } = useTheme();
@@ -53,13 +45,8 @@ export default function FollowersScreen() {
   };
 
   const fetchFollowers = async () => {
-    let userId: string | null = null;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      userId = window.localStorage.getItem('userId');
-    }
-    if (!userId) {
-      userId = 'guest';
-    }
+    const userId = await AsyncStorage.getItem('userId');
+    if (!userId) return;
     console.log('[Followers] fetchFollowers for userId:', userId);
     try {
       const res = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${userId}`);
@@ -82,17 +69,8 @@ export default function FollowersScreen() {
   };
 
   useEffect(() => {
-    let userId: string | null = null;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      userId = window.localStorage.getItem('userId');
-    }
-    if (!userId) {
-      userId = 'guest';
-    }
-    setCurrentUserId(userId);
+    AsyncStorage.getItem('userId').then(uid => { if (uid) setCurrentUserId(uid); });
     fetchFollowers();
-    const interval = setInterval(fetchFollowers, 5000);
-    return () => clearInterval(interval);
   }, []);
 
   const handleToggleFollow = async (targetUserId: string) => {
