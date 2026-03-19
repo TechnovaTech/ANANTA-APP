@@ -35,6 +35,10 @@ export default function ProfileScreen() {
   const { profileData, updateProfile, logout } = useProfile();
   const { isDark } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
+  const [hostLevel, setHostLevel] = useState(0);
+  const [viewerLevel, setViewerLevel] = useState(0);
+  const [totalCoinsEarned, setTotalCoinsEarned] = useState(0);
+  const [totalCoinsSpent, setTotalCoinsSpent] = useState(0);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -75,6 +79,10 @@ export default function ProfileScreen() {
       const user = data.user;
       const profileUri = resolveProfileUri(user.profileImage);
       const coverUri = resolveProfileUri(user.coverImage);
+      setHostLevel(user.hostLevel || 0);
+      setViewerLevel(user.viewerLevel || 0);
+      setTotalCoinsEarned(user.totalCoinsEarned || 0);
+      setTotalCoinsSpent(user.totalCoinsSpent || 0);
       updateProfile({
         name: user.username || '',
         title: user.username || '',
@@ -246,6 +254,24 @@ export default function ProfileScreen() {
           </View>
         </View>
         
+        {/* Level badges */}
+        {(hostLevel > 0 || viewerLevel > 0) && (
+          <View style={styles.levelBadgesRow}>
+            {hostLevel > 0 && (
+              <View style={[styles.levelBadge, { backgroundColor: '#FF9800' }]}>
+                <Ionicons name="star" size={12} color="white" />
+                <Text style={styles.levelBadgeText}>Host Lv.{hostLevel}</Text>
+              </View>
+            )}
+            {viewerLevel > 0 && (
+              <View style={[styles.levelBadge, { backgroundColor: '#9C27B0' }]}>
+                <Ionicons name="eye" size={12} color="white" />
+                <Text style={styles.levelBadgeText}>Viewer Lv.{viewerLevel}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         <TouchableOpacity style={styles.editButton} onPress={() => router.push('/edit-profile')}>
           <LinearGradient
             colors={isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7']}
@@ -275,6 +301,33 @@ export default function ProfileScreen() {
           <Ionicons name="diamond" size={20} color={isDark ? 'black' : 'white'} />
           <Text style={[styles.statNumber, { color: isDark ? 'black' : 'white' }]}>{profileData.coins}</Text>
           <Text style={[styles.statLabel, { color: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.9)' }]}>Coins</Text>
+        </View>
+      </View>
+
+      {/* Level progress card */}
+      <View style={[styles.levelCard, { backgroundColor: isDark ? '#2a2a2a' : 'white' }]}>
+        <Text style={[styles.levelCardTitle, { color: isDark ? 'white' : '#333' }]}>My Levels</Text>
+        <View style={styles.levelRow}>
+          <View style={styles.levelInfo}>
+            <View style={[styles.levelBadgeLarge, { backgroundColor: '#FF9800' }]}>
+              <Ionicons name="star" size={18} color="white" />
+              <Text style={styles.levelBadgeLargeText}>Lv.{hostLevel}</Text>
+            </View>
+            <View style={styles.levelDetails}>
+              <Text style={[styles.levelType, { color: isDark ? 'white' : '#333' }]}>Host Level</Text>
+              <Text style={[styles.levelCoins, { color: isDark ? '#aaa' : '#888' }]}>{totalCoinsEarned} coins earned</Text>
+            </View>
+          </View>
+          <View style={styles.levelInfo}>
+            <View style={[styles.levelBadgeLarge, { backgroundColor: '#9C27B0' }]}>
+              <Ionicons name="eye" size={18} color="white" />
+              <Text style={styles.levelBadgeLargeText}>Lv.{viewerLevel}</Text>
+            </View>
+            <View style={styles.levelDetails}>
+              <Text style={[styles.levelType, { color: isDark ? 'white' : '#333' }]}>Viewer Level</Text>
+              <Text style={[styles.levelCoins, { color: isDark ? '#aaa' : '#888' }]}>{totalCoinsSpent} coins spent</Text>
+            </View>
+          </View>
         </View>
       </View>
       
@@ -582,6 +635,74 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#333',
     fontWeight: '600',
+  },
+  levelBadgesRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  levelBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  levelBadgeText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  levelCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  levelCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  levelRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  levelInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  levelBadgeLarge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 2,
+  },
+  levelBadgeLargeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  levelDetails: {
+    flex: 1,
+  },
+  levelType: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  levelCoins: {
+    fontSize: 11,
   },
   logoutButton: {
     marginHorizontal: 20,

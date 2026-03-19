@@ -67,6 +67,18 @@ public class User {
     @Column(name = "ban_reason")
     private String banReason;
 
+    @Column(name = "host_level")
+    private Integer hostLevel = 0;
+
+    @Column(name = "viewer_level")
+    private Integer viewerLevel = 0;
+
+    @Column(name = "total_coins_earned")
+    private Double totalCoinsEarned = 0.0;
+
+    @Column(name = "total_coins_spent")
+    private Double totalCoinsSpent = 0.0;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
