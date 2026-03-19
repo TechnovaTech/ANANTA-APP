@@ -1310,6 +1310,32 @@ public class AppUserController {
         }
     }
 
+    @GetMapping("/search/users")
+    public ResponseEntity<?> searchUsers(@RequestParam String q, @RequestParam(required = false) String currentUserId) {
+        if (!StringUtils.hasText(q) || q.trim().length() < 2) {
+            return ResponseEntity.ok(List.of());
+        }
+        try {
+            List<User> users = userRepository.searchByQuery(q.trim());
+            String viewerId = currentUserId != null ? currentUserId.trim() : "";
+            List<Map<String, Object>> result = users.stream().map(u -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("userId", u.getUserId());
+                m.put("username", u.getUsername());
+                m.put("fullName", u.getFullName());
+                m.put("profileImage", u.getProfileImage());
+                m.put("location", u.getLocation());
+                boolean isFollowing = StringUtils.hasText(viewerId) &&
+                    followRepository.existsByFollowerIdAndFolloweeId(viewerId, u.getUserId());
+                m.put("isFollowing", isFollowing);
+                return m;
+            }).collect(Collectors.toList());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.ok(List.of());
+        }
+    }
+
     @PostMapping("/follow/clear-all")
     public ResponseEntity<?> clearAllFollows() {
         try {
