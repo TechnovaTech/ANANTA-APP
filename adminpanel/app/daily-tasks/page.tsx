@@ -373,11 +373,23 @@ export default function DailyTasksPage() {
             </div>
             <div>
               <label style={{display:'block',marginBottom:4,fontSize:13,color:'#4a5568'}}>Trigger Event</label>
-              <input
+              <select
                 value={editingHostTask.triggerEvent}
                 onChange={e => handleHostTaskChange('triggerEvent', e.target.value)}
                 style={{width:'100%',padding:'8px 10px',borderRadius:6,border:'1px solid #e2e8f0',fontSize:14}}
-              />
+              >
+                <option value="">-- Select Trigger --</option>
+                <option value="WATCH_TIME">WATCH_TIME</option>
+                <option value="GIFT_SENT_VALUE">GIFT_SENT_VALUE</option>
+                <option value="GIFT_RECEIVED_VALUE">GIFT_RECEIVED_VALUE</option>
+                <option value="ROOM_JOINED">ROOM_JOINED</option>
+                <option value="GIFT_UNIQUE_HOST">GIFT_UNIQUE_HOST</option>
+                <option value="HOST_LIVE_MINUTES">HOST_LIVE_MINUTES</option>
+                <option value="FOLLOW_RECEIVED">FOLLOW_RECEIVED</option>
+                <option value="HOST_FOLLOWED">HOST_FOLLOWED</option>
+                <option value="MESSAGE_SENT">MESSAGE_SENT</option>
+                <option value="VIEWER_JOINED">VIEWER_JOINED</option>
+              </select>
             </div>
           </div>
           
@@ -494,11 +506,23 @@ export default function DailyTasksPage() {
             </div>
             <div>
               <label style={{display:'block',marginBottom:4,fontSize:13,color:'#4a5568'}}>Trigger Event</label>
-              <input
+              <select
                 value={editingViewerTask.triggerEvent}
                 onChange={e => handleViewerTaskChange('triggerEvent', e.target.value)}
                 style={{width:'100%',padding:'8px 10px',borderRadius:6,border:'1px solid #e2e8f0',fontSize:14}}
-              />
+              >
+                <option value="">-- Select Trigger --</option>
+                <option value="WATCH_TIME">WATCH_TIME</option>
+                <option value="GIFT_SENT_VALUE">GIFT_SENT_VALUE</option>
+                <option value="GIFT_RECEIVED_VALUE">GIFT_RECEIVED_VALUE</option>
+                <option value="ROOM_JOINED">ROOM_JOINED</option>
+                <option value="GIFT_UNIQUE_HOST">GIFT_UNIQUE_HOST</option>
+                <option value="HOST_LIVE_MINUTES">HOST_LIVE_MINUTES</option>
+                <option value="FOLLOW_RECEIVED">FOLLOW_RECEIVED</option>
+                <option value="HOST_FOLLOWED">HOST_FOLLOWED</option>
+                <option value="MESSAGE_SENT">MESSAGE_SENT</option>
+                <option value="VIEWER_JOINED">VIEWER_JOINED</option>
+              </select>
             </div>
           </div>
           
