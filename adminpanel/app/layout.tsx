@@ -189,6 +189,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 KYC Verification
               </Link>
               
+              <Link href="/referral-management" style={{
+                display:'flex',
+                alignItems:'center',
+                padding:'12px 24px',
+                textDecoration:'none',
+                color: pathname==='/referral-management' ? '#3182ce' : '#4a5568',
+                background: pathname==='/referral-management' ? '#ebf8ff' : 'transparent',
+                borderRight: pathname==='/referral-management' ? '3px solid #3182ce' : '3px solid transparent',
+                fontWeight: pathname==='/referral-management' ? 600 : 500,
+                fontSize:15
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{marginRight:12}}>
+                  <path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                Referral Management
+              </Link>
+
               <Link href="/app-settings" style={{
                 display:'flex',
                 alignItems:'center',
