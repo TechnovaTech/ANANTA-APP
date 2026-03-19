@@ -116,7 +116,7 @@ export default function MessagesScreen() {
         const username = item.username ? `@${item.username}` : '@user';
         const time = item.lastMessageTime ? formatTime(item.lastMessageTime) : '';
         const avatarUri = resolveAvatarUri(item.profileImage);
-        const avatar = avatarUri ? { uri: avatarUri } : pickAvatar(index);
+        const avatar = avatarUri ? { uri: avatarUri } : null;
         return {
           threadId: String(item.threadId),
           otherUserId: String(item.otherUserId),
@@ -178,7 +178,7 @@ export default function MessagesScreen() {
         const name = item.fullName || item.username || 'User';
         const username = item.username ? `@${item.username}` : '@user';
         const avatarUri = resolveAvatarUri(item.profileImage);
-        const avatar = avatarUri ? { uri: avatarUri } : pickAvatar(index);
+        const avatar = avatarUri ? { uri: avatarUri } : null;
         return {
           userId: String(item.userId),
           name,
@@ -235,9 +235,12 @@ export default function MessagesScreen() {
               onPress={() => openChat(conversation.threadId, conversation.otherUserId, conversation.name, conversation.avatar)}
             >
               <View style={styles.avatarContainer}>
-                {conversation.avatar && (
-                  <Image source={conversation.avatar} style={[styles.avatar, { borderColor: isDark ? '#f7c14d' : '#127d96' }]} />
-                )}
+                {conversation.avatar
+                  ? <Image source={conversation.avatar} style={[styles.avatar, { borderColor: isDark ? '#f7c14d' : '#127d96' }]} />
+                  : <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: isDark ? '#333' : '#e5e7eb', borderColor: isDark ? '#f7c14d' : '#127d96' }]}>
+                      <Ionicons name="person" size={24} color={isDark ? '#888' : '#aaa'} />
+                    </View>
+                }
               </View>
               <View style={styles.conversationContent}>
                 <View style={styles.conversationHeader}>
@@ -307,12 +310,12 @@ export default function MessagesScreen() {
                   }}
                 >
                   <View style={styles.avatarContainer}>
-                    {item.avatar && (
-                      <Image
-                        source={item.avatar}
-                        style={[styles.avatar, { borderColor: isDark ? '#f7c14d' : '#127d96' }]}
-                      />
-                    )}
+                    {item.avatar
+                      ? <Image source={item.avatar} style={[styles.avatar, { borderColor: isDark ? '#f7c14d' : '#127d96' }]} />
+                      : <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: isDark ? '#333' : '#e5e7eb', borderColor: isDark ? '#f7c14d' : '#127d96' }]}>
+                          <Ionicons name="person" size={24} color={isDark ? '#888' : '#aaa'} />
+                        </View>
+                    }
                   </View>
                   <View style={styles.conversationContent}>
                     <ThemedText
@@ -392,6 +395,10 @@ const styles = StyleSheet.create({
     borderRadius: 27.5,
     borderWidth: 2,
     borderColor: '#127d96',
+  },
+  avatarFallback: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   onlineIndicator: {
     position: 'absolute',

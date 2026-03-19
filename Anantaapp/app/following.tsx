@@ -27,7 +27,7 @@ export default function FollowingScreen() {
     console.log('[Following] mapApiFollowing raw:', raw);
     return raw.map((item, index) => {
       const rawAvatar = item.profileImage ?? item.avatar ?? '';
-      const avatar = resolveAvatarUri(rawAvatar) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face';
+      const avatar = resolveAvatarUri(rawAvatar) || null;
       return {
         id: String(item.userId ?? item.id ?? index),
         name: item.fullName ?? item.name ?? item.username ?? 'User',
@@ -104,7 +104,12 @@ export default function FollowingScreen() {
   const renderFollowing = ({ item }) => (
     <View style={[styles.followingItem, { backgroundColor: isDark ? '#333' : 'white' }]}>
       <TouchableOpacity style={styles.userRow} onPress={() => router.push({ pathname: '/user-profile', params: { userId: item.id } })}>
-        <Image source={{ uri: item.avatar }} style={styles.avatar} />
+        {item.avatar
+          ? <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          : <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: isDark ? '#444' : '#e5e7eb' }]}>
+              <Ionicons name="person" size={22} color={isDark ? '#888' : '#aaa'} />
+            </View>
+        }
         <View style={styles.userInfo}>
           <Text style={[styles.name, { color: isDark ? 'white' : '#333' }]}>{item.name}</Text>
           <Text style={[styles.username, { color: isDark ? '#ccc' : '#666' }]}>{item.username}</Text>
@@ -211,6 +216,10 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
     marginRight: 15,
+  },
+  avatarFallback: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   userInfo: {
     flex: 1,

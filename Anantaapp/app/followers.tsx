@@ -33,7 +33,7 @@ export default function FollowersScreen() {
           ? `@${item.username}`
           : '@user';
       const rawAvatar = item.profileImage ?? item.avatar ?? '';
-      const avatar = resolveAvatarUri(rawAvatar) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&h=100&fit=crop&crop=face';
+      const avatar = resolveAvatarUri(rawAvatar) || null;
       return {
         id: rawId,
         name,
@@ -112,12 +112,12 @@ export default function FollowersScreen() {
   const renderFollower = ({ item }) => (
     <View style={[styles.followerItem, { backgroundColor: isDark ? '#333' : 'white' }]}>
       <TouchableOpacity style={styles.userRow} onPress={() => router.push({ pathname: '/user-profile', params: { userId: item.id } })}>
-        <Image 
-          source={{ uri: item.avatar }} 
-          style={styles.avatar}
-          defaultSource={require('../assets/images/icon.png')}
-          onError={() => console.log('Avatar failed to load for:', item.name)}
-        />
+        {item.avatar
+          ? <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          : <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: isDark ? '#444' : '#e5e7eb' }]}>
+              <Ionicons name="person" size={22} color={isDark ? '#888' : '#aaa'} />
+            </View>
+        }
         <View style={styles.userInfo}>
           <Text style={[styles.name, { color: isDark ? 'white' : '#333' }]}>{item.name}</Text>
           <Text style={[styles.username, { color: isDark ? '#ccc' : '#666' }]}>{item.username}</Text>
@@ -219,6 +219,10 @@ const styles = StyleSheet.create({
     marginRight: 15,
     borderWidth: 2,
     borderColor: '#ddd',
+  },
+  avatarFallback: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   userInfo: {
     flex: 1,
