@@ -77,6 +77,7 @@ export default function VideoLiveScreen() {
   const animatedValues = useRef<{ [key: number]: Animated.Value }>({});
   const [remoteUid, setRemoteUid] = useState<number | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const elapsedTimeRef = useRef(0);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const messagesIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -243,6 +244,9 @@ export default function VideoLiveScreen() {
       if (typeof data.fromBalance === 'number') {
         setWalletBalance(data.fromBalance);
       }
+      // Track coins spent for daily task progress
+      const prev = parseFloat(await AsyncStorage.getItem('pendingCoinsSpent') || '0');
+      await AsyncStorage.setItem('pendingCoinsSpent', String(prev + cost));
       // Broadcast gift animation to all viewers via message system
       const senderName = currentUsername !== 'User' ? currentUsername : (senderUserId || 'Someone');
       const giftMsgId = Date.now();
@@ -418,7 +422,7 @@ export default function VideoLiveScreen() {
               clearInterval(statsIntervalRef.current);
               statsIntervalRef.current = null;
             }
-            cleanupAgora().then(() => {
+            saveMinutes().then(() => cleanupAgora()).then(() => {
               Alert.alert('Live Ended', 'The host has left the session.', [
                 { text: 'OK', onPress: () => router.back() }
               ]);
@@ -471,7 +475,7 @@ export default function VideoLiveScreen() {
     statsIntervalRef.current = setInterval(loadSessionStats, 5000);
     messagesIntervalRef.current = setInterval(loadMessages, 2000);
     timerIntervalRef.current = setInterval(() => {
-      setElapsedTime(prev => prev + 1);
+      setElapsedTime(prev => { elapsedTimeRef.current = prev + 1; return prev + 1; });
     }, 1000);
     return () => {
       if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
@@ -495,6 +499,7 @@ export default function VideoLiveScreen() {
           messagesIntervalRef.current = null;
         }
         if (role === 'viewer') {
+          await saveMinutes();
           await cleanupAgora();
           Alert.alert('Live Ended', 'The host has ended this live session.', [
             { text: 'OK', onPress: () => router.back() }
@@ -510,7 +515,7 @@ export default function VideoLiveScreen() {
         if (typeof data.likes === 'number') {
           setLikes(data.likes);
         }
-        if (role === 'viewer' && data.status === 'ended') {
+        if (role === 'viewer' && data.status && data.status.toUpperCase() === 'ENDED') {
           if (statsIntervalRef.current) {
             clearInterval(statsIntervalRef.current);
             statsIntervalRef.current = null;
@@ -519,6 +524,7 @@ export default function VideoLiveScreen() {
             clearInterval(messagesIntervalRef.current);
             messagesIntervalRef.current = null;
           }
+          await saveMinutes();
           await cleanupAgora();
           Alert.alert('Live Ended', 'The host has ended this live session.', [
             { text: 'OK', onPress: () => router.back() }
@@ -589,8 +595,22 @@ export default function VideoLiveScreen() {
     }
   };
 
+  const saveMinutes = async () => {
+    const elapsedMinutes = elapsedTimeRef.current / 60;
+    if (elapsedMinutes <= 0) return;
+    if (role === 'viewer') {
+      const prev = parseFloat(await AsyncStorage.getItem('pendingWatchMinutes') || '0');
+      await AsyncStorage.setItem('pendingWatchMinutes', String(prev + elapsedMinutes));
+    } else if (role === 'host') {
+      const prev = parseFloat(await AsyncStorage.getItem('pendingLiveMinutes') || '0');
+      await AsyncStorage.setItem('pendingLiveMinutes', String(prev + elapsedMinutes));
+    }
+    elapsedTimeRef.current = 0; // prevent double-saving
+  };
+
   const endLive = async () => {
     try {
+      await saveMinutes();
       if (role === 'host' && sessionId && userId) {
         await fetch(`${ENV.API_BASE_URL}/api/app/live/end`, {
           method: 'POST',

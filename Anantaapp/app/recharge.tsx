@@ -153,7 +153,7 @@ export default function RechargeScreen() {
         description: `Recharge ${selectedPlan?.coins} coins`,
         order_id: orderData.orderId,
         handler: async function (response: any) {
-          await verifyPayment(response, userId, orderData.planId, orderData.coins);
+          await verifyPayment(response, userId, orderData.planId, orderData.coins ?? selectedPlan?.coins ?? 0);
         },
         prefill: {
           name: '',
@@ -191,7 +191,7 @@ export default function RechargeScreen() {
 
       RazorpayCheckout.open(options)
         .then(async (data: any) => {
-          await verifyPayment(data, userId, orderData.planId, orderData.coins);
+          await verifyPayment(data, userId, orderData.planId, orderData.coins ?? selectedPlan?.coins ?? 0);
         })
         .catch((error: any) => {
           setLoading(false);
@@ -226,6 +226,9 @@ export default function RechargeScreen() {
 
       const data = await response.json();
       if (data.success) {
+        // Track recharge coins for daily task progress
+        const prev = parseFloat(await AsyncStorage.getItem('pendingRechargeCoins') || '0');
+        await AsyncStorage.setItem('pendingRechargeCoins', String(prev + (coins ?? 0)));
         setPaymentSuccess(true);
         setCurrentStep('complete');
       } else {

@@ -279,6 +279,7 @@ export default function HomeScreen() {
         hostUsername: data.hostUsername,
         hostCountry: data.hostCountry,
         hostProfileImage: data.hostProfileImage,
+        hostUid: String(data.hostUid || '0'),
         isFollowing: data.isFollowing,
         username: String(username),
         profileImage: String(profileImage),

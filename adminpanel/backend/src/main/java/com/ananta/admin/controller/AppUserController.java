@@ -7,10 +7,15 @@ import com.ananta.admin.model.HostLevel;
 import com.ananta.admin.model.ViewerLevel;
 import com.ananta.admin.model.HostTask;
 import com.ananta.admin.model.ViewerTask;
+import com.ananta.admin.model.UserTaskProgress;
+import com.ananta.admin.model.Wallet;
+import com.ananta.admin.model.WalletTransaction;
 import com.ananta.admin.repository.HostLevelRepository;
 import com.ananta.admin.repository.ViewerLevelRepository;
 import com.ananta.admin.repository.HostTaskRepository;
 import com.ananta.admin.repository.ViewerTaskRepository;
+import com.ananta.admin.repository.UserTaskProgressRepository;
+import com.ananta.admin.repository.WalletTransactionRepository;
 import com.ananta.admin.payload.KycStatusResponse;
 import com.ananta.admin.payload.MessageResponse;
 import com.ananta.admin.payload.OtpVerifyRequest;
@@ -84,6 +89,12 @@ public class AppUserController {
     private ViewerTaskRepository viewerTaskRepository;
 
     @Autowired
+    private UserTaskProgressRepository userTaskProgressRepository;
+
+    @Autowired
+    private WalletTransactionRepository walletTransactionRepository;
+
+    @Autowired
     private org.springframework.context.ApplicationContext applicationContext;
 
     @PersistenceContext
@@ -113,24 +124,117 @@ public class AppUserController {
         int hostLevel = user != null && user.getHostLevel() != null ? user.getHostLevel() : 0;
         int viewerLevel = user != null && user.getViewerLevel() != null ? user.getViewerLevel() : 0;
 
-        List<HostTask> hostTasks = hostTaskRepository.findAllByOrderByIdAsc().stream()
-                .filter(t -> Boolean.TRUE.equals(t.getActive())
-                        && hostLevel >= t.getMinLevel()
-                        && hostLevel <= t.getMaxLevel())
-                .collect(Collectors.toList());
+        java.time.LocalDate today = java.time.LocalDate.now();
+        List<UserTaskProgress> allProgress = userTaskProgressRepository.findByUserId(normalizedUserId);
+        for (UserTaskProgress p : allProgress) {
+            if (p.getLastResetDate() == null || p.getLastResetDate().isBefore(today)) {
+                p.setCurrentValue(0.0); p.setCompleted(false); p.setRewardClaimed(false);
+                p.setLastResetDate(today);
+                userTaskProgressRepository.save(p);
+            }
+        }
+        allProgress = userTaskProgressRepository.findByUserId(normalizedUserId);
+        Map<String, UserTaskProgress> progressMap = new HashMap<>();
+        for (UserTaskProgress p : allProgress) progressMap.put(p.getTaskType() + "_" + p.getTaskId(), p);
 
-        List<ViewerTask> viewerTasks = viewerTaskRepository.findAllByOrderByIdAsc().stream()
-                .filter(t -> Boolean.TRUE.equals(t.getActive())
-                        && viewerLevel >= t.getMinLevel()
-                        && viewerLevel <= t.getMaxLevel())
-                .collect(Collectors.toList());
+        List<Map<String, Object>> hostTasksOut = hostTaskRepository.findAllByOrderByIdAsc().stream()
+                .filter(t -> Boolean.TRUE.equals(t.getActive()) && hostLevel >= t.getMinLevel() && hostLevel <= t.getMaxLevel())
+                .map(t -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", t.getId()); m.put("title", t.getTitle()); m.put("description", t.getDescription());
+                    m.put("triggerEvent", t.getTriggerEvent()); m.put("targetValue", t.getTargetValue());
+                    m.put("rewardCoins", t.getRewardCoins()); m.put("minLevel", t.getMinLevel());
+                    m.put("maxLevel", t.getMaxLevel()); m.put("difficulty", t.getDifficulty());
+                    UserTaskProgress p = progressMap.get("host_" + t.getId());
+                    m.put("currentValue", p != null ? p.getCurrentValue() : 0.0);
+                    m.put("completed", p != null && Boolean.TRUE.equals(p.getCompleted()));
+                    return m;
+                }).collect(Collectors.toList());
+
+        List<Map<String, Object>> viewerTasksOut = viewerTaskRepository.findAllByOrderByIdAsc().stream()
+                .filter(t -> Boolean.TRUE.equals(t.getActive()) && viewerLevel >= t.getMinLevel() && viewerLevel <= t.getMaxLevel())
+                .map(t -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id", t.getId()); m.put("title", t.getTitle()); m.put("description", t.getDescription());
+                    m.put("triggerEvent", t.getTriggerEvent()); m.put("targetValue", t.getTargetValue());
+                    m.put("rewardCoins", t.getRewardCoins()); m.put("minLevel", t.getMinLevel());
+                    m.put("maxLevel", t.getMaxLevel()); m.put("difficulty", t.getDifficulty());
+                    UserTaskProgress p = progressMap.get("viewer_" + t.getId());
+                    m.put("currentValue", p != null ? p.getCurrentValue() : 0.0);
+                    m.put("completed", p != null && Boolean.TRUE.equals(p.getCompleted()));
+                    return m;
+                }).collect(Collectors.toList());
 
         Map<String, Object> response = new HashMap<>();
-        response.put("hostTasks", hostTasks);
-        response.put("viewerTasks", viewerTasks);
+        response.put("hostTasks", hostTasksOut);
+        response.put("viewerTasks", viewerTasksOut);
         response.put("hostLevel", hostLevel);
         response.put("viewerLevel", viewerLevel);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/daily-tasks/progress")
+    public ResponseEntity<?> updateTaskProgress(@RequestBody Map<String, Object> payload) {
+        try {
+            String userId = payload.get("userId") != null ? payload.get("userId").toString().trim() : "";
+            Long taskId = Long.parseLong(payload.get("taskId").toString());
+            String taskType = payload.get("taskType").toString();
+            double addValue = Double.parseDouble(payload.get("addValue").toString());
+            if (!StringUtils.hasText(userId)) return ResponseEntity.badRequest().body(Map.of("error", "userId required"));
+
+            java.time.LocalDate today = java.time.LocalDate.now();
+            int targetValue = 0; int rewardCoins = 0;
+            if ("host".equals(taskType)) {
+                HostTask t = hostTaskRepository.findById(taskId).orElse(null);
+                if (t == null) return ResponseEntity.badRequest().body(Map.of("error", "Task not found"));
+                targetValue = t.getTargetValue(); rewardCoins = t.getRewardCoins();
+            } else {
+                ViewerTask t = viewerTaskRepository.findById(taskId).orElse(null);
+                if (t == null) return ResponseEntity.badRequest().body(Map.of("error", "Task not found"));
+                targetValue = t.getTargetValue(); rewardCoins = t.getRewardCoins();
+            }
+
+            UserTaskProgress progress = userTaskProgressRepository
+                    .findByUserIdAndTaskIdAndTaskType(userId, taskId, taskType)
+                    .orElseGet(() -> {
+                        UserTaskProgress p = new UserTaskProgress();
+                        p.setUserId(userId); p.setTaskId(taskId); p.setTaskType(taskType);
+                        p.setCurrentValue(0.0); p.setCompleted(false); p.setRewardClaimed(false);
+                        p.setLastResetDate(today); return p;
+                    });
+
+            if (progress.getLastResetDate() == null || progress.getLastResetDate().isBefore(today)) {
+                progress.setCurrentValue(0.0); progress.setCompleted(false);
+                progress.setRewardClaimed(false); progress.setLastResetDate(today);
+            }
+            if (Boolean.TRUE.equals(progress.getRewardClaimed())) {
+                return ResponseEntity.ok(Map.of("completed", true, "rewardClaimed", true,
+                        "currentValue", progress.getCurrentValue(), "targetValue", targetValue, "rewardCoins", 0, "justCompleted", false));
+            }
+
+            double newValue = Math.min(progress.getCurrentValue() + addValue, targetValue);
+            progress.setCurrentValue(newValue);
+            boolean justCompleted = false;
+            if (newValue >= targetValue) {
+                progress.setCompleted(true); progress.setRewardClaimed(true); justCompleted = true;
+                Wallet wallet = walletRepository.findByUserId(userId).orElseGet(() -> {
+                    Wallet w = new Wallet(); w.setUserId(userId); w.setBalance(0.0); return walletRepository.save(w);
+                });
+                wallet.setBalance((wallet.getBalance() != null ? wallet.getBalance() : 0.0) + rewardCoins);
+                walletRepository.save(wallet);
+                WalletTransaction tx = new WalletTransaction();
+                tx.setUserId(userId); tx.setAmount((double) rewardCoins); tx.setCredit(true);
+                tx.setType("TASK_REWARD"); tx.setNote("Daily task reward - " + taskType + " task #" + taskId);
+                walletTransactionRepository.save(tx);
+            }
+            userTaskProgressRepository.save(progress);
+
+            return ResponseEntity.ok(Map.of("completed", progress.getCompleted(), "rewardClaimed", progress.getRewardClaimed(),
+                    "currentValue", progress.getCurrentValue(), "targetValue", targetValue,
+                    "rewardCoins", justCompleted ? rewardCoins : 0, "justCompleted", justCompleted));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/levels/host")
