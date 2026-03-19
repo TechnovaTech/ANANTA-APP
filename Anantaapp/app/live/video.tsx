@@ -6,6 +6,7 @@ import { Animated, Image, StyleSheet, TextInput, TouchableOpacity, View, Text, K
 import { useTheme } from '@/contexts/ThemeContext';
 import { createAgoraEngine, RtcSurfaceView, ChannelProfileType, ClientRoleType } from '@/agoraClient';
 import { ENV } from '@/config/env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const resolveGiftImageUrl = (value: string | null | undefined) => {
   if (!value) return '';
@@ -132,39 +133,35 @@ export default function VideoLiveScreen() {
       setFloatingHearts(prev => prev.filter(heart => heart.id !== newHeart.id));
     }, 3000);
   };
-  const handleGift = () => {
-    if (role !== 'viewer') {
-      return;
+  const handleGift = async () => {
+    if (role !== 'viewer') return;
+    if (!hostUserId) return;
+    let viewerUserId = userId;
+    if (!viewerUserId || viewerUserId === 'guest') {
+      viewerUserId = Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.localStorage.getItem('userId') || undefined
+        : (await AsyncStorage.getItem('userId')) || undefined;
     }
-    if (!userId) {
-      return;
-    }
-    if (!hostUserId) {
-      return;
-    }
+    if (!viewerUserId) return;
     setShowGifts(true);
-    if (giftList.length === 0) {
-      loadGifts();
-    }
-    if (walletBalance === null) {
-      loadWallet();
-    }
+    if (giftList.length === 0) loadGifts();
+    if (walletBalance === null) loadWallet();
   };
 
   const loadWallet = async () => {
-    if (!userId) {
-      return;
-    }
     try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/${userId}`);
-      if (!res.ok) {
-        return;
+      let walletUserId = (!userId || userId === 'guest') ? null : userId;
+      if (!walletUserId) {
+        walletUserId = Platform.OS === 'web' && typeof window !== 'undefined'
+          ? window.localStorage.getItem('userId')
+          : await AsyncStorage.getItem('userId');
       }
+      if (!walletUserId || walletUserId === 'guest') return;
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/${walletUserId}`);
+      if (!res.ok) return;
       const data = await res.json();
-      const value = typeof data.balance === 'number' ? data.balance : Number(data.balance) || 0;
-      setWalletBalance(value);
-    } catch {
-    }
+      setWalletBalance(typeof data.balance === 'number' ? data.balance : Number(data.balance) || 0);
+    } catch {}
   };
 
   const loadGifts = async () => {
@@ -193,13 +190,17 @@ export default function VideoLiveScreen() {
   };
 
   const handleSendGift = async (gift: any) => {
-    if (!userId || !hostUserId) {
-      return;
+    let senderUserId = userId;
+    if (!senderUserId) {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        senderUserId = window.localStorage.getItem('userId') || undefined;
+      } else {
+        senderUserId = (await AsyncStorage.getItem('userId')) || undefined;
+      }
     }
+    if (!senderUserId || !hostUserId) return;
     const cost = typeof gift.coinValue === 'number' ? gift.coinValue : Number(gift.coinValue) || 0;
-    if (cost <= 0) {
-      return;
-    }
+    if (cost <= 0) return;
     if (walletBalance !== null && walletBalance < cost) {
       Alert.alert('Insufficient balance', 'You do not have enough coins to send this gift.');
       return;
@@ -207,11 +208,9 @@ export default function VideoLiveScreen() {
     try {
       const res = await fetch(`${ENV.API_BASE_URL}/api/app/gifts/send`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fromUserId: userId,
+          fromUserId: senderUserId,
           toUserId: hostUserId,
           giftId: gift.id,
         }),

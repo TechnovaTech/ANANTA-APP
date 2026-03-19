@@ -4,6 +4,7 @@ import { Colors } from '@/constants/theme';
 import { router } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, TouchableOpacity, View, Animated, Text, StatusBar, Platform, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Video } from 'expo-av';
 import { useTheme } from '@/contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -90,8 +91,9 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const storedUserId = window.localStorage.getItem('userId');
-      setCurrentUserId(storedUserId);
+      setCurrentUserId(window.localStorage.getItem('userId'));
+    } else {
+      AsyncStorage.getItem('userId').then(id => setCurrentUserId(id)).catch(() => {});
     }
   }, []);
 
@@ -224,9 +226,14 @@ export default function HomeScreen() {
       let userId: string | null = null;
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         userId = window.localStorage.getItem('userId');
+      } else {
+        try {
+          userId = await AsyncStorage.getItem('userId');
+        } catch { }
       }
       if (!userId) {
-        userId = 'guest';
+        Alert.alert('Error', 'Please login first');
+        return;
       }
 
       const response = await fetch(`${ENV.API_BASE_URL}/api/app/live/join`, {
