@@ -389,6 +389,7 @@ export default function DailyTasksPage() {
                 <option value="HOST_FOLLOWED">HOST_FOLLOWED</option>
                 <option value="MESSAGE_SENT">MESSAGE_SENT</option>
                 <option value="VIEWER_JOINED">VIEWER_JOINED</option>
+                <option value="RECHARGE_COINS">RECHARGE_COINS</option>
               </select>
             </div>
           </div>
@@ -522,6 +523,7 @@ export default function DailyTasksPage() {
                 <option value="HOST_FOLLOWED">HOST_FOLLOWED</option>
                 <option value="MESSAGE_SENT">MESSAGE_SENT</option>
                 <option value="VIEWER_JOINED">VIEWER_JOINED</option>
+                <option value="RECHARGE_COINS">RECHARGE_COINS</option>
               </select>
             </div>
           </div>
