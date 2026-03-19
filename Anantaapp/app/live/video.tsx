@@ -596,7 +596,7 @@ export default function VideoLiveScreen() {
 
       <View style={styles.overlay}>
         <View style={styles.header}>
-          {role === 'viewer' && (
+          {role === 'viewer' ? (
             <>
               <View style={styles.userInfo}>
                 <Image
@@ -609,7 +609,7 @@ export default function VideoLiveScreen() {
                 />
                 <View style={styles.userDetails}>
                   <ThemedText style={styles.username}>@{hostUsername}</ThemedText>
-                  <ThemedText style={styles.liveText}>{title}</ThemedText>
+                  <ThemedText style={styles.liveTitleText}>{title}</ThemedText>
                 </View>
               </View>
 
@@ -628,8 +628,7 @@ export default function VideoLiveScreen() {
                 </TouchableOpacity>
               </View>
             </>
-          )}
-          {role === 'host' && (
+          ) : role === 'host' ? (
             <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <View style={styles.liveBadge}>
                 <Animated.View style={[styles.liveCircle, { transform: [{ scale: pulseAnim }] }]} />
@@ -642,7 +641,7 @@ export default function VideoLiveScreen() {
                 <ThemedText style={styles.closeText}>×</ThemedText>
               </TouchableOpacity>
             </View>
-          )}
+          ) : null}
         </View>
 
         <View style={styles.stats}>
@@ -658,7 +657,7 @@ export default function VideoLiveScreen() {
             <ThemedText style={styles.statIcon}>⏱</ThemedText>
             <ThemedText style={styles.statText}>{Math.floor(elapsedTime / 60)}:{String(elapsedTime % 60).padStart(2, '0')}</ThemedText>
           </View>
-          {hostCountry && (
+          {!!hostCountry && (
             <View style={styles.statItem}>
               <ThemedText style={styles.statIcon}>📍</ThemedText>
               <ThemedText style={styles.statText}>{hostCountry}</ThemedText>
@@ -870,7 +869,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  liveText: {
+  liveTitleText: {
     color: 'white',
     fontSize: 12,
     opacity: 0.8,
