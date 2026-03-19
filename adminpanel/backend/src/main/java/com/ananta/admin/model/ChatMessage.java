@@ -22,8 +22,7 @@ public class ChatMessage {
     @Column(name = "receiver_id", nullable = false)
     private String receiverId;
 
-    @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(nullable = false)

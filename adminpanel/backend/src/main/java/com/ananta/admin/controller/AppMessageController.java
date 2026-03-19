@@ -202,7 +202,7 @@ public class AppMessageController {
                 m.put("content", msg.getContent());
                 m.put("status", msg.getStatus());
                 m.put("createdAt", msg.getCreatedAt());
-                m.put("deleted", msg.getDeletedAt() != null);
+                m.put("deleted", false);
                 items.add(m);
             }
 

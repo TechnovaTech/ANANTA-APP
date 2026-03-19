@@ -7,15 +7,15 @@ import {
   ScrollView,
   Image,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ENV } from '@/config/env';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -102,52 +102,50 @@ export default function MessagesScreen() {
   };
 
   useEffect(() => {
-    let userId: string | null = null;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      userId = window.localStorage.getItem('userId');
-    }
-    setCurrentUserId(userId);
+    AsyncStorage.getItem('userId').then(id => setCurrentUserId(id)).catch(() => {});
   }, []);
 
-  useEffect(() => {
-    if (!currentUserId) {
-      return;
-    }
-    const fetchConversations = async () => {
-      try {
-        const res = await fetch(`${ENV.API_BASE_URL}/api/app/messages/threads/${currentUserId}`);
-        if (!res.ok) {
-          return;
-        }
-        const data = await res.json();
-        if (!Array.isArray(data)) {
-          return;
-        }
-        const mapped: ConversationItem[] = data.map((item: any, index: number) => {
-          const name = item.fullName || item.username || 'User';
-          const username = item.username ? `@${item.username}` : '@user';
-          const time = item.lastMessageTime ? formatTime(item.lastMessageTime) : '';
-          const avatarUri = resolveAvatarUri(item.profileImage);
-          const avatar = avatarUri ? { uri: avatarUri } : pickAvatar(index);
-          return {
-            threadId: String(item.threadId),
-            otherUserId: String(item.otherUserId),
-            name,
-            username,
-            lastMessage: item.lastMessage || '',
-            time,
-            unread: item.unreadCount || 0,
-            avatar,
-          };
-        });
-        setConversations(mapped);
-      } catch {
-      }
-    };
-    fetchConversations();
-    const interval = setInterval(fetchConversations, 5000);
-    return () => clearInterval(interval);
-  }, [currentUserId]);
+  const fetchConversations = React.useCallback(async (userId: string) => {
+    try {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/messages/threads/${userId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!Array.isArray(data)) return;
+      const mapped: ConversationItem[] = data.map((item: any, index: number) => {
+        const name = item.fullName || item.username || 'User';
+        const username = item.username ? `@${item.username}` : '@user';
+        const time = item.lastMessageTime ? formatTime(item.lastMessageTime) : '';
+        const avatarUri = resolveAvatarUri(item.profileImage);
+        const avatar = avatarUri ? { uri: avatarUri } : pickAvatar(index);
+        return {
+          threadId: String(item.threadId),
+          otherUserId: String(item.otherUserId),
+          name,
+          username,
+          lastMessage: item.lastMessage || '',
+          time,
+          unread: item.unreadCount || 0,
+          avatar,
+        };
+      });
+      setConversations(mapped);
+    } catch {}
+  }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      let userId: string | null = null;
+      AsyncStorage.getItem('userId').then(id => {
+        userId = id;
+        setCurrentUserId(id);
+        if (id) fetchConversations(id);
+      }).catch(() => {});
+      const interval = setInterval(() => {
+        if (userId) fetchConversations(userId);
+      }, 5000);
+      return () => clearInterval(interval);
+    }, [fetchConversations])
+  );
 
   const openChat = (threadId: string | null, otherUserId: string, name: string, avatar: any) => {
     if (!currentUserId) {
@@ -165,15 +163,12 @@ export default function MessagesScreen() {
   };
 
   const loadContacts = async () => {
-    if (!currentUserId) {
-      return;
-    }
+    const uid = currentUserId || await AsyncStorage.getItem('userId').catch(() => null);
+    if (!uid) return;
     try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${currentUserId}`);
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${uid}`);
       console.log('[Messages] loadContacts profile status:', res.status);
-      if (!res.ok) {
-        return;
-      }
+      if (!res.ok) return;
       const data = await res.json();
       const followersJson = Array.isArray(data.followersList) ? data.followersList : [];
       const followingJson = Array.isArray(data.followingList) ? data.followingList : [];
@@ -222,62 +217,56 @@ export default function MessagesScreen() {
           <Ionicons name="arrow-back" size={24} color={isDark ? 'black' : 'white'} />
         </TouchableOpacity>
         <ThemedText style={[styles.headerTitle, { color: isDark ? 'black' : 'white' }]}>Messages</ThemedText>
-        <TouchableOpacity style={styles.newChatButton} onPress={loadContacts}>
-          <Ionicons name="add" size={24} color={isDark ? 'black' : 'white'} />
-        </TouchableOpacity>
+        <View style={styles.newChatButton} />
       </LinearGradient>
 
       <ScrollView style={styles.conversationsContainer} showsVerticalScrollIndicator={false}>
-        {conversations.map((conversation, index) => (
-          <TouchableOpacity
-            key={conversation.threadId}
-            style={[
-              styles.conversationItem,
-              {
-                backgroundColor: isDark ? '#2a2a2a' : 'white',
-              },
-            ]}
-            onPress={() => openChat(conversation.threadId, conversation.otherUserId, conversation.name, conversation.avatar)}
-          >
-            <View style={styles.avatarContainer}>
-              {conversation.avatar && (
-                <Image
-                  source={conversation.avatar}
-                  style={[styles.avatar, { borderColor: isDark ? '#f7c14d' : '#127d96' }]}
-                />
-              )}
-            </View>
-
-            <View style={styles.conversationContent}>
-              <View style={styles.conversationHeader}>
-                <ThemedText style={[styles.userName, { color: isDark ? 'white' : '#333' }]}>
-                  {conversation.name}
-                </ThemedText>
-                <ThemedText style={[styles.messageTime, { color: isDark ? '#ccc' : '#666' }]}>
-                  {conversation.time}
-                </ThemedText>
-              </View>
-              <View style={styles.messageRow}>
-                <ThemedText
-                  style={[styles.lastMessage, { color: isDark ? '#aaa' : '#666' }]}
-                  numberOfLines={1}
-                >
-                  {conversation.lastMessage}
-                </ThemedText>
-                {conversation.unread > 0 && (
-                  <LinearGradient
-                    colors={isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7']}
-                    style={styles.unreadBadge}
-                  >
-                    <ThemedText style={[styles.unreadCount, { color: isDark ? 'black' : 'white' }]}>
-                      {conversation.unread}
-                    </ThemedText>
-                  </LinearGradient>
+        {conversations.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="chatbubbles-outline" size={56} color={isDark ? '#444' : '#ccc'} />
+            <Text style={[styles.emptyText, { color: isDark ? '#666' : '#aaa' }]}>No conversations yet</Text>
+            <Text style={[styles.emptySubText, { color: isDark ? '#555' : '#bbb' }]}>Start a conversation from a user profile</Text>
+          </View>
+        ) : (
+          conversations.map((conversation) => (
+            <TouchableOpacity
+              key={conversation.threadId}
+              style={[styles.conversationItem, { backgroundColor: isDark ? '#2a2a2a' : 'white' }]}
+              onPress={() => openChat(conversation.threadId, conversation.otherUserId, conversation.name, conversation.avatar)}
+            >
+              <View style={styles.avatarContainer}>
+                {conversation.avatar && (
+                  <Image source={conversation.avatar} style={[styles.avatar, { borderColor: isDark ? '#f7c14d' : '#127d96' }]} />
                 )}
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.conversationContent}>
+                <View style={styles.conversationHeader}>
+                  <ThemedText style={[styles.userName, { color: isDark ? 'white' : '#333' }]}>
+                    {conversation.name}
+                  </ThemedText>
+                  <ThemedText style={[styles.messageTime, { color: isDark ? '#ccc' : '#666' }]}>
+                    {conversation.time}
+                  </ThemedText>
+                </View>
+                <View style={styles.messageRow}>
+                  <ThemedText style={[styles.lastMessage, { color: isDark ? '#aaa' : '#666' }]} numberOfLines={1}>
+                    {conversation.lastMessage}
+                  </ThemedText>
+                  {conversation.unread > 0 && (
+                    <LinearGradient
+                      colors={isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7']}
+                      style={styles.unreadBadge}
+                    >
+                      <ThemedText style={[styles.unreadCount, { color: isDark ? 'black' : 'white' }]}>
+                        {conversation.unread}
+                      </ThemedText>
+                    </LinearGradient>
+                  )}
+                </View>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
 
       {showNewChat && (
@@ -479,5 +468,19 @@ const styles = StyleSheet.create({
   newChatTitle: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
+    gap: 10,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptySubText: {
+    fontSize: 13,
   },
 });
