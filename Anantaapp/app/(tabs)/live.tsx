@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, View, StatusBar, Text, Dimensions, Platform, ActivityIndicator, Alert, ScrollView, Image } from 'react-native';
+import { StyleSheet, TouchableOpacity, View, StatusBar, Text, Dimensions, Platform, ActivityIndicator, Alert, ScrollView, Image, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -16,8 +16,34 @@ export default function LiveScreen() {
   const { isDark } = useTheme();
   const [selectedType, setSelectedType] = useState<'video' | 'audio'>('video');
   const [starting, setStarting] = useState(false);
+  const [kycStatus, setKycStatus] = useState<string>('NONE');
+  const [showKycModal, setShowKycModal] = useState(false);
+
+  useEffect(() => {
+    const checkKyc = async () => {
+      let userId: string | null = null;
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        userId = window.localStorage.getItem('userId');
+      } else {
+        try { userId = await AsyncStorage.getItem('userId'); } catch { }
+      }
+      if (!userId) return;
+      try {
+        const res = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${userId}`);
+        if (res.ok) {
+          const data = await res.json();
+          setKycStatus(data.kyc?.status || 'NONE');
+        }
+      } catch { }
+    };
+    checkKyc();
+  }, []);
 
   const handleStartLive = async () => {
+    if (kycStatus !== 'APPROVED') {
+      setShowKycModal(true);
+      return;
+    }
     let userId: string | null = null;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       userId = window.localStorage.getItem('userId');
@@ -109,6 +135,33 @@ export default function LiveScreen() {
   return (
     <View style={[styles.container, { backgroundColor: isDark ? '#000' : '#f8f9fa' }]}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
+
+      {/* KYC Modal */}
+      <Modal visible={showKycModal} transparent animationType="fade" onRequestClose={() => setShowKycModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: isDark ? '#2a2a2a' : 'white' }]}>
+            <View style={styles.modalIconCircle}>
+              <Ionicons name="shield-outline" size={40} color="#ed8936" />
+            </View>
+            <Text style={[styles.modalTitle, { color: isDark ? 'white' : '#1a202c' }]}>KYC Not Approved</Text>
+            <Text style={[styles.modalDesc, { color: isDark ? '#aaa' : '#718096' }]}>
+              You need to complete KYC verification before going live.
+            </Text>
+            <TouchableOpacity
+              style={styles.modalKycButton}
+              onPress={() => { setShowKycModal(false); router.push('/verification'); }}
+            >
+              <LinearGradient colors={isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7']} style={styles.modalKycGradient}>
+                <Ionicons name="shield-checkmark" size={18} color={isDark ? 'black' : 'white'} />
+                <Text style={[styles.modalKycText, { color: isDark ? 'black' : 'white' }]}>Complete KYC</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowKycModal(false)}>
+              <Text style={[styles.modalCancel, { color: isDark ? '#888' : '#aaa' }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modern Header */}
       <LinearGradient
@@ -304,5 +357,61 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 18,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  modalBox: {
+    width: '100%',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    elevation: 10,
+  },
+  modalIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#fef5e7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  modalDesc: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  modalKycButton: {
+    width: '100%',
+    borderRadius: 25,
+    overflow: 'hidden',
+    marginBottom: 14,
+  },
+  modalKycGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    gap: 8,
+  },
+  modalKycText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  modalCancel: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

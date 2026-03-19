@@ -39,6 +39,7 @@ export default function ProfileScreen() {
   const [viewerLevel, setViewerLevel] = useState(0);
   const [totalCoinsEarned, setTotalCoinsEarned] = useState(0);
   const [totalCoinsSpent, setTotalCoinsSpent] = useState(0);
+  const [kycStatus, setKycStatus] = useState<string>('NONE');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -77,6 +78,8 @@ export default function ProfileScreen() {
         followingListLength: Array.isArray(data.followingList) ? data.followingList.length : 'n/a',
       });
       const user = data.user;
+      const kyc = data.kyc;
+      setKycStatus(kyc?.status || 'NONE');
       const profileUri = resolveProfileUri(user.profileImage);
       const coverUri = resolveProfileUri(user.coverImage);
       setHostLevel(user.hostLevel || 0);
@@ -248,7 +251,10 @@ export default function ProfileScreen() {
           <View style={styles.userInfo}>
             <View style={styles.nameContainer}>
               <Text style={[styles.username, { color: isDark ? 'white' : '#333' }]}>{profileData.name}</Text>
-              <Ionicons name="checkmark-circle" size={16} color="#127d96" />
+              {kycStatus === 'APPROVED'
+                ? <Ionicons name="checkmark-circle" size={16} color="#38a169" />
+                : <Ionicons name="alert-circle" size={16} color="#ed8936" />
+              }
             </View>
             <Text style={[styles.userBio, { color: isDark ? '#aaa' : '#888' }]}>{profileData.bio}</Text>
           </View>

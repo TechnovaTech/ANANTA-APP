@@ -132,6 +132,18 @@ export default function KYCPage() {
                     <div>
                       <div style={{fontWeight:600,color:'#4a5568',marginBottom:4}}>{kyc.documentType}</div>
                       <div style={{fontSize:14,color:'#718096',fontFamily:'monospace'}}>{kyc.documentNumber}</div>
+                      <div style={{display:'flex',gap:8,marginTop:10}}>
+                        {kyc.documentFrontImage && (
+                          <a href={kyc.documentFrontImage.startsWith('data:') ? kyc.documentFrontImage : `http://localhost:8082${kyc.documentFrontImage}`} target="_blank" rel="noreferrer">
+                            <img src={kyc.documentFrontImage.startsWith('data:') ? kyc.documentFrontImage : `http://localhost:8082${kyc.documentFrontImage}`} alt="front" style={{width:64,height:44,objectFit:'cover',borderRadius:6,border:'1px solid #e2e8f0',cursor:'pointer'}} />
+                          </a>
+                        )}
+                        {kyc.documentBackImage && (
+                          <a href={kyc.documentBackImage.startsWith('data:') ? kyc.documentBackImage : `http://localhost:8082${kyc.documentBackImage}`} target="_blank" rel="noreferrer">
+                            <img src={kyc.documentBackImage.startsWith('data:') ? kyc.documentBackImage : `http://localhost:8082${kyc.documentBackImage}`} alt="back" style={{width:64,height:44,objectFit:'cover',borderRadius:6,border:'1px solid #e2e8f0',cursor:'pointer'}} />
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td style={{padding:'20px'}}>
