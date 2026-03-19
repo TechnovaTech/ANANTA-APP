@@ -267,6 +267,42 @@ public class AppUserController {
                 "rewardCoins", justCompleted ? rewardCoins : 0, "justCompleted", justCompleted);
     }
 
+    @GetMapping("/earnings/{userId}")
+    public ResponseEntity<?> getEarnings(@PathVariable String userId) {
+        String uid = userId == null ? "" : userId.trim();
+        List<WalletTransaction> txs = walletTransactionRepository.findByUserId(uid);
+        double totalGiftReceived = txs.stream().filter(t -> "GIFT_RECEIVED".equals(t.getType())).mapToDouble(WalletTransaction::getAmount).sum();
+        double totalTaskReward   = txs.stream().filter(t -> "TASK_REWARD".equals(t.getType())).mapToDouble(WalletTransaction::getAmount).sum();
+        double totalRecharge     = txs.stream().filter(t -> "RECHARGE".equals(t.getType())).mapToDouble(WalletTransaction::getAmount).sum();
+        double totalSpent        = txs.stream().filter(t -> !t.isCredit()).mapToDouble(WalletTransaction::getAmount).sum();
+        double totalEarned       = txs.stream().filter(WalletTransaction::isCredit).mapToDouble(WalletTransaction::getAmount).sum();
+        double currentBalance    = walletRepository.findByUserId(uid).map(w -> w.getBalance() != null ? w.getBalance() : 0.0).orElse(0.0);
+        List<Map<String, Object>> history = txs.stream()
+            .sorted((a, b) -> b.getCreatedAt() != null && a.getCreatedAt() != null ? b.getCreatedAt().compareTo(a.getCreatedAt()) : 0)
+            .limit(50)
+            .map(t -> {
+                Map<String, Object> m = new HashMap<>();
+                m.put("id", t.getId());
+                m.put("amount", t.getAmount());
+                m.put("credit", t.isCredit());
+                m.put("type", t.getType());
+                m.put("note", t.getNote());
+                m.put("otherUserId", t.getOtherUserId());
+                m.put("otherUserName", t.getOtherUserName());
+                m.put("createdAt", t.getCreatedAt() != null ? t.getCreatedAt().toString() : null);
+                return m;
+            }).collect(Collectors.toList());
+        Map<String, Object> response = new HashMap<>();
+        response.put("totalGiftReceived", totalGiftReceived);
+        response.put("totalTaskReward", totalTaskReward);
+        response.put("totalRecharge", totalRecharge);
+        response.put("totalSpent", totalSpent);
+        response.put("totalEarned", totalEarned);
+        response.put("currentBalance", currentBalance);
+        response.put("history", history);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/levels/host")
     public ResponseEntity<?> getHostLevels() {
         java.util.List<HostLevel> levels = hostLevelRepository.findAllByOrderByLevelAsc();
