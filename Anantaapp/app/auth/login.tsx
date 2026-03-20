@@ -3,10 +3,10 @@ import { Inter_400Regular, Inter_700Bold, useFonts } from '@expo-google-fonts/in
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Alert, Image, ImageBackground, Platform, StyleSheet, TouchableOpacity, View, StatusBar, Dimensions } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useState, useEffect } from 'react';
 import { GoogleAuthService } from '../../services/GoogleAuthService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AnantaLogo from '../../components/AnantaLogo';
 
 const { width, height } = Dimensions.get('window');
 
@@ -91,13 +91,7 @@ export default function LoginScreen() {
         >
           <View style={styles.content}>
                 <View style={styles.logoContainer}>
-                  <LinearGradient
-                    colors={['rgba(255,255,255,0.25)', 'rgba(255,255,255,0.15)']}
-                    style={styles.logoCircle}
-                  >
-                    <Ionicons name="diamond" size={50} color="white" />
-                  </LinearGradient>
-                  <ThemedText style={styles.title}>ANANTA</ThemedText>
+                  <AnantaLogo size="large" />
                   <ThemedText style={styles.subtitle}>Welcome Back!</ThemedText>
                   <ThemedText style={styles.description}>
                     Sign in to continue your journey
@@ -159,37 +153,14 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 25,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 10,
-  },
-  title: {
-    fontSize: width * 0.1,
-    fontWeight: '700',
-    color: 'white',
-    letterSpacing: width * 0.025,
-    marginBottom: 8,
-    fontFamily: 'Inter_700Bold',
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 3 },
-    textShadowRadius: 6,
+    marginBottom: 50,
   },
   subtitle: {
     fontSize: 20,
     color: 'rgba(255,255,255,0.95)',
     fontFamily: 'Inter_700Bold',
     textAlign: 'center',
+    marginTop: 24,
     marginBottom: 8,
   },
   description: {

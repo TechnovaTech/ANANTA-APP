@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ananta – Wordmark Logo</title>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=DM+Sans:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --gold:        #C9A96E;
+    --gold-bright: #F2CA6B;
+    --gold-pale:   #EEE0C0;
+    --gold-deep:   #7A5828;
+    --deep:        #080808;
+    --surface:     #0D0D0D;
+    --card:        #111111;
+    --text:        #F0EAE0;
+    --muted:       #555;
+    --border:      rgba(201,169,110,0.12);
+  }
+
+  html, body {
+    background: var(--deep);
+    min-height: 100vh;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 72px 24px 100px;
+    gap: 110px;
+  }
+
+  .section-label {
+    font-size: 9px;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 44px;
+  }
+
+  .bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background: radial-gradient(ellipse 70% 50% at 50% 0%, rgba(201,169,110,0.05) 0%, transparent 70%);
+  }
+
+  /* ══════════════════════════════
+     WORDMARK COMPONENT
+  ══════════════════════════════ */
+  .wordmark-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .wm-word {
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 900;
+    letter-spacing: var(--wm-spacing, 0.28em);
+    padding-right: var(--wm-spacing, 0.28em);
+    font-size: var(--wm-size, 96px);
+    line-height: 1;
+    color: var(--wm-color, var(--gold-pale));
+    text-transform: uppercase;
+    user-select: none;
+  }
+
+  /* Stream bar track */
+  .wm-bar {
+    position: relative;
+    width: var(--wm-bar-w, 100%);
+    height: var(--wm-bar-h, 3px);
+    margin-top: var(--wm-gap, 10px);
+    background: #1c1c1c;
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  /* Animated gold sweep */
+  .wm-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 100px;
+    background: linear-gradient(
+      90deg,
+      transparent       0%,
+      var(--gold-deep) 12%,
+      var(--gold)      38%,
+      var(--gold-bright) 52%,
+      var(--gold-pale) 62%,
+      var(--gold-bright) 70%,
+      var(--gold)      80%,
+      var(--gold-deep) 90%,
+      transparent      100%
+    );
+    background-size: 220% 100%;
+    animation: stream var(--wm-speed, 2.4s) cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  @keyframes stream {
+    0%   { background-position: 130% 0; }
+    100% { background-position: -50% 0; }
+  }
+
+  .wm-tag {
+    font-family: 'DM Sans', sans-serif;
+    font-size: var(--wm-tag-size, 10px);
+    font-weight: 300;
+    letter-spacing: var(--wm-tag-spacing, 0.46em);
+    padding-right: var(--wm-tag-spacing, 0.46em);
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: var(--wm-tag-mt, 12px);
+  }
+
+  /* ══════════════════════════════
+     HERO
+  ══════════════════════════════ */
+  .hero {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center;
+    animation: heroRise 1s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  @keyframes heroRise {
+    from { opacity:0; transform:translateY(28px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  .live-pill {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 28px;
+    padding: 7px 18px 7px 12px;
+    border: 1px solid rgba(201,169,110,0.22);
+    border-radius: 100px;
+    background: rgba(201,169,110,0.04);
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--gold-bright);
+    box-shadow: 0 0 8px rgba(242,202,107,0.8);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.12;} }
+  .live-pill span {
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--gold);
+  }
+
+  /* ══════════════════════════════
+     VARIANTS
+  ══════════════════════════════ */
+  .variants { position:relative;z-index:1; width:100%; max-width:860px; }
+
+  .vgrid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+  .vcard {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 44px 28px 32px;
+    display: flex; flex-direction: column; align-items: center;
+    transition: border-color 0.3s, box-shadow 0.3s, transform 0.3s;
+    animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
+    cursor: default;
+  }
+  .vcard:nth-child(1){animation-delay:0.08s;}
+  .vcard:nth-child(2){animation-delay:0.16s;}
+  .vcard:nth-child(3){animation-delay:0.24s;}
+  .vcard:nth-child(4){animation-delay:0.32s;}
+  .vcard:hover { border-color:rgba(201,169,110,0.28); box-shadow:0 16px 48px rgba(0,0,0,0.55); transform:translateY(-3px); }
+
+  @keyframes fadeUp {
+    from{opacity:0;transform:translateY(18px);} to{opacity:1;transform:translateY(0);}
+  }
+
+  .vcard-name {
+    font-size: 10px; font-weight: 400;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--muted); margin-top: 24px;
+  }
+  .vcard-desc { font-size: 11px; color: #3a3a3a; text-align:center; line-height:1.55; margin-top:5px; }
+
+  /* ══════════════════════════════
+     DARK / LIGHT
+  ══════════════════════════════ */
+  .comparison { position:relative;z-index:1; width:100%; max-width:860px; }
+  .comp-grid  { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+
+  .comp-panel {
+    border-radius: 20px;
+    padding: 52px 28px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid;
+    animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .comp-panel.dark  { background:#080808; border-color:rgba(201,169,110,0.08); }
+  .comp-panel.light { background:#F4EFE4; border-color:rgba(0,0,0,0.07); }
+  .comp-panel:nth-child(1){animation-delay:0.06s;}
+  .comp-panel:nth-child(2){animation-delay:0.14s;}
+
+  /* ══════════════════════════════
+     PALETTE
+  ══════════════════════════════ */
+  .palette { position:relative;z-index:1; display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
+
+  .swatch {
+    width:88px; border-radius:14px; overflow:hidden;
+    border: 1px solid rgba(255,255,255,0.04);
+    animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) both;
+  }
+  .swatch:nth-child(1){animation-delay:0.05s;}
+  .swatch:nth-child(2){animation-delay:0.1s;}
+  .swatch:nth-child(3){animation-delay:0.15s;}
+  .swatch:nth-child(4){animation-delay:0.2s;}
+  .swatch:nth-child(5){animation-delay:0.25s;}
+
+  .sw-color { height:52px; }
+  .sw-info  { background:var(--card); padding:9px 10px 11px; }
+  .sw-name  { font-size:9px; color:var(--text); display:block; margin-bottom:2px; letter-spacing:0.04em; }
+  .sw-hex   { font-size:9px; color:var(--muted); }
+
+  /* ══════════════════════════════
+     PHONE
+  ══════════════════════════════ */
+  .phone {
+    position: relative; z-index:1;
+    width: 375px;
+    background: var(--surface);
+    border-radius: 46px;
+    border: 1px solid rgba(201,169,110,0.07);
+    box-shadow:
+      0 0 0 8px #080808,
+      0 0 0 9px rgba(201,169,110,0.04),
+      0 50px 100px rgba(0,0,0,0.8);
+    overflow: hidden;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 48px 28px 44px;
+  }
+
+  .phone-status {
+    width:100%; display:flex; justify-content:space-between; align-items:center;
+    margin-bottom: 60px;
+  }
+
+  .phone-logo { margin-bottom: 48px; }
+
+  .p-google {
+    width:100%; display:flex; align-items:center; justify-content:center; gap:12px;
+    padding:16px 20px; background:var(--card);
+    border:1px solid rgba(201,169,110,0.14); border-radius:14px;
+    margin-bottom:14px; font-size:15px; color:var(--text);
+  }
+  .p-agree {
+    width:100%; background:var(--card);
+    border:1px solid rgba(201,169,110,0.09); border-radius:14px;
+    padding:16px; display:flex; gap:10px; align-items:flex-start; margin-bottom:14px;
+  }
+  .p-check { width:20px;height:20px;border:1.5px solid var(--gold);border-radius:6px;flex-shrink:0;margin-top:2px; }
+  .p-agree p { font-size:12px;line-height:1.6;color:var(--muted); }
+  .p-agree a { color:var(--gold); }
+  .p-cta {
+    width:100%; padding:16px; border-radius:14px;
+    background:linear-gradient(135deg,#C9A96E,#7A5828);
+    text-align:center; font-size:13px; font-weight:500;
+    letter-spacing:0.18em; text-transform:uppercase;
+    color:#080808; opacity:0.28;
+  }
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <p class="section-label">Primary Wordmark</p>
+    <div class="wordmark-block"
+         style="--wm-size:108px;--wm-spacing:0.3em;--wm-gap:14px;--wm-bar-h:4px;--wm-speed:2.2s;--wm-tag-size:11px;--wm-tag-spacing:0.5em;--wm-tag-mt:16px;">
+      <div class="wm-word">ANANTA</div>
+      <div class="wm-bar"></div>
+      <div class="wm-tag">Stream Without Limits</div>
+    </div>
+    <div class="live-pill">
+      <div class="live-dot"></div>
+      <span>Now Streaming</span>
+    </div>
+  </div>
+
+  <!-- VARIANTS -->
+  <div class="variants">
+    <p class="section-label">Logo Variants</p>
+    <div class="vgrid">
+
+      <div class="vcard">
+        <div class="wordmark-block"
+             style="--wm-size:68px;--wm-spacing:0.26em;--wm-gap:10px;--wm-bar-h:3px;--wm-speed:2.4s;--wm-tag-size:9px;--wm-tag-spacing:0.44em;--wm-tag-mt:12px;">
+          <div class="wm-word">ANANTA</div>
+          <div class="wm-bar"></div>
+          <div class="wm-tag">Stream Without Limits</div>
+        </div>
+        <div class="vcard-name">Display</div>
+        <div class="vcard-desc">Splash screens, onboarding & hero banners</div>
+      </div>
+
+      <div class="vcard">
+        <div class="wordmark-block"
+             style="--wm-size:58px;--wm-spacing:0.24em;--wm-gap:8px;--wm-bar-h:2.5px;--wm-speed:2s;--wm-bar-w:75%;">
+          <div class="wm-word">ANANTA</div>
+          <div class="wm-bar" style="width:75%;"></div>
+        </div>
+        <div class="vcard-name">Compact</div>
+        <div class="vcard-desc">App top bars, navigation headers & overlays</div>
+      </div>
+
+      <div class="vcard">
+        <div class="wordmark-block"
+             style="--wm-size:54px;--wm-spacing:0.34em;--wm-gap:8px;--wm-bar-h:1.5px;--wm-speed:3.2s;--wm-bar-w:55%;">
+          <div class="wm-word" style="color:#666;">ANANTA</div>
+          <div class="wm-bar" style="width:55%;background:#181818;"></div>
+        </div>
+        <div class="vcard-name">Watermark</div>
+        <div class="vcard-desc">Subtle burn-in on live video & stream content</div>
+      </div>
+
+      <div class="vcard">
+        <div class="wordmark-block"
+             style="--wm-size:44px;--wm-spacing:0.55em;--wm-gap:8px;--wm-bar-h:2px;--wm-speed:1.8s;--wm-tag-size:8px;--wm-tag-spacing:0.48em;--wm-tag-mt:10px;">
+          <div class="wm-word">ANANTA</div>
+          <div class="wm-bar"></div>
+          <div class="wm-tag">Live · Connect · Watch</div>
+        </div>
+        <div class="vcard-name">Wide-tracked</div>
+        <div class="vcard-desc">Email headers, press kits & printed merch</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- DARK / LIGHT -->
+  <div class="comparison">
+    <p class="section-label">Dark & Light Backgrounds</p>
+    <div class="comp-grid">
+      <div class="comp-panel dark">
+        <div class="wordmark-block"
+             style="--wm-size:60px;--wm-spacing:0.28em;--wm-gap:10px;--wm-bar-h:3px;--wm-speed:2.2s;--wm-tag-size:9px;--wm-tag-spacing:0.42em;--wm-tag-mt:12px;">
+          <div class="wm-word">ANANTA</div>
+          <div class="wm-bar"></div>
+          <div class="wm-tag">Stream Without Limits</div>
+        </div>
+      </div>
+      <div class="comp-panel light">
+        <div class="wordmark-block"
+             style="--wm-size:60px;--wm-spacing:0.28em;--wm-gap:10px;--wm-bar-h:3px;--wm-speed:2.2s;--wm-tag-size:9px;--wm-tag-spacing:0.42em;--wm-tag-mt:12px;">
+          <div class="wm-word" style="color:#1A1A1A;">ANANTA</div>
+          <div class="wm-bar" style="background:#D8CDB8;"></div>
+          <div class="wm-tag" style="color:#999;">Stream Without Limits</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PALETTE -->
+  <div style="position:relative;z-index:1;width:100%;max-width:860px;">
+    <p class="section-label">Brand Colour Palette</p>
+    <div class="palette">
+      <div class="swatch">
+        <div class="sw-color" style="background:#080808;"></div>
+        <div class="sw-info"><span class="sw-name">Pure Black</span><span class="sw-hex">#080808</span></div>
+      </div>
+      <div class="swatch">
+        <div class="sw-color" style="background:#EEE0C0;"></div>
+        <div class="sw-info"><span class="sw-name">Champagne</span><span class="sw-hex">#EEE0C0</span></div>
+      </div>
+      <div class="swatch">
+        <div class="sw-color" style="background:linear-gradient(135deg,#F2CA6B,#C9A96E);"></div>
+        <div class="sw-info"><span class="sw-name">Stream Gold</span><span class="sw-hex">#F2CA6B</span></div>
+      </div>
+      <div class="swatch">
+        <div class="sw-color" style="background:#C9A96E;"></div>
+        <div class="sw-info"><span class="sw-name">Antique Gold</span><span class="sw-hex">#C9A96E</span></div>
+      </div>
+      <div class="swatch">
+        <div class="sw-color" style="background:#7A5828;"></div>
+        <div class="sw-info"><span class="sw-name">Deep Amber</span><span class="sw-hex">#7A5828</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PHONE -->
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;">
+    <p class="section-label">In-App Preview — Signup Screen</p>
+    <div class="phone">
+
+      <div class="phone-status">
+        <span style="font-size:13px;font-weight:500;color:#F0EAE0;">9:41</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#F0EAE0"><rect x="2" y="14" width="3" height="7" rx="1"/><rect x="7" y="10" width="3" height="11" rx="1"/><rect x="12" y="6" width="3" height="15" rx="1"/><rect x="17" y="2" width="3" height="19" rx="1" opacity="0.3"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#F0EAE0" stroke-width="2" stroke-linecap="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="#F0EAE0" stroke="none"/></svg>
+        </div>
+      </div>
+
+      <div class="phone-logo">
+        <div class="wordmark-block"
+             style="--wm-size:58px;--wm-spacing:0.28em;--wm-gap:10px;--wm-bar-h:3px;--wm-speed:2.2s;--wm-tag-size:9px;--wm-tag-spacing:0.44em;--wm-tag-mt:12px;">
+          <div class="wm-word">ANANTA</div>
+          <div class="wm-bar"></div>
+          <div class="wm-tag">Stream Without Limits</div>
+        </div>
+      </div>
+
+      <div class="p-google">
+        <svg width="22" height="22" viewBox="0 0 24 24">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        <span>Continue with Google</span>
+      </div>
+
+      <div class="p-agree">
+        <div class="p-check"></div>
+        <p>I agree to the <a href="#">User Agreement</a> &amp; <a href="#">Privacy Policy</a></p>
+      </div>
+
+      <div class="p-cta">Continue</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
