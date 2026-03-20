@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+
+const SW = Dimensions.get('window').width;
 
 const GOLD_COLORS: [string, string, ...string[]] = [
   'transparent', '#7A5828', '#C9A96E', '#F2CA6B', '#EEE0C0', '#F2CA6B', '#C9A96E', '#7A5828', 'transparent',
@@ -33,9 +35,9 @@ export default function AnantaLogo({ size = 'large' }: { size?: 'small' | 'mediu
   }, [barWidth]);
 
   const sizes = {
-    small:  { word: 44, bar: 2,   tag: 8,  gap: 8  },
-    medium: { word: 58, bar: 3,   tag: 9,  gap: 10 },
-    large:  { word: 72, bar: 3.5, tag: 10, gap: 12 },
+    small:  { word: SW * 0.10, bar: 2,   tag: 8,  gap: 8,  trackW: SW * 0.45 },
+    medium: { word: SW * 0.13, bar: 3,   tag: 9,  gap: 10, trackW: SW * 0.60 },
+    large:  { word: SW * 0.16, bar: 3.5, tag: 10, gap: 12, trackW: SW * 0.75 },
   };
   const c = sizes[size];
 
@@ -44,7 +46,7 @@ export default function AnantaLogo({ size = 'large' }: { size?: 'small' | 'mediu
       <Text style={[styles.word, { fontSize: c.word }]}>ANANTA</Text>
 
       <View
-        style={[styles.barTrack, { height: c.bar, marginTop: c.gap }]}
+        style={[styles.barTrack, { height: c.bar, marginTop: c.gap, width: c.trackW }]}
         onLayout={e => setBarWidth(e.nativeEvent.layout.width)}
       >
         {barWidth > 0 && (
@@ -86,15 +88,15 @@ const styles = StyleSheet.create({
   container: { alignItems: 'center' },
   word: {
     fontWeight: '900',
-    letterSpacing: 8,
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(255,255,255,0.4)',
+    letterSpacing: 6,
+    color: '#F0EAE0',
+    textShadowColor: 'rgba(242,202,107,0.25)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 12,
     textTransform: 'uppercase',
+    includeFontPadding: false,
   },
   barTrack: {
-    width: '100%',
     backgroundColor: '#1c1c1c',
     borderRadius: 100,
     overflow: 'hidden',
