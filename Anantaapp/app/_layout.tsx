@@ -3,27 +3,26 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { useEffect } from 'react';
+import { View, StyleSheet, Dimensions } from 'react-native';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ProfileProvider } from '../contexts/ProfileContext';
 import { ThemeProvider as CustomThemeProvider } from '../contexts/ThemeContext';
 import { startAccountStatusCheck, stopAccountStatusCheck } from '../utils/accountStatus';
+import { LiveProvider, useLive } from '../contexts/LiveContext';
+import MiniLivePlayer from '../components/MiniLivePlayer';
 
 export const unstable_settings = {
   initialRouteName: '(tabs)',
 };
 
-export default function RootLayout() {
+function AppContent() {
   const colorScheme = useColorScheme();
+  const { liveSession, isMinimized } = useLive();
 
   useEffect(() => {
-    // Start checking account status when app loads
     startAccountStatusCheck();
-
-    // Cleanup on unmount
-    return () => {
-      stopAccountStatusCheck();
-    };
+    return () => stopAccountStatusCheck();
   }, []);
 
   return (
@@ -45,10 +44,21 @@ export default function RootLayout() {
             <Stack.Screen name="notification" />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             <Stack.Screen name="user-profile" />
+            <Stack.Screen name="live/video" options={{ animation: 'none' }} />
+            <Stack.Screen name="live/audio" options={{ animation: 'none' }} />
           </Stack>
           <StatusBar style="auto" />
         </ThemeProvider>
+        <MiniLivePlayer />
       </ProfileProvider>
     </CustomThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <LiveProvider>
+      <AppContent />
+    </LiveProvider>
   );
 }

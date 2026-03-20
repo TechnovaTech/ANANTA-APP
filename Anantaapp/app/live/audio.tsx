@@ -7,6 +7,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { createAgoraEngine, ChannelProfileType, ClientRoleType } from '@/agoraClient';
+import { useLive } from '@/contexts/LiveContext';
 
 const { width, height } = Dimensions.get('window');
 import { ENV } from '@/config/env';
@@ -309,7 +310,33 @@ export default function AudioLiveScreen() {
     }
   };
 
+  const { startLive, minimizeLive, clearLive } = useLive();
+  const endLiveRef = useRef<() => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    if (role === 'host') {
+      startLive({
+        type: 'audio',
+        title,
+        hostUsername,
+        sessionId: sessionId || '',
+        routeParams: params as Record<string, string>,
+        endLive: () => endLiveRef.current(),
+      });
+    }
+  }, []);
+
+  const handleMinimize = () => {
+    if (role === 'host') {
+      minimizeLive();
+    } else {
+      endLive();
+    }
+    router.back();
+  };
+
   const endLive = async () => {
+    clearLive();
     try {
       if (role === 'host' && sessionId && userId) {
         await fetch(`${ENV.API_BASE_URL}/api/app/live/end`, {
@@ -330,6 +357,7 @@ export default function AudioLiveScreen() {
       router.back();
     }
   };
+  endLiveRef.current = endLive;
 
   const wave1Scale = waveAnim1.interpolate({
     inputRange: [0, 1],
@@ -358,8 +386,8 @@ export default function AudioLiveScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={endLive}>
-          <Ionicons name="arrow-back" size={24} color="white" />
+        <TouchableOpacity style={styles.backButton} onPress={handleMinimize}>
+          <Ionicons name="chevron-down" size={24} color="white" />
         </TouchableOpacity>
         
         <View style={styles.headerInfo}>

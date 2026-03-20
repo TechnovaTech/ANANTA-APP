@@ -7,6 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { createAgoraEngine, RtcSurfaceView, ChannelProfileType, ClientRoleType } from '@/agoraClient';
 import { ENV } from '@/config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useLive } from '@/contexts/LiveContext';
 
 const resolveGiftImageUrl = (value: string | null | undefined) => {
   if (!value) return '';
@@ -106,7 +107,30 @@ export default function VideoLiveScreen() {
     }
   }, []);
 
-  const comments: any[] = [];
+  const { startLive, minimizeLive, clearLive } = useLive();
+  const endLiveRef = useRef<() => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    if (role === 'host') {
+      startLive({
+        type: 'video',
+        title,
+        hostUsername,
+        sessionId: sessionId || '',
+        routeParams: params as Record<string, string>,
+        endLive: () => endLiveRef.current(),
+      });
+    }
+  }, []);
+
+  const handleMinimize = () => {
+    if (role === 'host') {
+      minimizeLive();
+    } else {
+      endLive();
+    }
+    router.back();
+  };
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -653,21 +677,16 @@ export default function VideoLiveScreen() {
   };
 
   const endLive = async () => {
+    clearLive();
     try {
       await saveMinutes();
       if (role === 'host' && sessionId && userId) {
         await fetch(`${ENV.API_BASE_URL}/api/app/live/end`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            sessionId,
-            userId,
-          }),
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, userId }),
         });
       } else if (role === 'viewer' && sessionId) {
-        // Decrement viewer count when viewer leaves
         await fetch(`${ENV.API_BASE_URL}/api/app/live/leave`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -680,6 +699,7 @@ export default function VideoLiveScreen() {
       router.back();
     }
   };
+  endLiveRef.current = endLive;
 
   return (
     <KeyboardAvoidingView
@@ -730,13 +750,6 @@ export default function VideoLiveScreen() {
                     {isFollowing ? 'Following' : 'Follow'}
                   </ThemedText>
                 </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.closeButton}
-                  onPress={endLive}
-                >
-                  <ThemedText style={styles.closeText}>×</ThemedText>
-                </TouchableOpacity>
               </View>
             </>
           ) : role === 'host' ? (
@@ -747,9 +760,9 @@ export default function VideoLiveScreen() {
               </View>
               <TouchableOpacity
                 style={styles.closeButton}
-                onPress={endLive}
+                onPress={handleMinimize}
               >
-                <ThemedText style={styles.closeText}>×</ThemedText>
+                <ThemedText style={styles.closeText}>—</ThemedText>
               </TouchableOpacity>
             </View>
           ) : null}
