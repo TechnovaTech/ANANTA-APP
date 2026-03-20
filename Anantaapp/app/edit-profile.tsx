@@ -22,14 +22,14 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useProfile } from '../contexts/ProfileContext';
 import { useTheme } from '../contexts/ThemeContext';
-import * as SecureStore from 'expo-secure-store';
-import * as FileSystem from 'expo-file-system';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { ENV } from '@/config/env';
 
 const resolveProfileUri = (value: string | null | undefined) => {
   if (!value) return null;
+  if (value.includes('googleusercontent.com') || value.includes('google.com')) return null;
   if (value.startsWith('http') || value.startsWith('data:')) return value;
   if (value.startsWith('/uploads/')) return `${ENV.API_BASE_URL}${value}`;
   return value;
@@ -69,11 +69,7 @@ export default function EditProfileScreen() {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         storedUserId = window.localStorage.getItem('userId');
       } else {
-        try {
-          storedUserId = await SecureStore.getItemAsync('userId');
-        } catch {
-          storedUserId = null;
-        }
+        storedUserId = await AsyncStorage.getItem('userId');
       }
       if (storedUserId) {
         setUserId(storedUserId);
@@ -131,43 +127,17 @@ export default function EditProfileScreen() {
     }
   };
 
-  const toBase64 = async (uri: string | null) => {
-    if (!uri) return null;
+  const toBase64Web = async (uri: string): Promise<string | null> => {
     try {
-      // If already base64 or http URL, return as is
-      if (uri.startsWith('data:')) {
-        return uri;
-      }
-      if (uri.startsWith('http')) {
-        return uri;
-      }
-      if (uri.startsWith('/uploads/')) {
-        return uri;
-      }
-      
-      // For web platform with blob URLs
-      if (Platform.OS === 'web') {
-        if (uri.startsWith('blob:')) {
-          const res = await fetch(uri);
-          const blob = await res.blob();
-          const dataUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = () => reject(reader.error);
-            reader.readAsDataURL(blob);
-          });
-          return dataUrl;
-        }
-        return uri;
-      }
-      
-      // For native platform
-      const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
+      const res = await fetch(uri);
+      const blob = await res.blob();
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(blob);
       });
-      return `data:image/jpeg;base64,${base64}`;
-    } catch (error) {
-      console.error('toBase64 error:', error);
+    } catch {
       return null;
     }
   };
@@ -249,10 +219,15 @@ export default function EditProfileScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
-      base64: false,
+      base64: true,
     });
     if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      const asset = result.assets[0];
+      if (asset.base64) {
+        setProfileImage(`data:image/jpeg;base64,${asset.base64}`);
+      } else {
+        setProfileImage(asset.uri);
+      }
     }
   };
 
@@ -267,9 +242,15 @@ export default function EditProfileScreen() {
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.5,
+      base64: true,
     });
     if (!result.canceled) {
-      setProfileImage(result.assets[0].uri);
+      const asset = result.assets[0];
+      if (asset.base64) {
+        setProfileImage(`data:image/jpeg;base64,${asset.base64}`);
+      } else {
+        setProfileImage(asset.uri);
+      }
     }
   };
 
@@ -353,12 +334,16 @@ export default function EditProfileScreen() {
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [16, 9],
-      quality: 0.7,
-      base64: false,
+      quality: 0.5,
+      base64: true,
     });
-
     if (!result.canceled) {
-      setCoverImage(result.assets[0].uri);
+      const asset = result.assets[0];
+      if (asset.base64) {
+        setCoverImage(`data:image/jpeg;base64,${asset.base64}`);
+      } else {
+        setCoverImage(asset.uri);
+      }
     }
   };
 
@@ -382,38 +367,14 @@ export default function EditProfileScreen() {
       
       let imageToSend: string | null = profileImage;
       let coverToSend: string | null = coverImage;
-      
-      // Convert profile image to base64 if needed
-      if (
-        profileImage &&
-        !profileImage.startsWith('http') &&
-        !profileImage.startsWith('data:') &&
-        !profileImage.startsWith('/uploads/')
-      ) {
-        console.log('Converting profile image to base64...');
-        imageToSend = await toBase64(profileImage);
-        console.log('Profile base64 conversion result:', imageToSend ? `${imageToSend.substring(0, 50)}...` : 'null');
-        
-        if (imageToSend && imageToSend.length > 1000000) {
-          Alert.alert('Error', 'Profile image too large. Please select a smaller image.');
-          return;
+
+      // For web blob URIs, convert to base64
+      if (Platform.OS === 'web') {
+        if (profileImage && profileImage.startsWith('blob:')) {
+          imageToSend = await toBase64Web(profileImage);
         }
-      }
-      
-      // Convert cover image to base64 if needed
-      if (
-        coverImage &&
-        !coverImage.startsWith('http') &&
-        !coverImage.startsWith('data:') &&
-        !coverImage.startsWith('/uploads/')
-      ) {
-        console.log('Converting cover image to base64...');
-        coverToSend = await toBase64(coverImage);
-        console.log('Cover base64 conversion result:', coverToSend ? `${coverToSend.substring(0, 50)}...` : 'null');
-        
-        if (coverToSend && coverToSend.length > 1000000) {
-          Alert.alert('Error', 'Cover image too large. Please select a smaller image.');
-          return;
+        if (coverImage && coverImage.startsWith('blob:')) {
+          coverToSend = await toBase64Web(coverImage);
         }
       }
       
@@ -469,24 +430,8 @@ export default function EditProfileScreen() {
       const result = await response.json();
       console.log('Save successful:', result);
       
-      const resolvedUri = resolveProfileUri(imageToSend) || profileImage;
-      const resolvedCoverUri = resolveProfileUri(coverToSend) || coverImage;
-      updateProfile({
-        name: fullName,
-        UserName: userName,
-        bio,
-        location,
-        gender,
-        birthday,
-        addressLine1,
-        city,
-        state,
-        country,
-        pinCode,
-        profileImage: resolvedUri || profileImage,
-        profilePhoto: resolvedUri || profileImage,
-        headerBackground: resolvedCoverUri || coverImage,
-      });
+      // Reload fresh profile from server to get saved /uploads/ paths
+      await loadProfile(userId);
       
       Alert.alert('Success', 'Profile updated successfully');
       router.back();
@@ -519,7 +464,7 @@ export default function EditProfileScreen() {
         {/* Cover Image */}
         <View style={[styles.coverImageSection, { backgroundColor: isDark ? '#2a2a2a' : 'white' }]}>
           <View style={styles.coverImageContainer}>
-            {coverImage && (coverImage.startsWith('http') || coverImage.startsWith('data:') || coverImage.startsWith('/uploads/') || coverImage.startsWith('blob:')) ? (
+            {coverImage ? (
               <Image source={{ uri: coverImage }} style={styles.coverImage} resizeMode="cover" />
             ) : (
               <LinearGradient
@@ -537,7 +482,7 @@ export default function EditProfileScreen() {
         {/* Profile Image */}
         <View style={[styles.profileImageSection, { backgroundColor: isDark ? '#2a2a2a' : 'white' }]}>
           <View style={styles.profileImageContainer}>
-            {profileImage && (profileImage.startsWith('http') || profileImage.startsWith('data:') || profileImage.startsWith('/uploads/') || profileImage.startsWith('blob:')) ? (
+            {profileImage ? (
               <Image source={{ uri: profileImage }} style={styles.profileImage} resizeMode="cover" />
             ) : (
               <View style={[styles.profileImage, { backgroundColor: isDark ? '#f7c14d' : '#127d96', justifyContent: 'center', alignItems: 'center' }]}>

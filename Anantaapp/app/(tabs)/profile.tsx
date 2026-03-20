@@ -25,6 +25,7 @@ import { ENV } from '@/config/env';
 
 const resolveProfileUri = (value: string | null | undefined) => {
   if (!value) return null;
+  if (value.includes('googleusercontent.com') || value.includes('google.com')) return null;
   if (value.startsWith('http') || value.startsWith('data:')) return value;
   if (value.startsWith('/uploads/')) return `${ENV.API_BASE_URL}${value}`;
   if (value.length > 100) return `data:image/jpeg;base64,${value}`;
@@ -129,65 +130,39 @@ export default function ProfileScreen() {
 
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'] as any,
       allowsEditing: true,
       aspect: [16, 9],
-      quality: 1,
+      quality: 0.5,
+      base64: true,
     });
 
     if (!result.canceled) {
-      const newCoverUri = result.assets[0].uri;
-      updateProfile({ headerBackground: newCoverUri });
-      
-      // Save to backend
-      saveCoverImage(newCoverUri);
+      const asset = result.assets[0];
+      const coverBase64 = asset.base64
+        ? `data:image/jpeg;base64,${asset.base64}`
+        : asset.uri;
+      updateProfile({ headerBackground: coverBase64 });
+      await saveCoverImage(coverBase64);
     }
   };
 
-  const saveCoverImage = async (coverUri: string) => {
+  const saveCoverImage = async (coverBase64: string) => {
     try {
       let storedUserId: string | null = null;
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         storedUserId = window.localStorage.getItem('userId');
       } else {
-        try {
-          storedUserId = await AsyncStorage.getItem('userId');
-        } catch {
-          storedUserId = null;
-        }
+        storedUserId = await AsyncStorage.getItem('userId');
       }
-      
       if (!storedUserId) return;
-
-      // Convert to base64
-      let coverBase64 = coverUri;
-      if (!coverUri.startsWith('http') && !coverUri.startsWith('data:')) {
-        if (Platform.OS === 'web') {
-          const res = await fetch(coverUri);
-          const blob = await res.blob();
-          coverBase64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.readAsDataURL(blob);
-          });
-        } else {
-          const FileSystem = require('expo-file-system');
-          const base64 = await FileSystem.readAsStringAsync(coverUri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          coverBase64 = `data:image/jpeg;base64,${base64}`;
-        }
-      }
 
       await fetch(`${ENV.API_BASE_URL}/api/app/profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: storedUserId,
-          coverImage: coverBase64,
-        }),
+        body: JSON.stringify({ userId: storedUserId, coverImage: coverBase64 }),
       });
-      console.log('Cover image saved to backend');
+      await loadProfile(storedUserId);
     } catch (error) {
       console.error('Failed to save cover image:', error);
     }
