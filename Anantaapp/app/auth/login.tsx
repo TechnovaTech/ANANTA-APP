@@ -92,10 +92,6 @@ export default function LoginScreen() {
           <View style={styles.content}>
                 <View style={styles.logoContainer}>
                   <AnantaLogo size="large" />
-                  <ThemedText style={styles.subtitle}>Welcome Back!</ThemedText>
-                  <ThemedText style={styles.description}>
-                    Sign in to continue your journey
-                  </ThemedText>
                 </View>
                 
                 <View style={styles.formContainer}>
@@ -153,21 +149,8 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 50,
-  },
-  subtitle: {
-    fontSize: 20,
-    color: 'rgba(255,255,255,0.95)',
-    fontFamily: 'Inter_700Bold',
-    textAlign: 'center',
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  description: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
-    fontFamily: 'Inter_400Regular',
-    textAlign: 'center',
+    marginBottom: 80,
+    width: '100%',
   },
   formContainer: {
     width: '100%',

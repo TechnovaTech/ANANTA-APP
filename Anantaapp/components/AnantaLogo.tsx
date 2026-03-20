@@ -75,11 +75,9 @@ export default function AnantaLogo({ size = 'large' }: { size?: 'small' | 'mediu
         )}
       </View>
 
-      {size !== 'small' && (
-        <Text style={[styles.tagline, { fontSize: c.tag, marginTop: c.gap + 2 }]}>
-          STREAM WITHOUT LIMITS
-        </Text>
-      )}
+      <Text style={[styles.tagline, { fontSize: c.tag, marginTop: c.gap + 2 }]}>
+        STREAM WITHOUT LIMITS
+      </Text>
     </View>
   );
 }
@@ -89,7 +87,10 @@ const styles = StyleSheet.create({
   word: {
     fontWeight: '900',
     letterSpacing: 8,
-    color: '#EEE0C0',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(255,255,255,0.4)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 12,
     textTransform: 'uppercase',
   },
   barTrack: {
@@ -101,7 +102,7 @@ const styles = StyleSheet.create({
   tagline: {
     fontWeight: '300',
     letterSpacing: 4,
-    color: '#555',
+    color: '#BBBBBB',
     textTransform: 'uppercase',
   },
 });
