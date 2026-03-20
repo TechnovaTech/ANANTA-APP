@@ -7,7 +7,6 @@ import * as ImagePicker from 'expo-image-picker';
 import { useState, useEffect, useRef } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../contexts/ThemeContext';
-import { Animated } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useProfile } from '../../contexts/ProfileContext';
 import * as FileSystem from 'expo-file-system';
@@ -35,6 +34,8 @@ export default function ProfileScreen() {
   const [referralCode, setReferralCode] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle');
+  const usernameTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const leaveRegistration = async () => {
     if (Platform.OS === 'web') {
@@ -63,11 +64,28 @@ export default function ProfileScreen() {
     return () => sub.remove();
   }, []);
 
+  const handleUsernameChange = (text: string) => {
+    const clean = text.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    setUserName(clean);
+    setUsernameStatus('idle');
+    if (usernameTimer.current) clearTimeout(usernameTimer.current);
+    if (clean.length < 3) return;
+    setUsernameStatus('checking');
+    usernameTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`${ENV.API_BASE_URL}/api/app/check-username?username=${clean}`);
+        const data = await res.json();
+        setUsernameStatus(data.available ? 'available' : 'taken');
+      } catch { setUsernameStatus('idle'); }
+    }, 600);
+  };
+
   const genderOptions = ['Male', 'Female', 'Other'];
 
   const isFormValid =
     userName.trim().length >= 3 &&
-    /^[a-zA-Z0-9_]+$/.test(userName.trim()) &&
+    /^[a-z0-9_]+$/.test(userName.trim()) &&
+    usernameStatus === 'available' &&
     email.trim().length > 0 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) &&
     !!gender &&
@@ -214,17 +232,28 @@ export default function ProfileScreen() {
             <View style={styles.sectionContainer}>
               <ThemedText style={[styles.sectionTitle, { color: isDark ? 'white' : Colors.light.primary }]}>Personal Information</ThemedText>
 
-              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}>
+              <View style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: usernameStatus === 'taken' ? '#e53e3e' : usernameStatus === 'available' ? '#38a169' : isDark ? '#555' : '#e9ecef' }]}>
                 <Ionicons name="person-outline" size={20} color={isDark ? '#555' : Colors.light.primary} style={styles.icon} />
                 <TextInput
                   style={[styles.input, { color: isDark ? 'white' : '#333' }]}
-                  placeholder="Username (min 3 chars, letters/numbers only) *"
+                  placeholder="Username (min 3 chars, a-z 0-9 _) *"
                   placeholderTextColor={isDark ? '#888' : '#666'}
                   value={userName}
-                  onChangeText={(text) => setUserName(text.replace(/[^a-zA-Z0-9_]/g, ''))}
+                  onChangeText={handleUsernameChange}
                   maxLength={20}
+                  autoCapitalize="none"
+                  autoCorrect={false}
                 />
+                {usernameStatus === 'checking' && <Ionicons name="ellipsis-horizontal" size={18} color="#888" />}
+                {usernameStatus === 'available' && <Ionicons name="checkmark-circle" size={20} color="#38a169" />}
+                {usernameStatus === 'taken' && <Ionicons name="close-circle" size={20} color="#e53e3e" />}
               </View>
+              {usernameStatus === 'taken' && (
+                <Text style={{ color: '#e53e3e', fontSize: 12, marginTop: -10, marginBottom: 10, marginLeft: 20 }}>Username already taken</Text>
+              )}
+              {usernameStatus === 'available' && (
+                <Text style={{ color: '#38a169', fontSize: 12, marginTop: -10, marginBottom: 10, marginLeft: 20 }}>Username available</Text>
+              )}
 
               <View style={[styles.inputContainer, { backgroundColor: isDark ? '#333' : '#f8f9fa', borderColor: isDark ? '#555' : '#e9ecef' }]}>
                 <Ionicons name="mail-outline" size={20} color={isDark ? '#555' : Colors.light.primary} style={styles.icon} />
