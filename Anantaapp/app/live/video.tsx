@@ -107,11 +107,16 @@ export default function VideoLiveScreen() {
     }
   }, []);
 
-  const { startLive, minimizeLive, clearLive } = useLive();
+  const { startLive, minimizeLive, clearLive, liveSession, liveEngine, setLiveEngine } = useLive();
   const endLiveRef = useRef<() => Promise<void>>(async () => {});
+  const startedAtRef = useRef<number | null>(null);
+  const keepAliveRef = useRef(false);
 
   useEffect(() => {
     if (role === 'host') {
+      const existingStartedAt = liveSession?.sessionId === (sessionId || '') ? liveSession.startedAt : undefined;
+      const startedAt = existingStartedAt || Date.now();
+      startedAtRef.current = startedAt;
       startLive({
         type: 'video',
         title,
@@ -119,12 +124,14 @@ export default function VideoLiveScreen() {
         sessionId: sessionId || '',
         routeParams: params as Record<string, string>,
         endLive: () => endLiveRef.current(),
+        startedAt,
       });
     }
   }, []);
 
   const handleMinimize = () => {
     if (role === 'host') {
+      keepAliveRef.current = true;
       minimizeLive();
     } else {
       endLive();
@@ -398,6 +405,11 @@ export default function VideoLiveScreen() {
   };
 
   const initAgora = async () => {
+    if (role === 'host' && liveEngine && liveSession?.sessionId === (sessionId || '')) {
+      engineRef.current = liveEngine;
+      setJoined(true);
+      return;
+    }
     console.log('=== INIT AGORA START ===');
     console.log('AppId:', appId);
     console.log('Token:', token?.substring(0, 30));
@@ -434,6 +446,9 @@ export default function VideoLiveScreen() {
       const engine = await createAgoraEngine(appId);
       console.log('Step 2: Engine created successfully');
       engineRef.current = engine;
+      if (role === 'host') {
+        setLiveEngine(engine);
+      }
 
       console.log('Step 3: Setting channel profile...');
       await engine.setChannelProfile(ChannelProfileType.ChannelProfileLiveBroadcasting);
@@ -530,10 +545,19 @@ export default function VideoLiveScreen() {
         console.error('Cleanup error:', e);
       }
       engineRef.current = null;
+      if (role === 'host') {
+        setLiveEngine(null);
+      }
     }
   };
 
   const statsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const syncElapsedTime = () => {
+    if (!startedAtRef.current) return;
+    const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000));
+    elapsedTimeRef.current = elapsedSeconds;
+    setElapsedTime(elapsedSeconds);
+  };
 
   useEffect(() => {
     initAgora();
@@ -542,13 +566,16 @@ export default function VideoLiveScreen() {
     checkFollowStatus();
     statsIntervalRef.current = setInterval(loadSessionStats, 5000);
     messagesIntervalRef.current = setInterval(loadMessages, 2000);
-    timerIntervalRef.current = setInterval(() => {
-      setElapsedTime(prev => { elapsedTimeRef.current = prev + 1; return prev + 1; });
-    }, 1000);
+    if (!startedAtRef.current) {
+      startedAtRef.current = Date.now();
+    }
+    syncElapsedTime();
+    timerIntervalRef.current = setInterval(syncElapsedTime, 1000);
     return () => {
       if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
       if (messagesIntervalRef.current) clearInterval(messagesIntervalRef.current);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (role === 'host' && keepAliveRef.current) return;
       cleanupAgora();
     };
   }, []);
@@ -679,6 +706,7 @@ export default function VideoLiveScreen() {
   const endLive = async () => {
     clearLive();
     try {
+      keepAliveRef.current = false;
       await saveMinutes();
       if (role === 'host' && sessionId && userId) {
         await fetch(`${ENV.API_BASE_URL}/api/app/live/end`, {

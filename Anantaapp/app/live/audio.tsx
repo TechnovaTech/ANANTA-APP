@@ -61,6 +61,7 @@ export default function AudioLiveScreen() {
   const statsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const messagesIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startedAtRef = useRef<number | null>(null);
   
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -287,9 +288,16 @@ export default function AudioLiveScreen() {
     checkFollowStatus();
     statsIntervalRef.current = setInterval(loadSessionStats, 5000);
     messagesIntervalRef.current = setInterval(loadMessages, 2000);
-    timerIntervalRef.current = setInterval(() => {
-      setElapsedTime(prev => prev + 1);
-    }, 1000);
+    if (!startedAtRef.current) {
+      startedAtRef.current = Date.now();
+    }
+    const syncElapsedTime = () => {
+      if (!startedAtRef.current) return;
+      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000));
+      setElapsedTime(elapsedSeconds);
+    };
+    syncElapsedTime();
+    timerIntervalRef.current = setInterval(syncElapsedTime, 1000);
     return () => {
       if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
       if (messagesIntervalRef.current) clearInterval(messagesIntervalRef.current);
@@ -310,11 +318,14 @@ export default function AudioLiveScreen() {
     }
   };
 
-  const { startLive, minimizeLive, clearLive } = useLive();
+  const { startLive, minimizeLive, clearLive, liveSession } = useLive();
   const endLiveRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     if (role === 'host') {
+      const existingStartedAt = liveSession?.sessionId === (sessionId || '') ? liveSession.startedAt : undefined;
+      const startedAt = existingStartedAt || Date.now();
+      startedAtRef.current = startedAt;
       startLive({
         type: 'audio',
         title,
@@ -322,6 +333,7 @@ export default function AudioLiveScreen() {
         sessionId: sessionId || '',
         routeParams: params as Record<string, string>,
         endLive: () => endLiveRef.current(),
+        startedAt,
       });
     }
   }, []);

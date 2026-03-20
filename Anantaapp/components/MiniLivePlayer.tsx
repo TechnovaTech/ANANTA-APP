@@ -1,12 +1,22 @@
 import React, { useRef, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, PanResponder, Animated } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, PanResponder, Animated, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { RtcSurfaceView } from '@/agoraClient';
 import { useLive } from '../contexts/LiveContext';
 
 export default function MiniLivePlayer() {
   const { liveSession, isMinimized, expandLive, clearLive } = useLive();
-  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const { width, height } = Dimensions.get('window');
+  const cardWidth = 150;
+  const cardHeight = 150;
+  const minX = 12;
+  const minY = 12;
+  const maxX = Math.max(minX, width - cardWidth - 12);
+  const maxY = Math.max(minY, height - cardHeight - 12);
+  const initialX = maxX;
+  const initialY = Math.max(minY, height - cardHeight - 100);
+  const pan = useRef(new Animated.ValueXY({ x: initialX, y: initialY })).current;
 
   const w1 = useRef(new Animated.Value(0.3)).current;
   const w2 = useRef(new Animated.Value(0.3)).current;
@@ -28,9 +38,25 @@ export default function MiniLivePlayer() {
 
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_evt, gesture) =>
+        Math.abs(gesture.dx) > 3 || Math.abs(gesture.dy) > 3,
+      onPanResponderGrant: () => {
+        pan.setOffset({
+          x: (pan.x as any)._value,
+          y: (pan.y as any)._value,
+        });
+        pan.setValue({ x: 0, y: 0 });
+      },
       onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], { useNativeDriver: false }),
-      onPanResponderRelease: () => pan.extractOffset(),
+      onPanResponderRelease: () => {
+        pan.flattenOffset();
+        const x = (pan.x as any)._value;
+        const y = (pan.y as any)._value;
+        const clampedX = Math.min(Math.max(x, minX), maxX);
+        const clampedY = Math.min(Math.max(y, minY), maxY);
+        pan.setValue({ x: clampedX, y: clampedY });
+      },
     })
   ).current;
 
@@ -59,7 +85,11 @@ export default function MiniLivePlayer() {
         <View style={styles.visual}>
           {liveSession.type === 'video' ? (
             <View style={styles.videoBg}>
-              <Ionicons name="videocam" size={32} color="rgba(255,255,255,0.4)" />
+              <RtcSurfaceView
+                canvas={{ uid: 0 }}
+                style={styles.videoSurface}
+                zOrderMediaOverlay={false}
+              />
             </View>
           ) : (
             <View style={styles.audioBg}>
@@ -104,8 +134,8 @@ export default function MiniLivePlayer() {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 100,
-    right: 16,
+    left: 0,
+    top: 0,
     zIndex: 9999,
     elevation: 20,
     width: 150,
@@ -130,6 +160,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#0a0a0a',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  videoSurface: {
+    width: '100%',
+    height: '100%',
   },
   audioBg: {
     flex: 1,
