@@ -112,28 +112,36 @@ export default function VerificationScreen() {
       }
       if (!userId) { Alert.alert('Error', 'Session expired. Please login again.'); return; }
 
-      const frontBase64 = await toBase64(frontImage);
-      const backBase64 = await toBase64(backImage);
-
       const docTypeMap: Record<string, string> = { aadhar: 'Aadhaar Card', license: 'Driving License' };
 
-      const res = await fetch(`${ENV.API_BASE_URL}/api/app/register`, {
+      const form = new FormData();
+      form.append('userId', userId);
+      form.append('username', formData.fullName);
+      form.append('fullName', formData.fullName);
+      form.append('email', formData.email);
+      form.append('phone', formData.phone || '');
+      form.append('gender', formData.gender || '');
+      form.append('birthday', formData.birthday || '');
+      form.append('bio', formData.bio || '');
+      form.append('documentType', docTypeMap[selectedDocType] || selectedDocType);
+      form.append('documentNumber', formData.documentNumber);
+
+      if (frontImage) {
+        const filename = frontImage.split('/').pop() || 'front.jpg';
+        const match = /\.([a-zA-Z]+)$/.exec(filename);
+        const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+        form.append('documentFrontImage', { uri: frontImage, name: filename, type } as any);
+      }
+      if (backImage) {
+        const filename = backImage.split('/').pop() || 'back.jpg';
+        const match = /\.([a-zA-Z]+)$/.exec(filename);
+        const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
+        form.append('documentBackImage', { uri: backImage, name: filename, type } as any);
+      }
+
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/register-multipart`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          username: formData.fullName,
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
-          gender: formData.gender,
-          birthday: formData.birthday,
-          bio: formData.bio,
-          documentType: docTypeMap[selectedDocType] || selectedDocType,
-          documentNumber: formData.documentNumber,
-          documentFrontImage: frontBase64,
-          documentBackImage: backBase64,
-        }),
+        body: form,
       });
 
       if (!res.ok) {

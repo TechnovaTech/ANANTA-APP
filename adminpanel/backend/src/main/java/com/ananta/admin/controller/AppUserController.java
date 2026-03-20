@@ -754,6 +754,75 @@ public class AppUserController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping(value = "/register-multipart", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> registerMultipart(
+            @RequestParam("userId") String userId,
+            @RequestParam("username") String username,
+            @RequestParam(value = "fullName", required = false) String fullName,
+            @RequestParam("email") String email,
+            @RequestParam(value = "phone", required = false) String phone,
+            @RequestParam(value = "gender", required = false) String gender,
+            @RequestParam(value = "birthday", required = false) String birthday,
+            @RequestParam(value = "bio", required = false) String bio,
+            @RequestParam("documentType") String documentType,
+            @RequestParam("documentNumber") String documentNumber,
+            @RequestPart(value = "documentFrontImage", required = false) org.springframework.web.multipart.MultipartFile frontFile,
+            @RequestPart(value = "documentBackImage", required = false) org.springframework.web.multipart.MultipartFile backFile
+    ) {
+        String normalizedUserId = userId != null ? userId.trim() : "";
+        if (!StringUtils.hasText(normalizedUserId) || !StringUtils.hasText(username) || !StringUtils.hasText(email) || !StringUtils.hasText(documentType) || !StringUtils.hasText(documentNumber)) {
+            return ResponseEntity.badRequest().body(new MessageResponse("Please fill all required fields"));
+        }
+        String compactUserId = normalizedUserId.replaceAll("[^A-Za-z0-9]", "");
+        Optional<User> userOpt = userRepository.findByUserId(normalizedUserId);
+        if (userOpt.isEmpty()) userOpt = userRepository.findByUserIdTrimmed(normalizedUserId);
+        if (userOpt.isEmpty() && StringUtils.hasText(compactUserId)) userOpt = userRepository.findByUserIdNormalized(compactUserId);
+        User user = userOpt.orElseThrow(() -> new RuntimeException("User not found"));
+
+        String name = StringUtils.hasText(fullName) ? fullName.trim() : username.trim();
+        user.setUsername(username.trim());
+        user.setFullName(name);
+        user.setEmail(email.trim());
+        if (StringUtils.hasText(phone)) user.setPhone(phone.trim());
+        user.setGender(gender);
+        user.setBirthday(birthday);
+        user.setBio(bio);
+        userRepository.save(user);
+
+        KYC kyc = kycRepository.findByUserId(user.getUserId()).orElseGet(() -> { KYC k = new KYC(); k.setUserId(user.getUserId()); return k; });
+        kyc.setFullName(name);
+        kyc.setDocumentType(mapDocumentType(documentType));
+        kyc.setDocumentNumber(documentNumber.trim());
+
+        if (frontFile != null && !frontFile.isEmpty()) {
+            String path = saveUploadedFile(frontFile, "doc_front", user.getUserId());
+            if (StringUtils.hasText(path)) kyc.setDocumentFrontImage(path);
+        }
+        if (backFile != null && !backFile.isEmpty()) {
+            String path = saveUploadedFile(backFile, "doc_back", user.getUserId());
+            if (StringUtils.hasText(path)) kyc.setDocumentBackImage(path);
+        }
+        kyc.setStatus(KYC.KYCStatus.PENDING);
+        kycRepository.save(kyc);
+        return ResponseEntity.ok(new MessageResponse("KYC submitted, pending review"));
+    }
+
+    private String saveUploadedFile(org.springframework.web.multipart.MultipartFile file, String prefix, String userId) {
+        if (file == null || file.isEmpty()) return null;
+        try {
+            Path uploadPath = Paths.get(UPLOAD_DIR);
+            Files.createDirectories(uploadPath);
+            String original = file.getOriginalFilename();
+            String ext = (StringUtils.hasText(original) && original.contains(".")) ? original.substring(original.lastIndexOf('.')) : ".jpg";
+            String filename = prefix + "_" + userId + "_" + System.currentTimeMillis() + ext;
+            file.transferTo(uploadPath.resolve(filename).toFile());
+            return "/uploads/" + filename;
+        } catch (Exception e) {
+            System.err.println("saveUploadedFile failed: " + e.getMessage());
+            return null;
+        }
+    }
+
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         String normalizedUserId = request.getUserId() != null ? request.getUserId().trim() : "";
@@ -824,13 +893,9 @@ public class AppUserController {
         String backPath = saveBase64Image(request.getDocumentBackImage(), "doc_back", user.getUserId());
         if (StringUtils.hasText(frontPath)) {
             kyc.setDocumentFrontImage(frontPath);
-        } else if (StringUtils.hasText(request.getDocumentFrontImage())) {
-            kyc.setDocumentFrontImage(request.getDocumentFrontImage());
         }
         if (StringUtils.hasText(backPath)) {
             kyc.setDocumentBackImage(backPath);
-        } else if (StringUtils.hasText(request.getDocumentBackImage())) {
-            kyc.setDocumentBackImage(request.getDocumentBackImage());
         }
         kyc.setStatus(KYC.KYCStatus.PENDING);
 
@@ -1515,6 +1580,7 @@ public class AppUserController {
             Files.write(filePath, data);
             return "/uploads/" + filename;
         } catch (Exception e) {
+            System.err.println("saveBase64Image failed for prefix=" + prefix + " userId=" + userId + ": " + e.getMessage());
             return null;
         }
     }
