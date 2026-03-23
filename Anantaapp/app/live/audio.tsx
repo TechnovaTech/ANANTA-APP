@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState, useRef } from 'react';
 import { Image, Keyboard, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, StatusBar, Dimensions, Animated, Alert, PermissionsAndroid, BackHandler, Modal, FlatList } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +13,13 @@ import { useLive } from '@/contexts/LiveContext';
 
 const { width, height } = Dimensions.get('window');
 import { ENV } from '@/config/env';
+
+const resolveGiftImageUrl = (value: string | null | undefined) => {
+  if (!value) return '';
+  if (value.startsWith('http') || value.startsWith('data:')) return value;
+  if (value.startsWith('/uploads/')) return `${ENV.API_BASE_URL}${value}`;
+  return value;
+};
 
 const resolveProfileImageUrl = (value: string | null | undefined) => {
   if (!value) return '';
@@ -62,6 +70,15 @@ export default function AudioLiveScreen() {
   const [floatingHearts, setFloatingHearts] = useState<any[]>([]);
   const [joined, setJoined] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [giftList, setGiftList] = useState<any[]>([]);
+  const [showGifts, setShowGifts] = useState(false);
+  const [loadingGifts, setLoadingGifts] = useState(false);
+  const [giftAnimation, setGiftAnimation] = useState<{ senderName: string; giftImageUrl: string; giftName: string } | null>(null);
+  const giftAnimScale = useRef(new Animated.Value(0)).current;
+  const giftAnimY = useRef(new Animated.Value(0)).current;
+  const giftAnimOpacity = useRef(new Animated.Value(0)).current;
+  const shownGiftIds = useRef<Set<number>>(new Set());
   const scrollViewRef = useRef<ScrollView>(null);
   const engineRef = useRef<any | null>(null);
   const statsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -181,6 +198,17 @@ export default function AudioLiveScreen() {
       if (response.ok) {
         const data = await response.json();
         setIsFollowing(data.isFollowing);
+        if (data.isFollowing) {
+          // viewer followed host → HOST_FOLLOWED for viewer (drained on daily-tasks screen)
+          const prev = parseFloat(await AsyncStorage.getItem('pendingHostFollowed') || '0');
+          await AsyncStorage.setItem('pendingHostFollowed', String(prev + 1));
+          // host received a follow → post FOLLOW_RECEIVED directly to host's tasks (different device)
+          fetch(`${ENV.API_BASE_URL}/api/app/daily-tasks/progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: hostUserId, taskType: 'host', triggerEvent: 'FOLLOW_RECEIVED', addValue: 1 }),
+          }).catch(() => {});
+        }
       }
     } catch (e) {
       console.error('Follow error:', e);
@@ -200,8 +228,155 @@ export default function AudioLiveScreen() {
     }, 3000);
   };
 
+  const handleGift = async () => {
+    if (role !== 'viewer') return;
+    if (!hostUserId) return;
+    let viewerUserId = userId;
+    if (!viewerUserId || viewerUserId === 'guest') {
+      viewerUserId = Platform.OS === 'web' && typeof window !== 'undefined'
+        ? window.localStorage.getItem('userId') || undefined
+        : (await SecureStore.getItemAsync('userId')) || undefined;
+    }
+    if (!viewerUserId) return;
+    setShowGifts(true);
+    if (giftList.length === 0) loadGifts();
+    if (walletBalance === null) loadWallet();
+  };
+
+  const loadWallet = async () => {
+    try {
+      let walletUserId = (!userId || userId === 'guest') ? null : userId;
+      if (!walletUserId) {
+        walletUserId = Platform.OS === 'web' && typeof window !== 'undefined'
+          ? window.localStorage.getItem('userId')
+          : await SecureStore.getItemAsync('userId');
+      }
+      if (!walletUserId || walletUserId === 'guest') return;
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/${walletUserId}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setWalletBalance(typeof data.balance === 'number' ? data.balance : Number(data.balance) || 0);
+    } catch {}
+  };
+
+  const loadGifts = async () => {
+    try {
+      setLoadingGifts(true);
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/gifts`);
+      if (!res.ok) {
+        setLoadingGifts(false);
+        return;
+      }
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setGiftList(
+          data.map((item: any) => ({
+            id: item.id,
+            name: item.name,
+            coinValue: item.coinValue,
+            imageUrl: resolveGiftImageUrl(item.imageUrl),
+          }))
+        );
+      }
+      setLoadingGifts(false);
+    } catch {
+      setLoadingGifts(false);
+    }
+  };
+
+  const triggerGiftAnimation = (senderName: string, giftImageUrl: string, giftName: string) => {
+    giftAnimScale.setValue(0);
+    giftAnimY.setValue(0);
+    giftAnimOpacity.setValue(1);
+    setGiftAnimation({ senderName, giftImageUrl, giftName });
+    Animated.sequence([
+      Animated.spring(giftAnimScale, { toValue: 1, useNativeDriver: true, friction: 5 }),
+      Animated.delay(1800),
+      Animated.parallel([
+        Animated.timing(giftAnimY, { toValue: -80, duration: 600, useNativeDriver: true }),
+        Animated.timing(giftAnimOpacity, { toValue: 0, duration: 600, useNativeDriver: true }),
+      ]),
+    ]).start(() => setGiftAnimation(null));
+  };
+
+  const handleSendGift = async (gift: any) => {
+    let senderUserId = userId;
+    if (!senderUserId) {
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        senderUserId = window.localStorage.getItem('userId') || undefined;
+      } else {
+        senderUserId = (await SecureStore.getItemAsync('userId')) || undefined;
+      }
+    }
+    if (!senderUserId || !hostUserId) return;
+    const cost = typeof gift.coinValue === 'number' ? gift.coinValue : Number(gift.coinValue) || 0;
+    if (cost <= 0) return;
+    if (walletBalance !== null && walletBalance < cost) {
+      Alert.alert('Insufficient balance', 'You do not have enough coins to send this gift.');
+      return;
+    }
+    try {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/gifts/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fromUserId: senderUserId,
+          toUserId: hostUserId,
+          giftId: gift.id,
+        }),
+      });
+      if (!res.ok) {
+        Alert.alert('Error', 'Unable to send gift');
+        return;
+      }
+      const data = await res.json();
+      if (typeof data.fromBalance === 'number') {
+        setWalletBalance(data.fromBalance);
+      }
+      // Track gift sent value (for viewer's own tasks)
+      const prevSpent = parseFloat(await AsyncStorage.getItem('pendingGiftSentValue') || '0');
+      await AsyncStorage.setItem('pendingGiftSentValue', String(prevSpent + cost));
+      // Track unique host gifted (store as JSON array of hostUserIds)
+      const uniqueHostsRaw = await AsyncStorage.getItem('pendingGiftUniqueHosts');
+      const uniqueHosts: string[] = uniqueHostsRaw ? JSON.parse(uniqueHostsRaw) : [];
+      if (hostUserId && !uniqueHosts.includes(hostUserId)) {
+        uniqueHosts.push(hostUserId);
+        await AsyncStorage.setItem('pendingGiftUniqueHosts', JSON.stringify(uniqueHosts));
+      }
+      // Post GIFT_RECEIVED_VALUE directly to host's tasks (host is on a different device)
+      fetch(`${ENV.API_BASE_URL}/api/app/daily-tasks/progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: hostUserId, taskType: 'host', triggerEvent: 'GIFT_RECEIVED_VALUE', addValue: cost }),
+      }).catch(() => {});
+      // Broadcast gift animation to all viewers via message system
+      const senderName = currentUsername !== 'User' ? currentUsername : (senderUserId || 'Someone');
+      const giftMsgId = Date.now();
+      shownGiftIds.current.add(giftMsgId);
+      const giftPayload = JSON.stringify({ __gift: true, giftImageUrl: gift.imageUrl, giftName: gift.name });
+      await fetch(`${ENV.API_BASE_URL}/api/app/live/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          username: senderName,
+          message: giftPayload,
+          avatar: resolveProfileImageUrl(currentUserProfileImage) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50',
+        }),
+      }).catch(() => {});
+      triggerGiftAnimation(senderName, gift.imageUrl, gift.name);
+      addFloatingHeart();
+      setShowGifts(false);
+    } catch {
+      Alert.alert('Error', 'Unable to send gift');
+    }
+  };
+
   const sendMessage = async () => {
     if (!messageText.trim() || !sessionId) return;
+    // Track message sent
+    const prevMsg = parseFloat(await AsyncStorage.getItem('pendingMessageSent') || '0');
+    await AsyncStorage.setItem('pendingMessageSent', String(prevMsg + 1));
     try {
       await fetch(`${ENV.API_BASE_URL}/api/app/live/message`, {
         method: 'POST',
@@ -274,7 +449,19 @@ export default function AudioLiveScreen() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          setLiveComments(data.slice(-5));
+          const regularComments: any[] = [];
+          data.forEach((msg: any) => {
+            try {
+              const parsed = JSON.parse(msg.message);
+              if (parsed.__gift && msg.id && !shownGiftIds.current.has(msg.id)) {
+                shownGiftIds.current.add(msg.id);
+                triggerGiftAnimation(msg.user, parsed.giftImageUrl, parsed.giftName);
+              }
+            } catch {
+              regularComments.push(msg);
+            }
+          });
+          setLiveComments(regularComments.slice(-5));
         }
       }
     } catch { }
@@ -653,6 +840,11 @@ export default function AudioLiveScreen() {
             <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
               <Ionicons name="heart" size={20} color="#ff4444" />
             </TouchableOpacity>
+            
+            <TouchableOpacity style={styles.actionButton} onPress={handleGift}>
+              <Ionicons name="gift" size={20} color="#ffd93d" />
+            </TouchableOpacity>
+            
             {isRoomAdmin && (
               <TouchableOpacity style={styles.actionButton} onPress={() => { setViewerSearch(''); loadViewers(); setShowViewers(true); }}>
                 <Ionicons name="people" size={20} color="white" />
@@ -661,6 +853,27 @@ export default function AudioLiveScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
+
+      {giftAnimation && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.giftAnimOverlay,
+            {
+              opacity: giftAnimOpacity,
+              transform: [{ scale: giftAnimScale }, { translateY: giftAnimY }],
+            },
+          ]}
+        >
+          {giftAnimation.giftImageUrl ? (
+            <Image source={{ uri: giftAnimation.giftImageUrl }} style={styles.giftAnimImage} />
+          ) : (
+            <Text style={{ fontSize: 80 }}>🎁</Text>
+          )}
+          <Text style={styles.giftAnimName}>{giftAnimation.giftName}</Text>
+          <Text style={styles.giftAnimSender}>from @{giftAnimation.senderName}</Text>
+        </Animated.View>
+      )}
 
       <Modal visible={showViewers} transparent animationType="slide" onRequestClose={() => setShowViewers(false)}>
         <View style={styles.modalOverlay}>
@@ -715,6 +928,63 @@ export default function AudioLiveScreen() {
                       <Text style={styles.banBtnText}>Ban</Text>
                     </TouchableOpacity>
                   </View>
+                )}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showGifts}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowGifts(false)}
+      >
+        <View style={styles.giftModalOverlay}>
+          <View style={styles.giftModalContainer}>
+            <View style={styles.giftModalHeader}>
+              <Text style={styles.giftModalTitle}>Send a gift</Text>
+              <TouchableOpacity onPress={() => setShowGifts(false)}>
+                <Text style={styles.giftModalClose}>×</Text>
+              </TouchableOpacity>
+            </View>
+            {walletBalance !== null && (
+              <Text style={styles.giftBalanceText}>
+                Your balance: {walletBalance} coins
+              </Text>
+            )}
+            {loadingGifts ? (
+              <Text style={styles.giftLoadingText}>Loading gifts...</Text>
+            ) : giftList.length === 0 ? (
+              <Text style={styles.giftLoadingText}>No gifts available.</Text>
+            ) : (
+              <FlatList
+                data={giftList}
+                keyExtractor={item => String(item.id)}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.giftList}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.giftItem}
+                    onPress={() => handleSendGift(item)}
+                  >
+                    <View style={styles.giftImageWrapper}>
+                      {item.imageUrl ? (
+                        <Image
+                          source={{ uri: item.imageUrl }}
+                          style={styles.giftImage}
+                        />
+                      ) : (
+                        <Text style={styles.giftPlaceholder}>🎁</Text>
+                      )}
+                    </View>
+                    <Text style={styles.giftName} numberOfLines={1}>
+                      {item.name}
+                    </Text>
+                    <Text style={styles.giftCoins}>{item.coinValue} coins</Text>
+                  </TouchableOpacity>
                 )}
               />
             )}
@@ -1053,5 +1323,110 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: '700',
+  },
+  giftModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  giftModalContainer: {
+    backgroundColor: 'rgba(15,15,16,0.98)',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 24,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  giftModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  giftModalTitle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  giftModalClose: {
+    color: 'white',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  giftBalanceText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 13,
+    marginBottom: 10,
+  },
+  giftLoadingText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 13,
+  },
+  giftList: {
+    paddingTop: 8,
+  },
+  giftItem: {
+    width: 90,
+    marginRight: 12,
+    alignItems: 'center',
+  },
+  giftImageWrapper: {
+    width: 70,
+    height: 70,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  giftImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+  },
+  giftPlaceholder: {
+    fontSize: 30,
+  },
+  giftName: {
+    color: 'white',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  giftCoins: {
+    color: '#ffd93d',
+    fontSize: 11,
+  },
+  giftAnimOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  giftAnimImage: {
+    width: 160,
+    height: 160,
+    borderRadius: 24,
+    marginBottom: 12,
+  },
+  giftAnimName: {
+    color: '#FFD700',
+    fontSize: 22,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+    marginBottom: 4,
+  },
+  giftAnimSender: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
 });
