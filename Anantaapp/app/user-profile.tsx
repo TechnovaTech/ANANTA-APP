@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, Image, TouchableOpacity, ScrollView,
   StyleSheet, StatusBar, Dimensions, ActivityIndicator, RefreshControl,
+  Modal, TextInput, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -31,6 +32,9 @@ export default function UserProfileScreen() {
   const [isBlocked, setIsBlocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [reportText, setReportText] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
 
   useEffect(() => {
     SecureStore.getItemAsync('userId').then(id => setCurrentUserId(id)).catch(() => {});
@@ -118,6 +122,28 @@ export default function UserProfileScreen() {
     }
   };
 
+  const submitReport = async () => {
+    if (!reportText.trim()) return;
+    setReportSubmitting(true);
+    try {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reporterId: currentUserId, reportedUserId: targetUserId, reason: reportText.trim() }),
+      });
+      if (res.ok) {
+        setShowReport(false);
+        setReportText('');
+        Alert.alert('Reported', 'Your report has been submitted.');
+      } else {
+        Alert.alert('Error', 'Failed to submit report.');
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to submit report.');
+    }
+    setReportSubmitting(false);
+  };
+
   const goToChat = () => {
     const name = profile?.user?.username || profile?.user?.fullName || targetUserId;
     router.push({
@@ -171,6 +197,13 @@ export default function UserProfileScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={22} color="white" />
           </TouchableOpacity>
+
+          {/* Report button - only for other users */}
+          {!isSelf && (
+            <TouchableOpacity style={styles.reportBtn} onPress={() => setShowReport(true)}>
+              <Ionicons name="flag-outline" size={20} color="white" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Profile card */}
@@ -297,6 +330,37 @@ export default function UserProfileScreen() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Report Modal */}
+      <Modal visible={showReport} transparent animationType="slide" onRequestClose={() => setShowReport(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalBox, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}>
+            <Text style={[styles.modalTitle, { color: isDark ? 'white' : '#1a202c' }]}>Report User</Text>
+            <Text style={[styles.modalSub, { color: isDark ? '#aaa' : '#718096' }]}>Describe why you are reporting this user</Text>
+            <TextInput
+              style={[styles.reportInput, { backgroundColor: isDark ? '#2a2a2a' : '#f7f8fc', color: isDark ? 'white' : '#1a202c', borderColor: isDark ? '#333' : '#e2e8f0' }]}
+              placeholder="Enter reason..."
+              placeholderTextColor={isDark ? '#666' : '#aaa'}
+              multiline
+              numberOfLines={4}
+              value={reportText}
+              onChangeText={setReportText}
+            />
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalBtn, { backgroundColor: isDark ? '#333' : '#e2e8f0' }]} onPress={() => { setShowReport(false); setReportText(''); }}>
+                <Text style={{ color: isDark ? '#ccc' : '#4a5568', fontWeight: '600' }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: reportText.trim() ? '#e53e3e' : '#ccc' }]}
+                onPress={submitReport}
+                disabled={!reportText.trim() || reportSubmitting}
+              >
+                <Text style={{ color: 'white', fontWeight: '600' }}>{reportSubmitting ? 'Submitting...' : 'Submit Report'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -318,6 +382,56 @@ const styles = StyleSheet.create({
     borderRadius: 19,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reportBtn: {
+    position: 'absolute',
+    top: height * 0.06,
+    right: 16,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalBox: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 28,
+    paddingBottom: 40,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  modalSub: {
+    fontSize: 14,
+    marginBottom: 16,
+  },
+  reportInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 24,
     alignItems: 'center',
   },
   card: {

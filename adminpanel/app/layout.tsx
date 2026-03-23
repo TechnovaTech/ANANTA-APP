@@ -223,6 +223,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </svg>
                 App Settings
               </Link>
+
+              <Link href="/reports" style={{
+                display:'flex',
+                alignItems:'center',
+                padding:'12px 24px',
+                textDecoration:'none',
+                color: pathname==='/reports' ? '#3182ce' : '#4a5568',
+                background: pathname==='/reports' ? '#ebf8ff' : 'transparent',
+                borderRight: pathname==='/reports' ? '3px solid #3182ce' : '3px solid transparent',
+                fontWeight: pathname==='/reports' ? 600 : 500,
+                fontSize:15
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginRight:12}}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                </svg>
+                User Reports
+              </Link>
             </nav>
           </div>
 
