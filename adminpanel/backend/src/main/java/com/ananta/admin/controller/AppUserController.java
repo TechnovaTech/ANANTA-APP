@@ -1595,6 +1595,50 @@ public class AppUserController {
         return "AN" + suffix;
     }
 
+    @GetMapping("/room-admins/{userId}")
+    public ResponseEntity<?> getRoomAdmins(@PathVariable String userId) {
+        User user = userRepository.findByUserId(userId.trim()).orElse(null);
+        if (user == null) return ResponseEntity.ok(List.of());
+        List<String> adminIds = user.getRoomAdmins() != null ? user.getRoomAdmins() : List.of();
+        List<Map<String, Object>> result = adminIds.stream().map(adminId -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("userId", adminId);
+            userRepository.findByUserId(adminId).ifPresent(u -> {
+                m.put("username", u.getUsername());
+                m.put("profileImage", u.getProfileImage());
+            });
+            return m;
+        }).collect(Collectors.toList());
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/room-admins/{userId}")
+    @Transactional
+    public ResponseEntity<?> addRoomAdmin(@PathVariable String userId, @RequestBody Map<String, String> body) {
+        String adminUserId = body.get("adminUserId");
+        if (!StringUtils.hasText(adminUserId)) return ResponseEntity.badRequest().body(Map.of("error", "adminUserId required"));
+        User user = userRepository.findByUserId(userId.trim()).orElse(null);
+        if (user == null) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        if (user.getRoomAdmins() == null) user.setRoomAdmins(new java.util.ArrayList<>());
+        if (!user.getRoomAdmins().contains(adminUserId.trim())) {
+            user.getRoomAdmins().add(adminUserId.trim());
+            userRepository.save(user);
+        }
+        return ResponseEntity.ok(Map.of("message", "added"));
+    }
+
+    @DeleteMapping("/room-admins/{userId}/{adminUserId}")
+    @Transactional
+    public ResponseEntity<?> removeRoomAdmin(@PathVariable String userId, @PathVariable String adminUserId) {
+        User user = userRepository.findByUserId(userId.trim()).orElse(null);
+        if (user == null) return ResponseEntity.status(404).body(Map.of("error", "User not found"));
+        if (user.getRoomAdmins() != null) {
+            user.getRoomAdmins().remove(adminUserId.trim());
+            userRepository.save(user);
+        }
+        return ResponseEntity.ok(Map.of("message", "removed"));
+    }
+
     private void giveSignupBonus(String userId) {
         try {
             // Get signup bonus from settings

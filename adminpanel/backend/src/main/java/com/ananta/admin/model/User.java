@@ -81,6 +81,11 @@ public class User {
     @Column(name = "blocked_user_id")
     private java.util.List<String> blockedUsers = new java.util.ArrayList<>();
 
+    @ElementCollection(fetch = jakarta.persistence.FetchType.EAGER)
+    @CollectionTable(name = "user_room_admins", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "admin_user_id")
+    private java.util.List<String> roomAdmins = new java.util.ArrayList<>();
+
     @Column(name = "host_level")
     private Integer hostLevel = 0;
 
