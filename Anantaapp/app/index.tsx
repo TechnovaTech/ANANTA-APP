@@ -1,6 +1,6 @@
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View, ActivityIndicator } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 export default function Index() {
@@ -24,7 +24,11 @@ export default function Index() {
   }, []);
 
   if (!target) {
-    return null;
+    return (
+      <View style={{ flex: 1, backgroundColor: '#127d96', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#ffffff" />
+      </View>
+    );
   }
 
   return <Redirect href={target} />;
