@@ -52,6 +52,24 @@ public class UserReportController {
         return ResponseEntity.ok(new MessageResponse("Report submitted successfully"));
     }
 
+    // App: get reports submitted by a user
+    @GetMapping("/api/app/reports/my")
+    public List<Map<String, Object>> getMyReports(@RequestParam String reporterId) {
+        return reportRepository.findAllByOrderByCreatedAtDesc().stream()
+                .filter(r -> reporterId.equals(r.getReporterId()))
+                .map(r -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", r.getId());
+                    map.put("reportedUserId", r.getReportedUserId());
+                    map.put("reportedUserName", resolveUsername(r.getReportedUserId()));
+                    map.put("reason", r.getReason());
+                    map.put("status", r.getStatus());
+                    map.put("adminNote", r.getAdminNote());
+                    map.put("createdAt", r.getCreatedAt());
+                    return map;
+                }).collect(Collectors.toList());
+    }
+
     // Admin: get all reports with resolved usernames
     @GetMapping("/api/admin/reports")
     public List<Map<String, Object>> getAllReports() {

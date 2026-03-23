@@ -20,7 +20,8 @@ export default function SettingsScreen() {
     { id: 6, title: 'Live History', icon: 'videocam' },
     { id: 7, title: 'Invitation Rewards', icon: 'gift' },
     { id: 8, title: 'Block', icon: 'ban' },
-    { id: 9, title: 'Logout', icon: 'log-out' },
+    { id: 9, title: 'My Reports', icon: 'flag' },
+    { id: 10, title: 'Logout', icon: 'log-out' },
   ];
 
   return (
@@ -71,6 +72,8 @@ export default function SettingsScreen() {
                   router.push('/invitation-rewards');
                 } else if (item.title === 'Block') {
                   router.push('/block');
+                } else if (item.title === 'My Reports') {
+                  router.push('/my-reports');
                 }
               }}
             >

@@ -386,7 +386,12 @@ export default function ProfileScreen() {
             </View>
             <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Settings</Text>
           </TouchableOpacity>
-          <View style={styles.actionButton} />
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/my-reports')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#E53E3E' }]}>
+              <Ionicons name="flag" size={24} color="white" />
+            </View>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>My Reports</Text>
+          </TouchableOpacity>
           <View style={styles.actionButton} />
         </View>
       </View>
