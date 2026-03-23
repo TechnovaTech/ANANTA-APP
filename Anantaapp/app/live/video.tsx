@@ -2,7 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Image, StyleSheet, TextInput, TouchableOpacity, View, Text, KeyboardAvoidingView, Platform, Alert, Modal, FlatList, PermissionsAndroid, BackHandler } from 'react-native';
+import { Animated, Image, StyleSheet, TextInput, TouchableOpacity, View, Text, KeyboardAvoidingView, Platform, Alert, Modal, FlatList, PermissionsAndroid, BackHandler, Keyboard } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createAgoraEngine, RtcSurfaceView, ChannelProfileType, ClientRoleType } from '@/agoraClient';
 import { ENV } from '@/config/env';
@@ -47,6 +47,16 @@ export default function VideoLiveScreen() {
 
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [showViewers, setShowViewers] = useState(false);
+  const [viewersList, setViewersList] = useState<any[]>([]);
+  const [viewerSearch, setViewerSearch] = useState('');
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener('keyboardDidShow', e => setKeyboardHeight(e.endCoordinates.height));
+    const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardHeight(0));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
   const [viewerCount, setViewerCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(() => {
     const value = params.isFollowing as string | undefined;
@@ -171,6 +181,60 @@ export default function VideoLiveScreen() {
       setFloatingHearts(prev => prev.filter(heart => heart.id !== newHeart.id));
     }, 3000);
   };
+  const filteredViewers = viewerSearch.trim()
+    ? viewersList.filter(v =>
+        (v.username || '').toLowerCase().includes(viewerSearch.toLowerCase()) ||
+        (v.userId || '').toLowerCase().includes(viewerSearch.toLowerCase())
+      )
+    : viewersList;
+
+  const loadViewers = async () => {
+    if (!sessionId) return;
+    try {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/live/viewers/${sessionId}`);
+      if (res.ok) setViewersList(await res.json());
+    } catch {}
+  };
+
+  const kickViewer = async (viewerUserId: string) => {
+    try {
+      await fetch(`${ENV.API_BASE_URL}/api/app/live/kick`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, hostUserId: userId, viewerUserId }),
+      });
+      setViewersList(prev => prev.filter(v => v.userId !== viewerUserId));
+    } catch {}
+  };
+
+  const banViewer = async (viewerUserId: string) => {
+    try {
+      await fetch(`${ENV.API_BASE_URL}/api/app/live/ban`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, hostUserId: userId, viewerUserId }),
+      });
+      setViewersList(prev => prev.filter(v => v.userId !== viewerUserId));
+    } catch {}
+  };
+
+  const checkIfKicked = async () => {
+    if (role !== 'viewer' || !sessionId || !userId) return;
+    try {
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/live/check-kicked/${sessionId}/${userId}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.kicked) {
+          await saveMinutes();
+          await cleanupAgora();
+          Alert.alert('Removed', 'You have been removed from this live session.', [
+            { text: 'OK', onPress: () => router.back() }
+          ]);
+        }
+      }
+    } catch {}
+  };
+
   const handleGift = async () => {
     if (role !== 'viewer') return;
     if (!hostUserId) return;
@@ -567,6 +631,7 @@ export default function VideoLiveScreen() {
     checkFollowStatus();
     statsIntervalRef.current = setInterval(loadSessionStats, 5000);
     messagesIntervalRef.current = setInterval(loadMessages, 2000);
+    const kickCheckInterval = role === 'viewer' ? setInterval(checkIfKicked, 3000) : null;
     if (!startedAtRef.current) {
       startedAtRef.current = Date.now();
     }
@@ -576,6 +641,7 @@ export default function VideoLiveScreen() {
       if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
       if (messagesIntervalRef.current) clearInterval(messagesIntervalRef.current);
       if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (kickCheckInterval) clearInterval(kickCheckInterval);
       if (role === 'host' && keepAliveRef.current) return;
       cleanupAgora();
     };
@@ -888,6 +954,9 @@ export default function VideoLiveScreen() {
                 <TouchableOpacity style={styles.actionButton} onPress={toggleCamera}>
                   <ThemedText style={styles.actionIcon}>📷</ThemedText>
                 </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={() => { setViewerSearch(''); loadViewers(); setShowViewers(true); }}>
+                  <ThemedText style={styles.actionIcon}>👥</ThemedText>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.actionButton} onPress={endLive}>
                   <ThemedText style={styles.actionIcon}>⏹</ThemedText>
                 </TouchableOpacity>
@@ -925,6 +994,68 @@ export default function VideoLiveScreen() {
             <Text style={styles.giftAnimSender}>from @{giftAnimation.senderName}</Text>
           </Animated.View>
         )}
+
+        <Modal visible={showViewers} transparent animationType="slide" onRequestClose={() => setShowViewers(false)}>
+          <View style={styles.giftModalOverlay}>
+            <View style={[styles.giftModalContainer, { paddingBottom: 20, marginBottom: keyboardHeight }]}>
+              <View style={styles.giftModalHeader}>
+                <Text style={styles.giftModalTitle}>Viewers ({viewersList.length})</Text>
+                <TouchableOpacity onPress={() => setShowViewers(false)}>
+                  <Text style={styles.giftModalClose}>×</Text>
+                </TouchableOpacity>
+              </View>
+              <TextInput
+                style={styles.viewerSearch}
+                placeholder="Search by username or ID..."
+                placeholderTextColor="rgba(255,255,255,0.4)"
+                value={viewerSearch}
+                onChangeText={setViewerSearch}
+                autoCapitalize="none"
+              />
+              {filteredViewers.length === 0 ? (
+                <Text style={[styles.giftLoadingText, { paddingVertical: 20, textAlign: 'center' }]}>
+                  {viewerSearch ? 'No viewers found' : 'No viewers yet'}
+                </Text>
+              ) : (
+                <FlatList
+                  data={filteredViewers}
+                  keyExtractor={item => item.userId}
+                  style={{ maxHeight: keyboardHeight > 0 ? 150 : 400 }}
+                  renderItem={({ item }) => (
+                    <View style={styles.viewerRow}>
+                      <Image
+                        source={{ uri: resolveProfileImageUrl(item.profileImage) || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=50' }}
+                        style={styles.viewerAvatar}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.viewerName}>@{item.username || item.userId}</Text>
+                        <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11 }}>{item.userId}</Text>
+                      </View>
+                      <TouchableOpacity
+                        style={styles.kickBtn}
+                        onPress={() => Alert.alert('Kick', `Remove ${item.username} from this live?`, [
+                          { text: 'Cancel', style: 'cancel' },
+                          { text: 'Kick', style: 'destructive', onPress: () => kickViewer(item.userId) },
+                        ])}
+                      >
+                        <Text style={styles.kickBtnText}>Kick</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.banBtn}
+                        onPress={() => Alert.alert('Ban', `Ban ${item.username} from all your lives?`, [
+                          { text: 'Cancel', style: 'cancel' },
+                          { text: 'Ban', style: 'destructive', onPress: () => banViewer(item.userId) },
+                        ])}
+                      >
+                        <Text style={styles.banBtnText}>Ban</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                />
+              )}
+            </View>
+          </View>
+        </Modal>
 
         <Modal
           visible={showGifts}
@@ -1344,5 +1475,58 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: 'bold',
     letterSpacing: 0.5,
+  },
+  viewerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  viewerSearch: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    color: 'white',
+    fontSize: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  viewerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
+  },
+  viewerName: {
+    flex: 1,
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  kickBtn: {
+    backgroundColor: '#e67e22',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  kickBtnText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  banBtn: {
+    backgroundColor: '#e74c3c',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  banBtnText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '700',
   },
 })

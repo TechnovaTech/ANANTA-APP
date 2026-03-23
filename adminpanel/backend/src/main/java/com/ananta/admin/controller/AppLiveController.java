@@ -45,6 +45,8 @@ public class AppLiveController {
     private FollowRepository followRepository;
 
     private static final Map<String, List<Map<String, Object>>> sessionMessages = new ConcurrentHashMap<>();
+    private static final Map<String, Set<String>> sessionKickedUsers = new ConcurrentHashMap<>();
+    private static final Map<String, Set<String>> sessionViewers = new ConcurrentHashMap<>();
 
     @PostMapping("/start")
     public ResponseEntity<?> startLive(@RequestBody Map<String, Object> payload) {
@@ -173,6 +175,14 @@ public class AppLiveController {
             response.put("hostUid", hostUid);
             response.put("viewerCount", session.getViewerCount());
             response.put("isFollowing", isFollowing);
+            // Check if kicked from this session
+            if (sessionKickedUsers.getOrDefault(sessionId, new HashSet<>()).contains(userId)) {
+                return ResponseEntity.status(403).body(Collections.singletonMap("message", "You have been removed from this live session"));
+            }
+            // Track viewer
+            if (StringUtils.hasText(userId)) {
+                sessionViewers.computeIfAbsent(sessionId, k -> new java.util.concurrent.CopyOnWriteArraySet<>()).add(userId);
+            }
             hostOpt.ifPresent(user -> {
                 response.put("hostUsername", user.getUsername());
                 response.put("hostCountry", user.getCountry());
@@ -263,6 +273,8 @@ public class AppLiveController {
         session.setEndedAt(LocalDateTime.now());
         liveSessionRepository.save(session);
 
+        sessionKickedUsers.remove(sessionId);
+        sessionViewers.remove(sessionId);
         return ResponseEntity.ok(Collections.singletonMap("message", "Live ended"));
     }
 
@@ -275,6 +287,10 @@ public class AppLiveController {
         }
         try {
             LiveSession session = liveSessionRepository.findBySessionId(sessionId).orElse(null);
+            String leavingUserId = asString(payload.get("userId"));
+            if (StringUtils.hasText(leavingUserId) && StringUtils.hasText(sessionId)) {
+                sessionViewers.getOrDefault(sessionId, new HashSet<>()).remove(leavingUserId);
+            }
             if (session != null) {
                 int current = session.getViewerCount() != null ? session.getViewerCount() : 0;
                 if (current > 0) {
@@ -369,6 +385,70 @@ public class AppLiveController {
 
         List<Map<String, Object>> messages = sessionMessages.getOrDefault(sessionId, new ArrayList<>());
         return ResponseEntity.ok(messages);
+    }
+
+    @GetMapping("/viewers/{sessionId}")
+    public ResponseEntity<?> getViewers(@PathVariable String sessionId) {
+        Set<String> viewerIds = sessionViewers.getOrDefault(sessionId, new HashSet<>());
+        List<Map<String, Object>> viewers = new ArrayList<>();
+        for (String vid : viewerIds) {
+            Map<String, Object> v = new HashMap<>();
+            v.put("userId", vid);
+            userRepository.findByUserId(vid).ifPresent(u -> {
+                v.put("username", u.getUsername());
+                v.put("profileImage", u.getProfileImage());
+            });
+            viewers.add(v);
+        }
+        return ResponseEntity.ok(viewers);
+    }
+
+    @PostMapping("/kick")
+    public ResponseEntity<?> kickViewer(@RequestBody Map<String, Object> payload) {
+        String sessionId = asString(payload.get("sessionId"));
+        String hostId = asString(payload.get("hostUserId"));
+        String viewerId = asString(payload.get("viewerUserId"));
+        if (!StringUtils.hasText(sessionId) || !StringUtils.hasText(viewerId)) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "sessionId and viewerUserId required"));
+        }
+        LiveSession session = liveSessionRepository.findBySessionId(sessionId).orElse(null);
+        if (session == null || !session.getHostUserId().equals(hostId)) {
+            return ResponseEntity.status(403).body(Collections.singletonMap("message", "Not authorized"));
+        }
+        sessionKickedUsers.computeIfAbsent(sessionId, k -> new java.util.concurrent.CopyOnWriteArraySet<>()).add(viewerId);
+        sessionViewers.getOrDefault(sessionId, new HashSet<>()).remove(viewerId);
+        return ResponseEntity.ok(Collections.singletonMap("message", "kicked"));
+    }
+
+    @PostMapping("/ban")
+    @Transactional
+    public ResponseEntity<?> banViewer(@RequestBody Map<String, Object> payload) {
+        String sessionId = asString(payload.get("sessionId"));
+        String hostId = asString(payload.get("hostUserId"));
+        String viewerId = asString(payload.get("viewerUserId"));
+        if (!StringUtils.hasText(sessionId) || !StringUtils.hasText(viewerId)) {
+            return ResponseEntity.badRequest().body(Collections.singletonMap("message", "sessionId and viewerUserId required"));
+        }
+        LiveSession session = liveSessionRepository.findBySessionId(sessionId).orElse(null);
+        if (session == null || !session.getHostUserId().equals(hostId)) {
+            return ResponseEntity.status(403).body(Collections.singletonMap("message", "Not authorized"));
+        }
+        sessionKickedUsers.computeIfAbsent(sessionId, k -> new java.util.concurrent.CopyOnWriteArraySet<>()).add(viewerId);
+        sessionViewers.getOrDefault(sessionId, new HashSet<>()).remove(viewerId);
+        userRepository.findByUserId(hostId).ifPresent(host -> {
+            if (host.getBlockedUsers() == null) host.setBlockedUsers(new java.util.ArrayList<>());
+            if (!host.getBlockedUsers().contains(viewerId)) {
+                host.getBlockedUsers().add(viewerId);
+                userRepository.save(host);
+            }
+        });
+        return ResponseEntity.ok(Collections.singletonMap("message", "banned"));
+    }
+
+    @GetMapping("/check-kicked/{sessionId}/{userId}")
+    public ResponseEntity<?> checkKicked(@PathVariable String sessionId, @PathVariable String userId) {
+        boolean kicked = sessionKickedUsers.getOrDefault(sessionId, new HashSet<>()).contains(userId);
+        return ResponseEntity.ok(Collections.singletonMap("kicked", kicked));
     }
 
     @PostMapping("/like")
