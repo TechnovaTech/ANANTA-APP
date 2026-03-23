@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   StyleSheet, View, Text, TouchableOpacity, ScrollView,
-  Alert, Image, TextInput, Platform,
+  Alert, Image, TextInput, Platform, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -11,6 +11,178 @@ import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '../contexts/ThemeContext';
 import { ENV } from '@/config/env';
 
+const HOST_POLICY_TEXT = `ANANTA
+Host Policy
+Guidelines and responsibilities for all live hosts on the Ananta platform.
+Effective Date: 23 March 2026
+Operated by Sparknet Studios
+support@anantalive.com  |  anantalive.com
+
+1. Introduction
+This Host Policy ("Policy") applies to all users of the Ananta platform who wish to broadcast live video or audio streams ("Hosts"). By activating host status and going live on Ananta, you agree to be bound by this Policy in addition to Ananta's Terms of Service and Privacy Policy.
+Ananta is a platform operated by Sparknet Studios that connects live streamers with audiences across India. We are committed to maintaining a safe, respectful, and legally compliant environment for all users. This Policy sets out your rights, responsibilities, and the standards expected of every Host on the platform.
+Failure to comply with this Policy may result in earnings being withheld, host privileges being revoked, or your account being permanently banned.
+
+2. Becoming a Host on Ananta
+
+2.1 Eligibility
+To become a Host on Ananta, you must meet all of the following requirements:
+• Be at least 18 years of age
+• Hold a valid, active Ananta user account in good standing
+• Successfully complete Ananta's KYC (Know Your Customer) verification process
+• Agree to and comply with this Host Policy, the Terms of Service, and Privacy Policy
+
+2.2 KYC Verification
+KYC verification is mandatory for all Hosts before going live or receiving earnings. The KYC process requires you to submit the following:
+• A valid government-issued photo ID — Aadhaar card, PAN card, Passport, or Voter ID
+• A selfie or liveness check for identity confirmation
+• Your bank account details or UPI ID for withdrawal purposes
+• PAN card details for tax compliance and TDS deduction as applicable under Indian income tax law
+KYC documents are reviewed by Sparknet Studios within 2-5 business days. You will be notified via email and in-app notification once your KYC is approved or if additional information is required. Providing false, incomplete, or fraudulent KYC documents will result in immediate permanent ban and may be reported to relevant authorities.
+
+2.3 Host Activation
+Once your KYC is verified and approved, your account will be upgraded to Host status. You may then go live using the Ananta app. Ananta reserves the right to revoke host status at any time for violations of this Policy or the Terms of Service.
+
+3. Host Responsibilities
+
+3.1 Stream Environment
+As a Host, you are fully responsible for everything that occurs within your live stream. This includes:
+• Ensuring your streaming environment is appropriate, well-lit, and free of hazardous or offensive background content
+• Ensuring no minors are visible or participating in your live stream in any capacity
+• Ensuring no other individuals appear in your stream without their explicit consent
+• Ensuring your stream does not take place in a location where broadcasting could be illegal or unsafe
+
+3.2 Content Standards
+All content broadcast on Ananta must adhere to the following standards at all times during a live session:
+• Content must be suitable for a general adult audience (18+)
+• Language must be respectful — excessive profanity, slurs, or hate speech is not permitted
+• Hosts must not engage in or encourage any activity that is illegal under Indian law
+• Hosts must treat all viewers and co-hosts with dignity and respect
+• Hosts must not solicit personal information from viewers including phone numbers, addresses, or financial details
+
+4. Strictly Prohibited Content
+The following categories of content are strictly prohibited on Ananta under all circumstances. Broadcasting any of the following will result in immediate stream termination, earnings withholding, and permanent account ban:
+
+4.1 Adult and Sexual Content
+• Nudity, partial nudity, or sexually suggestive behaviour of any kind
+• Sexually explicit language, sounds, or acts
+• Content designed to solicit sexual favours or payments in exchange for sexual content
+• Any content that sexualises or exploits individuals
+
+4.2 Political Content
+• Campaigning for or against any political party, candidate, or political ideology
+• Broadcasting political rallies, speeches, or party propaganda
+• Expressing partisan political opinions intended to influence viewers
+• Content that could be construed as election interference or voter manipulation
+Ananta is a neutral entertainment platform. Discussions of current events are permitted in a neutral and factual manner but must not cross into partisan political advocacy.
+
+4.3 Religious Content
+• Content that mocks, disrespects, or attacks any religion, religious community, religious figure, or place of worship
+• Content that promotes religious extremism, fundamentalism, or sectarian violence
+• Content designed to provoke communal tension or religious discord
+• Proselytising or soliciting conversions during a live stream
+Hosts may discuss religion respectfully and factually. Content that promotes harmony and understanding across religions is permitted. Content that incites division or disrespect is not.
+
+4.4 Other Prohibited Content
+• Violence, gore, self-harm, or content that glorifies or encourages physical harm
+• Gambling, betting, or promotion of online gambling platforms
+• Promotion, sale, or use of illegal drugs, alcohol to minors, or controlled substances
+• Sharing or displaying copyrighted material including songs, films, or shows without proper licencing
+• Harassment, stalking, or targeted abuse of any individual viewer or user
+• Fake news, misinformation, or content designed to deceive viewers
+• Unauthorised promotion or advertising of third-party products or services for personal gain
+
+5. Gifting and Earnings
+
+5.1 Virtual Gifts
+Viewers may send virtual gifts to Hosts during live streams using Ananta coins. Gifts are a voluntary expression of appreciation from viewers and do not represent payment for any specific service or act. Hosts must not solicit gifts in exchange for specific content, actions, or promises, as this constitutes a transactional arrangement that violates this Policy.
+
+5.2 Platform Fee
+Ananta retains a platform fee from all gifts received by Hosts. The remaining balance after the platform fee is credited to the Host's in-app earnings wallet. The current platform fee percentage is communicated within the app and may be updated with prior notice.
+
+5.3 Earnings Wallet
+Earnings credited to your wallet represent your share of gifts received after the platform fee. Earnings accumulate in your in-app wallet and can be withdrawn subject to the conditions in Section 6. Sparknet Studios reserves the right to freeze, withhold, or forfeit earnings in the following circumstances:
+• Violation of this Host Policy or the Terms of Service
+• Suspected fraudulent activity including self-gifting, coordinated fake gifting, or coin manipulation
+• Pending investigation of a complaint or legal inquiry
+• Failure to maintain valid KYC or providing false KYC documents
+• Account termination due to policy violations
+
+6. Withdrawals
+
+6.1 Eligibility for Withdrawal
+To withdraw earnings from your Ananta wallet, you must:
+• Have completed and maintained valid KYC verification
+• Have a minimum balance meeting the withdrawal threshold as specified in the app
+• Have a verified bank account or UPI ID linked to your account
+• Not have any active policy violations, account suspensions, or pending investigations
+
+6.2 Withdrawal Process
+Withdrawal requests are processed within 3-7 business days via IMPS or UPI to your registered account. Sparknet Studios is not responsible for delays caused by your bank or payment infrastructure. Withdrawals may be subject to TDS deduction as applicable under Indian income tax regulations. It is your sole responsibility to file your income tax returns and declare earnings from Ananta.
+
+6.3 Withheld Earnings
+If your earnings are withheld due to a policy violation or investigation, you will be notified via email and in-app notification. Withheld earnings will be reviewed within 15 business days. If the investigation concludes in your favour, earnings will be released. If the investigation confirms a violation, withheld earnings may be forfeited permanently.
+
+7. Stream Moderation and Intervention
+Ananta employs automated monitoring tools and human moderators who may observe live streams at any time. In the event that a live stream is found to be in violation of this Policy, Ananta reserves the right to:
+• Immediately terminate the live stream without prior notice
+• Issue an in-app warning to the Host
+• Temporarily or permanently restrict the Host's ability to go live
+• Withhold or forfeit the Host's earnings
+• Permanently ban the Host's account
+• Report the content and Host details to law enforcement authorities if required by Indian law
+Moderation decisions are made at the sole discretion of Sparknet Studios. Hosts may appeal a moderation decision by contacting support@anantalive.com within 7 days of the action. Appeals will be reviewed within 15 business days. The decision on appeal is final.
+
+8. Violations and Consequences
+
+8.1 Earnings Withholding
+Any confirmed violation of this Policy may result in some or all of your accumulated earnings being withheld. Withheld earnings may be permanently forfeited if the violation is determined to be severe or intentional.
+
+8.2 Permanent Ban
+The following violations will result in immediate permanent account ban with no possibility of reinstatement:
+• Broadcasting adult, sexual, or pornographic content
+• Content involving or targeting minors in any harmful manner
+• Fraudulent KYC submission or identity impersonation
+• Coordinated gifting fraud or coin economy manipulation
+• Content that incites violence, communal hatred, or terrorism
+• Repeated serious violations following prior warnings or suspensions
+A permanently banned Host forfeits all accumulated earnings and coins. The associated device and phone number may also be blocked from creating new accounts on Ananta.
+
+8.3 Reporting Violations to Authorities
+Sparknet Studios will cooperate fully with law enforcement and regulatory authorities in India. Any content that constitutes a cognisable offence under Indian law including the Information Technology Act 2000, Indian Penal Code, or POCSO Act will be reported to the appropriate authorities and relevant user data will be shared as required by law.
+
+9. Intellectual Property During Streams
+Hosts are responsible for ensuring they have the necessary rights and licences for all content used during a live stream. This includes:
+• Background music — you must hold a valid licence or use royalty-free music only
+• Films, shows, or video clips — broadcasting copyrighted video content is strictly prohibited
+• Third-party logos, brand names, or trademarks — must not be used without authorisation
+Ananta may mute or terminate streams where copyrighted content is detected. Repeat violations may result in permanent ban.
+
+10. Host Conduct Towards Viewers
+Hosts are expected to maintain a respectful and positive relationship with their audience. The following conduct towards viewers is prohibited:
+• Soliciting personal information such as phone numbers, home addresses, or financial details from viewers
+• Pressuring viewers to send gifts, recharge coins, or make payments
+• Engaging in romantic or intimate conversations with viewers in a manner designed to exploit emotions or extract money
+• Discriminating against viewers based on religion, caste, gender, sexual orientation, or region
+• Publicly shaming, mocking, or humiliating any viewer
+
+11. Tax Compliance
+All earnings received through Ananta are subject to applicable Indian tax laws. As a Host, you are solely responsible for:
+• Declaring your Ananta earnings in your annual income tax return
+• Paying applicable income tax on your earnings
+• Maintaining records of your earnings and withdrawals for tax purposes
+Sparknet Studios will deduct TDS as required under Indian income tax regulations and will provide TDS certificates upon request.
+
+12. Changes to This Policy
+Sparknet Studios reserves the right to update or modify this Host Policy at any time. Hosts will be notified of material changes via in-app notification or email at least 7 days before the changes take effect.
+
+13. Contact and Support
+For any questions, concerns, or appeals related to this Host Policy, please contact:
+• Email: support@anantalive.com
+• Website: https://anantalive.com
+• Response time: Within 5 business days
+• Operated by: Sparknet Studios, India`;
+
 export default function VerificationScreen() {
   const { isDark } = useTheme();
   const [selectedDocType, setSelectedDocType] = useState('');
@@ -19,6 +191,8 @@ export default function VerificationScreen() {
   const [selfieImage, setSelfieImage] = useState<string | null>(null);
   const [kycStatus, setKycStatus] = useState<'NONE' | 'PENDING' | 'APPROVED'>('NONE');
   const [submitting, setSubmitting] = useState(false);
+  const [acceptedPolicy, setAcceptedPolicy] = useState(false);
+  const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [formData, setFormData] = useState({ fullName: '', email: '', phone: '', gender: '', birthday: '', bio: '', documentNumber: '', dateOfBirth: '', address: '' });
 
   const accentColor = isDark ? '#f7c14d' : '#127d96';
@@ -346,11 +520,21 @@ export default function VerificationScreen() {
                 </View>
               </View>
 
+              {/* Host Policy Agreement */}
+              <View style={[styles.section, { backgroundColor: isDark ? '#2a2a2a' : 'white' }]}>
+                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => setShowPolicyModal(true)}>
+                  <View style={[styles.checkbox, { borderColor: isDark ? '#888' : '#666', backgroundColor: acceptedPolicy ? accentColor : 'transparent' }]}>
+                    {acceptedPolicy && <Ionicons name="checkmark" size={16} color={accentText} />}
+                  </View>
+                  <Text style={[styles.policyText, { color: isDark ? 'white' : '#333' }]}>I agree to the Host Policy</Text>
+                </TouchableOpacity>
+              </View>
+
               {/* Submit */}
               <TouchableOpacity
-                style={[styles.submitButton, { opacity: submitting ? 0.7 : 1 }]}
+                style={[styles.submitButton, { opacity: (submitting || !acceptedPolicy) ? 0.5 : 1 }]}
                 onPress={submitVerification}
-                disabled={submitting}
+                disabled={submitting || !acceptedPolicy}
               >
                 <LinearGradient colors={isDark ? ['#f7c14d', '#ffb300'] : ['#127d96', '#15a3c7']} style={styles.submitGradient}>
                   <Ionicons name="checkmark-circle" size={20} color={accentText} />
@@ -365,6 +549,29 @@ export default function VerificationScreen() {
           <View style={{ height: 40 }} />
         </ScrollView>
       )}
+
+      {/* Host Policy Modal */}
+      <Modal visible={showPolicyModal} transparent animationType="slide" onRequestClose={() => setShowPolicyModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.policyModal, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: isDark ? 'white' : '#333' }]}>Host Policy</Text>
+              <TouchableOpacity onPress={() => setShowPolicyModal(false)}>
+                <Ionicons name="close" size={24} color={isDark ? 'white' : '#333'} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ flex: 1, marginVertical: 10 }}>
+              <Text style={{ fontSize: 14, lineHeight: 22, color: isDark ? '#ddd' : '#444' }}>{HOST_POLICY_TEXT}</Text>
+            </ScrollView>
+            <TouchableOpacity
+              style={[styles.agreeButton, { backgroundColor: accentColor }]}
+              onPress={() => { setAcceptedPolicy(true); setShowPolicyModal(false); }}
+            >
+              <Text style={{ color: accentText, fontSize: 15, fontWeight: '600' }}>I Agree</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -418,4 +625,13 @@ const styles = StyleSheet.create({
   submitButton: { marginHorizontal: 20, borderRadius: 25, overflow: 'hidden', marginBottom: 10 },
   submitGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 10 },
   submitText: { fontSize: 16, fontWeight: 'bold' },
+
+  // Policy
+  checkbox: { width: 22, height: 22, borderRadius: 4, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
+  policyText: { flex: 1, fontSize: 14 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  policyModal: { height: '90%', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold' },
+  agreeButton: { borderRadius: 20, paddingVertical: 14, alignItems: 'center', marginTop: 10 },
 });
