@@ -7,7 +7,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useState, useEffect } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ENV } from '@/config/env';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const BackIcon = ({ color = 'black' }) => (
   <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -74,7 +74,7 @@ export default function LevelManagementScreen() {
         if (Platform.OS === 'web' && typeof window !== 'undefined') {
           userId = window.localStorage.getItem('userId');
         } else {
-          userId = await AsyncStorage.getItem('userId');
+          userId = await SecureStore.getItemAsync('userId');
         }
 
         const [hostRes, viewerRes] = await Promise.all([

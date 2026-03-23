@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../contexts/ThemeContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { getApiUrl } from '../config/env';
 
 type Tier = { shares: number; coins: number; claimed: boolean };
@@ -20,7 +20,7 @@ export default function InvitationRewardsScreen() {
 
   const fetchData = useCallback(async () => {
     try {
-      const userId = Platform.OS === 'web' ? window.localStorage.getItem('userId') : await AsyncStorage.getItem('userId');
+      const userId = Platform.OS === 'web' ? window.localStorage.getItem('userId') : await SecureStore.getItemAsync('userId');
       if (!userId) return;
       const res = await fetch(getApiUrl(`/api/app/referral/info/${userId}`));
       const data = await res.json();
@@ -52,7 +52,7 @@ export default function InvitationRewardsScreen() {
   const handleClaim = async (shares: number) => {
     setClaiming(shares);
     try {
-      const userId = Platform.OS === 'web' ? window.localStorage.getItem('userId') : await AsyncStorage.getItem('userId');
+      const userId = Platform.OS === 'web' ? window.localStorage.getItem('userId') : await SecureStore.getItemAsync('userId');
       const res = await fetch(getApiUrl('/api/app/referral/claim'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

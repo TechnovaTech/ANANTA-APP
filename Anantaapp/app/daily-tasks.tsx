@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../contexts/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { ENV } from '@/config/env';
 
 type Task = {
@@ -130,7 +131,7 @@ export default function DailyTasksScreen() {
 
   const loadTasks = async () => {
     try {
-      const userId = await AsyncStorage.getItem('userId');
+      const userId = await SecureStore.getItemAsync('userId');
       if (!userId) return;
       userIdRef.current = userId;
       const res = await fetch(`${ENV.API_BASE_URL}/api/app/daily-tasks/${userId}`);

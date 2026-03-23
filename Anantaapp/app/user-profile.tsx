@@ -6,7 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ENV } from '@/config/env';
 
@@ -33,7 +33,7 @@ export default function UserProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem('userId').then(id => setCurrentUserId(id)).catch(() => {});
+    SecureStore.getItemAsync('userId').then(id => setCurrentUserId(id)).catch(() => {});
   }, []);
 
   const loadProfile = useCallback(async () => {
@@ -71,7 +71,7 @@ export default function UserProfileScreen() {
       const init = async () => {
         setLoading(true);
         await loadProfile();
-        const id = await AsyncStorage.getItem('userId').catch(() => null);
+        const id = await SecureStore.getItemAsync('userId').catch(() => null);
         setCurrentUserId(id);
         if (id) await checkFollowing(id);
         if (id) await checkBlocked(id);

@@ -19,7 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router, useFocusEffect } from 'expo-router';
 import { useProfile } from '../../contexts/ProfileContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 import { ENV } from '@/config/env';
 
@@ -50,7 +50,7 @@ export default function ProfileScreen() {
           storedUserId = window.localStorage.getItem('userId');
         } else {
           try {
-            storedUserId = await AsyncStorage.getItem('userId');
+            storedUserId = await SecureStore.getItemAsync('userId');
           } catch {
             storedUserId = null;
           }
@@ -118,7 +118,7 @@ export default function ProfileScreen() {
       storedUserId = window.localStorage.getItem('userId');
     } else {
       try {
-        storedUserId = await AsyncStorage.getItem('userId');
+        storedUserId = await SecureStore.getItemAsync('userId');
       } catch {
         storedUserId = null;
       }
@@ -154,7 +154,7 @@ export default function ProfileScreen() {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         storedUserId = window.localStorage.getItem('userId');
       } else {
-        storedUserId = await AsyncStorage.getItem('userId');
+        storedUserId = await SecureStore.getItemAsync('userId');
       }
       if (!storedUserId) return;
 

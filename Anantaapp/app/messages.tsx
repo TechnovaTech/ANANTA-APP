@@ -15,7 +15,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { ENV } from '@/config/env';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const { width } = Dimensions.get('window');
 
@@ -102,7 +102,7 @@ export default function MessagesScreen() {
   };
 
   useEffect(() => {
-    AsyncStorage.getItem('userId').then(id => setCurrentUserId(id)).catch(() => {});
+    SecureStore.getItemAsync('userId').then(id => setCurrentUserId(id)).catch(() => {});
   }, []);
 
   const fetchConversations = React.useCallback(async (userId: string) => {
@@ -135,7 +135,7 @@ export default function MessagesScreen() {
   useFocusEffect(
     React.useCallback(() => {
       let userId: string | null = null;
-      AsyncStorage.getItem('userId').then(id => {
+      SecureStore.getItemAsync('userId').then(id => {
         userId = id;
         setCurrentUserId(id);
         if (id) fetchConversations(id);
@@ -163,7 +163,7 @@ export default function MessagesScreen() {
   };
 
   const loadContacts = async () => {
-    const uid = currentUserId || await AsyncStorage.getItem('userId').catch(() => null);
+    const uid = currentUserId || await SecureStore.getItemAsync('userId').catch(() => null);
     if (!uid) return;
     try {
       const res = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${uid}`);

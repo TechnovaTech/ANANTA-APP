@@ -15,7 +15,7 @@ import {
   Keyboard,
 } from 'react-native';
 import { useTheme } from '../contexts/ThemeContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { ENV } from '@/config/env';
 
 const { width } = Dimensions.get('window');
@@ -113,7 +113,7 @@ export default function ChatScreen() {
       let interval: ReturnType<typeof setInterval> | null = null;
 
       const init = async () => {
-        const uid = await AsyncStorage.getItem('userId').catch(() => null);
+        const uid = await SecureStore.getItemAsync('userId').catch(() => null);
         if (!uid || !active) return;
         setCurrentUserId(uid);
         currentUserIdRef.current = uid;

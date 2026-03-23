@@ -10,7 +10,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useProfile } from '../../contexts/ProfileContext';
 import * as FileSystem from 'expo-file-system';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { ENV } from '@/config/env';
 
 export default function ProfileScreen() {
@@ -42,8 +42,8 @@ export default function ProfileScreen() {
       window.localStorage.removeItem('userId');
       window.localStorage.removeItem('userEmail');
     } else {
-      await AsyncStorage.removeItem('userId');
-      await AsyncStorage.removeItem('userEmail');
+      await SecureStore.deleteItemAsync('userId');
+      await SecureStore.deleteItemAsync('userEmail');
     }
     router.replace('/auth/login');
   };

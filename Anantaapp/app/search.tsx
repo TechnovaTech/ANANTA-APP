@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ENV } from '@/config/env';
 
@@ -22,9 +22,8 @@ export default function SearchScreen() {
   const queryRef = useRef('');
 
   useEffect(() => {
-    AsyncStorage.getItem('userId').then(id => {
+    SecureStore.getItemAsync('userId').then(id => {
       setCurrentUserId(id);
-      // Re-run search with correct userId if already typed
       if (id && queryRef.current.trim().length >= 2) search(queryRef.current, id);
     }).catch(() => {});
   }, []);

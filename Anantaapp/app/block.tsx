@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../contexts/ThemeContext';
 import { useState, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { ENV } from '@/config/env';
 import { useFocusEffect } from 'expo-router';
 
@@ -20,7 +20,7 @@ export default function BlockScreen() {
 
   const getUserId = async () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') return window.localStorage.getItem('userId');
-    return AsyncStorage.getItem('userId').catch(() => null);
+    return SecureStore.getItemAsync('userId').catch(() => null);
   };
 
   const fetchBlockedUsers = async (userId: string) => {

@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { ENV } from '@/config/env';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 
 const resolveAvatarUri = (value: string | null | undefined) => {
@@ -45,7 +45,7 @@ export default function FollowersScreen() {
   };
 
   const fetchFollowers = async () => {
-    const userId = await AsyncStorage.getItem('userId');
+    const userId = await SecureStore.getItemAsync('userId');
     if (!userId) return;
     console.log('[Followers] fetchFollowers for userId:', userId);
     try {
@@ -69,7 +69,7 @@ export default function FollowersScreen() {
   };
 
   useEffect(() => {
-    AsyncStorage.getItem('userId').then(uid => { if (uid) setCurrentUserId(uid); });
+    SecureStore.getItemAsync('userId').then(uid => { if (uid) setCurrentUserId(uid); });
     fetchFollowers();
   }, []);
 

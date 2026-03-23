@@ -6,7 +6,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { ENV } from '@/config/env';
 
 type Tx = {
@@ -55,7 +55,7 @@ export default function EarningsScreen() {
   const load = async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const userId = await AsyncStorage.getItem('userId');
+      const userId = await SecureStore.getItemAsync('userId');
       if (!userId) return;
       const res = await fetch(`${ENV.API_BASE_URL}/api/app/earnings/${userId}`);
       if (res.ok) setData(await res.json());

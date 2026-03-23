@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
+import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '../contexts/ThemeContext';
 import { ENV } from '@/config/env';
 
@@ -28,8 +29,7 @@ export default function VerificationScreen() {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         userId = window.localStorage.getItem('userId');
       } else {
-        const AS = require('@react-native-async-storage/async-storage').default;
-        userId = await AS.getItem('userId');
+        userId = await SecureStore.getItemAsync('userId');
       }
       if (!userId) return;
       try {
@@ -107,8 +107,7 @@ export default function VerificationScreen() {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         userId = window.localStorage.getItem('userId');
       } else {
-        const AS = require('@react-native-async-storage/async-storage').default;
-        userId = await AS.getItem('userId');
+        userId = await SecureStore.getItemAsync('userId');
       }
       if (!userId) { Alert.alert('Error', 'Session expired. Please login again.'); return; }
 

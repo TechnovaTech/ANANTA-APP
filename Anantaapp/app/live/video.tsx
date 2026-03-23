@@ -7,6 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { createAgoraEngine, RtcSurfaceView, ChannelProfileType, ClientRoleType } from '@/agoraClient';
 import { ENV } from '@/config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { useLive } from '@/contexts/LiveContext';
 
 const resolveGiftImageUrl = (value: string | null | undefined) => {
@@ -177,7 +178,7 @@ export default function VideoLiveScreen() {
     if (!viewerUserId || viewerUserId === 'guest') {
       viewerUserId = Platform.OS === 'web' && typeof window !== 'undefined'
         ? window.localStorage.getItem('userId') || undefined
-        : (await AsyncStorage.getItem('userId')) || undefined;
+        : (await SecureStore.getItemAsync('userId')) || undefined;
     }
     if (!viewerUserId) return;
     setShowGifts(true);
@@ -191,7 +192,7 @@ export default function VideoLiveScreen() {
       if (!walletUserId) {
         walletUserId = Platform.OS === 'web' && typeof window !== 'undefined'
           ? window.localStorage.getItem('userId')
-          : await AsyncStorage.getItem('userId');
+          : await SecureStore.getItemAsync('userId');
       }
       if (!walletUserId || walletUserId === 'guest') return;
       const res = await fetch(`${ENV.API_BASE_URL}/api/app/wallet/${walletUserId}`);
@@ -247,7 +248,7 @@ export default function VideoLiveScreen() {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         senderUserId = window.localStorage.getItem('userId') || undefined;
       } else {
-        senderUserId = (await AsyncStorage.getItem('userId')) || undefined;
+        senderUserId = (await SecureStore.getItemAsync('userId')) || undefined;
       }
     }
     if (!senderUserId || !hostUserId) return;

@@ -22,7 +22,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useProfile } from '../contexts/ProfileContext';
 import { useTheme } from '../contexts/ThemeContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { ENV } from '@/config/env';
@@ -69,7 +69,7 @@ export default function EditProfileScreen() {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         storedUserId = window.localStorage.getItem('userId');
       } else {
-        storedUserId = await AsyncStorage.getItem('userId');
+        storedUserId = await SecureStore.getItemAsync('userId');
       }
       if (storedUserId) {
         setUserId(storedUserId);

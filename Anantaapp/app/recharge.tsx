@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const { width, height } = Dimensions.get('window');
 
@@ -50,7 +51,7 @@ export default function RechargeScreen() {
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         userId = window.localStorage.getItem('userId');
       } else {
-        try { userId = await AsyncStorage.getItem('userId'); } catch { }
+        try { userId = await SecureStore.getItemAsync('userId'); } catch { }
       }
       if (!userId) return;
       try {
@@ -114,7 +115,7 @@ export default function RechargeScreen() {
       userId = window.localStorage.getItem('userId');
     } else {
       try {
-        userId = await AsyncStorage.getItem('userId');
+        userId = await SecureStore.getItemAsync('userId');
       } catch { }
     }
 
@@ -276,7 +277,7 @@ export default function RechargeScreen() {
       userId = window.localStorage.getItem('userId');
     } else {
       try {
-        userId = await AsyncStorage.getItem('userId');
+        userId = await SecureStore.getItemAsync('userId');
       } catch { }
     }
 

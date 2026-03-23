@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Alert, Image, ImageBackground, Platform, StyleSheet, TouchableOpacity, View, StatusBar, Dimensions } from 'react-native';
 import { useState, useEffect } from 'react';
 import { GoogleAuthService } from '../../services/GoogleAuthService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import AnantaLogo from '../../components/AnantaLogo';
 
 const { width, height } = Dimensions.get('window');
@@ -57,8 +57,8 @@ export default function LoginScreen() {
         window.localStorage.setItem('userId', authResult.userId);
         window.localStorage.setItem('userEmail', authResult.email);
       } else {
-        await AsyncStorage.setItem('userId', authResult.userId);
-        await AsyncStorage.setItem('userEmail', authResult.email);
+        await SecureStore.setItemAsync('userId', authResult.userId);
+        await SecureStore.setItemAsync('userEmail', authResult.email);
       }
 
       if (authResult.redirectTo === 'home') {

@@ -4,7 +4,7 @@ import { Colors } from '@/constants/theme';
 import { router } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, TouchableOpacity, View, Animated, Text, StatusBar, Platform, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { Video } from 'expo-av';
 import { useTheme } from '@/contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -103,7 +103,7 @@ export default function HomeScreen() {
       setCurrentUserId(id);
       if (id) fetchFollowingIds(id);
     } else {
-      AsyncStorage.getItem('userId').then(id => {
+      SecureStore.getItemAsync('userId').then(id => {
         setCurrentUserId(id);
         if (id) fetchFollowingIds(id);
       }).catch(() => {});
@@ -242,7 +242,7 @@ export default function HomeScreen() {
         userId = window.localStorage.getItem('userId');
       } else {
         try {
-          userId = await AsyncStorage.getItem('userId');
+          userId = await SecureStore.getItemAsync('userId');
         } catch { }
       }
       if (!userId) {

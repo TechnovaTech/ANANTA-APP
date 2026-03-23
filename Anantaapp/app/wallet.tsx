@@ -6,6 +6,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ENV } from '@/config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const { width, height } = Dimensions.get('window');
 
@@ -45,7 +46,7 @@ export default function WalletScreen() {
           if (Platform.OS === 'web' && typeof window !== 'undefined') {
             userId = window.localStorage.getItem('userId');
           } else {
-            userId = await AsyncStorage.getItem('userId');
+            userId = await SecureStore.getItemAsync('userId');
           }
           
           console.log('[Wallet] userId from storage:', userId);
