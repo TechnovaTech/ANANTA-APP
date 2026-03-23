@@ -315,7 +315,7 @@ export default function ProfileScreen() {
       
       {/* Action buttons */}
       <View style={styles.actionGrid}>
-        {/* First row - 3 icons */}
+        {/* Row 1 */}
         <View style={styles.actionRow}>
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/verification')}>
             <View style={[styles.actionIcon, { backgroundColor: isDark ? '#f7c14d' : '#127d96' }]}>
@@ -323,38 +323,12 @@ export default function ProfileScreen() {
             </View>
             <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>KYC</Text>
           </TouchableOpacity>
-          
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/wallet')}>
             <View style={[styles.actionIcon, { backgroundColor: '#FF6B35' }]}>
               <Ionicons name="wallet" size={24} color="white" />
             </View>
             <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Wallet</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/messages')}>
-            <View style={[styles.actionIcon, { backgroundColor: '#28A745' }]}>
-              <Ionicons name="chatbubbles" size={24} color="white" />
-            </View>
-            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Messages</Text>
-          </TouchableOpacity>
-        </View>
-        
-        {/* Second row - 3 icons */}
-        <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/settings')}>
-            <View style={[styles.actionIcon, { backgroundColor: '#9C27B0' }]}>
-              <Ionicons name="settings-outline" size={24} color="white" />
-            </View>
-            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Settings</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/earnings')}>
-            <View style={[styles.actionIcon, { backgroundColor: '#B8860B' }]}>
-              <Ionicons name="cash" size={24} color="white" />
-            </View>
-            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Earnings</Text>
-          </TouchableOpacity>
-          
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/recharge')}>
             <View style={[styles.actionIcon, { backgroundColor: '#DC3545' }]}>
               <Ionicons name="card" size={24} color="white" />
@@ -362,40 +336,56 @@ export default function ProfileScreen() {
             <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Recharge</Text>
           </TouchableOpacity>
         </View>
-        
-        {/* Third row - 3 icons */}
+        {/* Row 2 */}
         <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/earnings')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#B8860B' }]}>
+              <Ionicons name="cash" size={24} color="white" />
+            </View>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Earnings</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/level-management')}>
             <View style={[styles.actionIcon, { backgroundColor: '#FF9800' }]}>
               <Ionicons name="bar-chart" size={24} color="white" />
             </View>
             <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Level</Text>
           </TouchableOpacity>
-          
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/daily-tasks')}>
             <View style={[styles.actionIcon, { backgroundColor: '#00BCD4' }]}>
               <Ionicons name="checkmark-circle" size={24} color="white" />
             </View>
             <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Daily Tasks</Text>
           </TouchableOpacity>
-          
+        </View>
+        {/* Row 3 */}
+        <View style={styles.actionRow}>
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/room-admin')}>
             <View style={[styles.actionIcon, { backgroundColor: '#607D8B' }]}>
               <Ionicons name="person" size={24} color="white" />
             </View>
             <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Room Admin</Text>
           </TouchableOpacity>
-        </View>
-        
-        {/* Fourth row - 1 icon */}
-        <View style={styles.actionRow}>
           <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/invitation-rewards')}>
             <View style={[styles.actionIcon, { backgroundColor: '#E91E63' }]}>
               <Ionicons name="gift" size={24} color="white" />
             </View>
             <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Rewards</Text>
           </TouchableOpacity>
-          
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/live-history')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#FF5722' }]}>
+              <Ionicons name="videocam" size={24} color="white" />
+            </View>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Live History</Text>
+          </TouchableOpacity>
+        </View>
+        {/* Row 4 */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/settings')}>
+            <View style={[styles.actionIcon, { backgroundColor: '#9C27B0' }]}>
+              <Ionicons name="settings-outline" size={24} color="white" />
+            </View>
+            <Text style={[styles.actionText, { color: isDark ? 'white' : '#333' }]}>Settings</Text>
+          </TouchableOpacity>
           <View style={styles.actionButton} />
           <View style={styles.actionButton} />
         </View>
