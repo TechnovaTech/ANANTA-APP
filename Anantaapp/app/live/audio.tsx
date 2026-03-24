@@ -602,6 +602,7 @@ export default function AudioLiveScreen() {
 
   const { startLive, minimizeLive, clearLive, liveSession } = useLive();
   const endLiveRef = useRef<() => Promise<void>>(async () => {});
+  const keepAliveRef = useRef(false);
 
   useEffect(() => {
     if (role === 'host') {
@@ -622,6 +623,7 @@ export default function AudioLiveScreen() {
 
   const handleMinimize = () => {
     if (role === 'host') {
+      keepAliveRef.current = true;
       minimizeLive();
     } else {
       endLive();
@@ -632,7 +634,7 @@ export default function AudioLiveScreen() {
   const endLive = async () => {
     clearLive();
     try {
-      if (role === 'host' && sessionId && userId) {
+      if (role === 'host' && sessionId && userId && !keepAliveRef.current) {
         await fetch(`${ENV.API_BASE_URL}/api/app/live/end`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -647,7 +649,9 @@ export default function AudioLiveScreen() {
       }
     } catch {
     } finally {
-      await cleanupAgora();
+      if (!keepAliveRef.current) {
+        await cleanupAgora();
+      }
       router.back();
     }
   };
