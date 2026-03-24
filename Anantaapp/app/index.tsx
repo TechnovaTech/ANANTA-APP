@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   loadingContainer: {
-    marginBottom: 100,
+    marginBottom: 120,
   },
   poweredByContainer: {
     position: 'absolute',
@@ -107,13 +107,13 @@ const styles = StyleSheet.create({
   },
   poweredByText: {
     color: 'rgba(255,255,255,0.8)',
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 22,
+    fontWeight: '700',
     marginRight: 12,
     letterSpacing: 0.5,
   },
   sparknetLogo: {
-    width: 160,
-    height: 50,
+    width: 120,
+    height: 40,
   },
 });
