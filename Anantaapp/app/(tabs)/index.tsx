@@ -447,204 +447,78 @@ export default function HomeScreen() {
         ) : null}
         
         {hasLive ? (
-        <Animated.View style={[styles.contentGrid, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <View style={styles.leftColumn}>
-            {/* Large card on left */}
-            {primaryItem ? (
-              <TouchableOpacity 
-                style={[styles.largeCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-                onPress={() => handleJoinFromHome(primaryItem, activeTab)}
-              >
-                <View style={styles.largeCardImageContainer}>
-                  {renderImage(resolveImage(primaryItem), styles.largeCardImage)}
-                  {activeTab === 'audio' && (
-                    <View style={[styles.audioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
-                      <Ionicons name="musical-notes" size={24} color="white" />
+        <Animated.View style={[styles.liveGrid, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          {/* Render cards in rows of 2 */}
+          {Array.from({ length: Math.ceil(currentList.length / 2) }, (_, rowIndex) => (
+            <View key={rowIndex} style={styles.gridRow}>
+              {currentList.slice(rowIndex * 2, rowIndex * 2 + 2).map((item, index) => (
+                <TouchableOpacity 
+                  key={item.id || item.sessionId || index} 
+                  style={[styles.gridCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
+                  onPress={() => handleJoinFromHome(item, activeTab)}
+                >
+                  <View style={styles.gridCardImageContainer}>
+                    {renderImage(resolveImage(item), styles.gridCardImage)}
+                    {activeTab === 'audio' && (
+                      <View style={[styles.audioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
+                        <Ionicons name="musical-notes" size={20} color="white" />
+                      </View>
+                    )}
+                    <View style={styles.liveTag}>
+                      <Text style={styles.liveTagText}>LIVE</Text>
                     </View>
-                  )}
-                  <View style={styles.liveTag}>
-                    <Text style={styles.liveTagText}>LIVE</Text>
+                    <View style={styles.viewerCount}>
+                      <Ionicons 
+                        name={activeTab === 'video' ? 'eye' : 'headset'} 
+                        size={12} 
+                        color="white" 
+                      />
+                      <Text style={styles.viewerText}>
+                        {activeTab === 'video'
+                          ? `${(item as any).views ?? 0}`
+                          : `${(item as any).listeners ?? 0}`}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={styles.viewerCount}>
-                    <Ionicons 
-                      name={activeTab === 'video' ? 'eye' : 'headset'} 
-                      size={14} 
-                      color="white" 
-                    />
-                    <Text style={styles.viewerText}>
-                      {activeTab === 'video'
-                        ? `${(primaryItem as any).views ?? 0}`
-                        : `${(primaryItem as any).listeners ?? 0}`}
-                    </Text>
-                  </View>
-                </View>
-                
-                <View style={styles.largeCardContent}>
-                  <Text style={[styles.largeCardTitle, { color: isDark ? 'white' : '#333' }]} numberOfLines={2}>
-                    {primaryItem.title}
-                  </Text>
                   
-                  <View style={styles.userSection}>
-                    {renderImage(resolveImage(primaryItem), styles.userAvatar)}
-                    <View style={styles.userInfo}>
-                      <Text style={[styles.userName, { color: isDark ? '#ccc' : '#666' }]}>
-                        {primaryItem.user}
-                      </Text>
-                      <Text style={[styles.userLocation, { color: isDark ? '#888' : '#999' }]}>
-                        {primaryItem.location}
-                      </Text>
-                    </View>
+                  <View style={styles.gridCardContent}>
+                    <Text style={[styles.gridCardTitle, { color: isDark ? 'white' : '#333' }]} numberOfLines={2}>
+                      {item.title}
+                    </Text>
                     
-                    <TouchableOpacity 
-                      style={[
-                        styles.followBtn,
-                        { backgroundColor: isDark ? '#F7C14D' : '#127d96' },
-                        followedKeys.includes((primaryItem as any).followKey || String(primaryItem.id)) && styles.followingBtn
-                      ]}
-                      onPress={() => handleFollow(primaryItem)}
-                    >
-                      <Text style={[styles.followBtnText, { color: isDark ? 'black' : 'white' }]}>
-                        {followedKeys.includes((primaryItem as any).followKey || String(primaryItem.id)) ? 'Following' : 'Follow'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ) : null}
-            
-            {/* Two medium cards below large card */}
-            <View style={styles.mediumCardsRow}>
-              {currentList.slice(5, 7).map((item, index) => (
-                <TouchableOpacity 
-                  key={item.id || item.sessionId || index} 
-                  style={[styles.mediumCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-                  onPress={() => handleJoinFromHome(item, activeTab)}
-                >
-                  <View style={styles.mediumCardImageContainer}>
-                    {renderImage(resolveImage(item), styles.mediumCardImage)}
-                    {activeTab === 'audio' && (
-                      <View style={[styles.smallAudioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
-                        <Ionicons name="musical-notes" size={16} color="white" />
+                    <View style={styles.userSection}>
+                      {renderImage(resolveImage(item), styles.userAvatar)}
+                      <View style={styles.userInfo}>
+                        <Text style={[styles.userName, { color: isDark ? '#ccc' : '#666' }]}>
+                          {item.user}
+                        </Text>
+                        <Text style={[styles.userLocation, { color: isDark ? '#888' : '#999' }]}>
+                          {item.location}
+                        </Text>
                       </View>
-                    )}
-                    <View style={styles.smallLiveTag}>
-                      <Text style={styles.smallLiveTagText}>LIVE</Text>
+                      
+                      <TouchableOpacity 
+                        style={[
+                          styles.followBtn,
+                          { backgroundColor: isDark ? '#F7C14D' : '#127d96' },
+                          followedKeys.includes((item as any).followKey || String(item.id)) && styles.followingBtn
+                        ]}
+                        onPress={() => handleFollow(item)}
+                      >
+                        <Text style={[styles.followBtnText, { color: isDark ? 'black' : 'white' }]}>
+                          {followedKeys.includes((item as any).followKey || String(item.id)) ? 'Following' : 'Follow'}
+                        </Text>
+                      </TouchableOpacity>
                     </View>
-                  </View>
-                  
-                  <View style={styles.mediumCardContent}>
-                    <Text style={[styles.mediumCardTitle, { color: isDark ? 'white' : '#333' }]} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                    <Text style={[styles.smallUserName, { color: isDark ? '#ccc' : '#666' }]}>
-                      {item.user}
-                    </Text>
                   </View>
                 </TouchableOpacity>
               ))}
+              {/* Add empty placeholder if odd number of items in last row */}
+              {rowIndex === Math.ceil(currentList.length / 2) - 1 && currentList.length % 2 === 1 && (
+                <View style={styles.gridCard} />
+              )}
             </View>
-            
-            {/* Two additional medium cards below */}
-            <View style={styles.mediumCardsRow}>
-              {currentList.slice(7, 9).map((item, index) => (
-                <TouchableOpacity 
-                  key={item.id || item.sessionId || index} 
-                  style={[styles.mediumCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-                  onPress={() => handleJoinFromHome(item, activeTab)}
-                >
-                  <View style={styles.mediumCardImageContainer}>
-                    {renderImage(resolveImage(item), styles.mediumCardImage)}
-                    {activeTab === 'audio' && (
-                      <View style={[styles.smallAudioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
-                        <Ionicons name="musical-notes" size={16} color="white" />
-                      </View>
-                    )}
-                    <View style={styles.smallLiveTag}>
-                      <Text style={styles.smallLiveTagText}>LIVE</Text>
-                    </View>
-                  </View>
-                  
-                  <View style={styles.mediumCardContent}>
-                    <Text style={[styles.mediumCardTitle, { color: isDark ? 'white' : '#333' }]} numberOfLines={1}>
-                      {item.title}
-                    </Text>
-                    <Text style={[styles.smallUserName, { color: isDark ? '#ccc' : '#666' }]}>
-                      {item.user}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-          
-          <View style={styles.rightColumn}>
-            {/* Three smaller cards on right */}
-            {currentList.slice(1, 4).map((item, index) => (
-              <TouchableOpacity 
-                key={item.id || item.sessionId || index} 
-                style={[styles.smallCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-                onPress={() => handleJoinFromHome(item, activeTab)}
-              >
-                <View style={styles.smallCardImageContainer}>
-                  {renderImage(resolveImage(item), styles.smallCardImage)}
-                  {activeTab === 'audio' && (
-                    <View style={[styles.smallAudioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
-                      <Ionicons name="musical-notes" size={16} color="white" />
-                    </View>
-                  )}
-                  <View style={styles.smallLiveTag}>
-                    <Text style={styles.smallLiveTagText}>LIVE</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.smallCardContent}>
-                  <Text style={[styles.smallCardTitle, { color: isDark ? 'white' : '#333' }]} numberOfLines={1}>
-                    {item.title}
-                  </Text>
-                  <Text style={[styles.smallUserName, { color: isDark ? '#ccc' : '#666' }]}>
-                    {item.user}
-                  </Text>
-                  <Text style={[styles.smallViewerText, { color: isDark ? '#888' : '#999' }]}>
-                    {activeTab === 'video' ? `${(item as any).views} views` : `${(item as any).listeners} listening`}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-            
-            {/* Music session card moved below */}
-            {extraItem ? (
-              <TouchableOpacity 
-                style={[styles.smallCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-                onPress={() => handleJoinFromHome(extraItem, activeTab)}
-              >
-                <View style={styles.smallCardImageContainer}>
-                  {renderImage(resolveImage(extraItem), styles.smallCardImage)}
-                  {activeTab === 'audio' && (
-                    <View style={[styles.smallAudioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
-                      <Ionicons name="musical-notes" size={16} color="white" />
-                    </View>
-                  )}
-                  <View style={styles.smallLiveTag}>
-                    <Text style={styles.smallLiveTagText}>LIVE</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.smallCardContent}>
-                  <Text style={[styles.smallCardTitle, { color: isDark ? 'white' : '#333' }]} numberOfLines={1}>
-                    {extraItem.title}
-                  </Text>
-                  <Text style={[styles.smallUserName, { color: isDark ? '#ccc' : '#666' }]}>
-                    {extraItem.user}
-                  </Text>
-                  <Text style={[styles.smallViewerText, { color: isDark ? '#888' : '#999' }]}>
-                    {activeTab === 'video'
-                      ? `${(extraItem as any).views} views`
-                      : `${(extraItem as any).listeners} listening`}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ) : null}
-          </View>
+          ))}
         </Animated.View>
         ) : (
           <View style={styles.emptyStateContainer}>
@@ -653,69 +527,6 @@ export default function HomeScreen() {
             </Text>
           </View>
         )}
-        
-        <Animated.View style={[styles.bottomRow, { opacity: fadeAnim }]}>
-          {currentList.slice(7, 8).map((item, index) => (
-            <TouchableOpacity 
-              key={item.id || item.sessionId || index} 
-              style={[styles.bottomCard, { backgroundColor: isDark ? '#1a1a1a' : 'white' }]}
-              onPress={() => handleJoinFromHome(item, activeTab)}
-            >
-              <View style={styles.bottomCardImageContainer}>
-                {renderImage(resolveImage(item), styles.bottomCardImage)}
-                {activeTab === 'audio' && (
-                  <View style={[styles.audioIndicator, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
-                    <Ionicons name="musical-notes" size={20} color="white" />
-                  </View>
-                )}
-                <View style={styles.liveTag}>
-                  <Text style={styles.liveTagText}>LIVE</Text>
-                </View>
-                <View style={styles.viewerCount}>
-                  <Ionicons 
-                    name={activeTab === 'video' ? 'eye' : 'headset'} 
-                    size={12} 
-                    color="white" 
-                  />
-                  <Text style={styles.viewerText}>
-                    {activeTab === 'video' ? (item as any).views : (item as any).listeners}
-                  </Text>
-                </View>
-              </View>
-              
-              <View style={styles.bottomCardContent}>
-                <Text style={[styles.bottomCardTitle, { color: isDark ? 'white' : '#333' }]} numberOfLines={2}>
-                  {item.title}
-                </Text>
-                
-                <View style={styles.userSection}>
-                  {renderImage(resolveImage(item), styles.userAvatar)}
-                  <View style={styles.userInfo}>
-                    <Text style={[styles.userName, { color: isDark ? '#ccc' : '#666' }]}>
-                      {item.user}
-                    </Text>
-                    <Text style={[styles.userLocation, { color: isDark ? '#888' : '#999' }]}>
-                      {item.location}
-                    </Text>
-                  </View>
-                  
-                  <TouchableOpacity 
-                    style={[
-                      styles.followBtn,
-                      { backgroundColor: isDark ? '#F7C14D' : '#127d96' },
-                      followedKeys.includes((item as any).followKey || String(item.id)) && styles.followingBtn
-                    ]}
-                    onPress={() => handleFollow(item)}
-                  >
-                    <Text style={[styles.followBtnText, { color: isDark ? 'black' : 'white' }]}>
-                      {followedKeys.includes((item as any).followKey || String(item.id)) ? 'Following' : 'Follow'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -876,19 +687,16 @@ const styles = StyleSheet.create({
   activeIndicator: {
     backgroundColor: '#127d96',
   },
-  contentGrid: {
-    flexDirection: 'row',
-    gap: 15,
+  liveGrid: {
     paddingBottom: 20,
   },
-  leftColumn: {
-    flex: 1.2,
+  gridRow: {
+    flexDirection: 'row',
+    gap: 15,
+    marginBottom: 15,
   },
-  rightColumn: {
-    flex: 0.8,
-    gap: 10,
-  },
-  largeCard: {
+  gridCard: {
+    flex: 1,
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -897,147 +705,21 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 6,
   },
-  largeCardImageContainer: {
+  gridCardImageContainer: {
     position: 'relative',
-    height: 220,
+    height: 140,
   },
-  largeCardImage: {
+  gridCardImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
-  largeCardContent: {
-    padding: 16,
-  },
-  largeCardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 12,
-    lineHeight: 22,
-  },
-  smallCard: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  smallCardImageContainer: {
-    position: 'relative',
-    height: 85,
-  },
-  smallCardImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  smallCardContent: {
-    padding: 8,
-  },
-  smallCardTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-    lineHeight: 16,
-  },
-  smallUserName: {
-    fontSize: 10,
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  smallViewerText: {
-    fontSize: 9,
-  },
-  smallAudioIndicator: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(18,125,150,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  smallLiveTag: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#ff4444',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  smallLiveTagText: {
-    color: 'white',
-    fontSize: 8,
-    fontWeight: 'bold',
-  },
-  mediumCardsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 15,
-  },
-  mediumCard: {
-    flex: 1,
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 3,
-  },
-  mediumCardImageContainer: {
-    position: 'relative',
-    height: 100,
-  },
-  mediumCardImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  mediumCardContent: {
-    padding: 10,
-  },
-  mediumCardTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 4,
-    lineHeight: 16,
-  },
-  bottomRow: {
-    justifyContent: 'center',
-    marginTop: 20,
-    paddingBottom: 20,
-  },
-  bottomCard: {
-    width: '100%',
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  bottomCardImageContainer: {
-    position: 'relative',
-    height: 120,
-  },
-  bottomCardImage: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  bottomCardContent: {
+  gridCardContent: {
     padding: 12,
   },
-  bottomCardTitle: {
+  gridCardTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 8,
     lineHeight: 18,
   },
