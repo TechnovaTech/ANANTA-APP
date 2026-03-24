@@ -87,12 +87,12 @@ export default function HomeScreen() {
       setCurrentBannerIndex(prevIndex => {
         const nextIndex = (prevIndex + 1) % heroItems.length;
         bannerScrollRef.current?.scrollTo({
-          x: nextIndex * width,
+          x: nextIndex * (width - 40 + 15), // Account for card width + margin
           animated: true,
         });
         return nextIndex;
       });
-    }, 4000);
+    }, 3500); // Slightly faster animation
 
     return () => clearInterval(interval);
   }, [heroItems.length]);
@@ -378,15 +378,16 @@ export default function HomeScreen() {
             pagingEnabled 
             style={styles.bannerContainer}
             onMomentumScrollEnd={(event) => {
-              const newIndex = Math.round(event.nativeEvent.contentOffset.x / width);
-              setCurrentBannerIndex(newIndex);
+              const cardWidth = width - 40 + 15; // Card width + margin
+              const newIndex = Math.round(event.nativeEvent.contentOffset.x / cardWidth);
+              setCurrentBannerIndex(Math.max(0, Math.min(newIndex, heroItems.length - 1)));
             }}
           >
             {heroItems.map((item: any, index: number) => {
               const mediaUrl = resolveHeroMediaUrl(item.mediaUrl);
               const isVideo = String(item.mediaType || '').toUpperCase() === 'VIDEO';
               return (
-                <View key={item.id ?? index} style={styles.featuredCard}>
+                <TouchableOpacity key={item.id ?? index} style={styles.featuredCard}>
                   {isVideo && mediaUrl ? (
                     <Video
                       source={{ uri: mediaUrl }}
@@ -397,9 +398,21 @@ export default function HomeScreen() {
                       isMuted
                     />
                   ) : mediaUrl ? (
-                    <Image source={{ uri: mediaUrl }} style={styles.featuredImage} />
+                    <View style={styles.featuredImage}>
+                      <Image 
+                        source={{ uri: mediaUrl }} 
+                        style={[styles.featuredImage, { position: 'absolute' }]}
+                        resizeMode="cover"
+                        onError={() => console.log('Image load error')}
+                      />
+                    </View>
                   ) : (
-                    <View style={[styles.featuredImage, styles.imagePlaceholder, { backgroundColor: isDark ? '#222' : '#e5e7eb' }]} />
+                    <LinearGradient
+                      colors={isDark ? ['#333', '#555'] : ['#127d96', '#15a3c7']}
+                      style={[styles.featuredImage, styles.imagePlaceholder]}
+                    >
+                      <Text style={[styles.heroTitle, { textAlign: 'center', position: 'absolute' }]}>ANANTA</Text>
+                    </LinearGradient>
                   )}
                   <View style={styles.heroOverlay}>
                     {item.title ? (
@@ -416,9 +429,9 @@ export default function HomeScreen() {
                       </View>
                     </View>
                   ) : null}
-                </View>
+                </TouchableOpacity>
               );
-            })}
+            })}}
           </ScrollView>
           
           {/* Banner Indicators */}
@@ -799,14 +812,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginRight: 15,
     position: 'relative',
+    backgroundColor: '#f0f0f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   featuredImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    backgroundColor: '#f0f0f0',
   },
   imagePlaceholder: {
     backgroundColor: '#e5e7eb',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   featuredOverlay: {
     position: 'absolute',
