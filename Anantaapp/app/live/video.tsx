@@ -799,7 +799,7 @@ export default function VideoLiveScreen() {
         await fetch(`${ENV.API_BASE_URL}/api/app/live/leave`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId }),
+          body: JSON.stringify({ sessionId, userId }),
         });
       }
     } catch {
@@ -919,15 +919,24 @@ export default function VideoLiveScreen() {
         </View>
 
         <View style={styles.commentsSection}>
-          {liveComments.map((comment) => (
-            <View key={comment.id} style={styles.liveCommentItem}>
-              <Image source={{ uri: comment.avatar }} style={styles.liveCommentAvatar} />
-              <View style={styles.liveCommentContent}>
-                <Text style={styles.liveCommentUser}>@{comment.user}</Text>
-                <Text style={styles.liveCommentText}>{comment.message}</Text>
+          {liveComments.map((comment) => {
+            const isSystemMsg = comment.isSystemMessage === true;
+            return (
+              <View key={comment.id} style={isSystemMsg ? styles.systemMessageItem : styles.liveCommentItem}>
+                {!isSystemMsg && <Image source={{ uri: comment.avatar }} style={styles.liveCommentAvatar} />}
+                <View style={isSystemMsg ? styles.systemMessageContent : styles.liveCommentContent}>
+                  {isSystemMsg ? (
+                    <Text style={styles.systemMessageText}>{comment.message}</Text>
+                  ) : (
+                    <>
+                      <Text style={styles.liveCommentUser}>@{comment.user}</Text>
+                      <Text style={styles.liveCommentText}>{comment.message}</Text>
+                    </>
+                  )}
+                </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
 
         <View style={styles.floatingHeartsContainer}>
@@ -1303,6 +1312,24 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
     fontSize: 13,
     lineHeight: 16,
+  },
+  systemMessageItem: {
+    flexDirection: 'row',
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  systemMessageContent: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  systemMessageText: {
+    color: '#FFD700',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   bottomSection: {
     position: 'absolute',

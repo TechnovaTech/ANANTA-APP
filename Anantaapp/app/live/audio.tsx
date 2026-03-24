@@ -626,7 +626,7 @@ export default function AudioLiveScreen() {
         await fetch(`${ENV.API_BASE_URL}/api/app/live/leave`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId }),
+          body: JSON.stringify({ sessionId, userId }),
         });
       }
     } catch {
@@ -753,15 +753,24 @@ export default function AudioLiveScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.commentsContent}
       >
-        {liveComments.map((comment) => (
-          <View key={comment.id} style={styles.commentItem}>
-            <Image source={{ uri: comment.avatar }} style={styles.commentAvatar} />
-            <View style={styles.commentBubble}>
-              <Text style={styles.commentUser}>@{comment.user}</Text>
-              <Text style={styles.commentText}>{comment.message}</Text>
+        {liveComments.map((comment) => {
+          const isSystemMsg = comment.isSystemMessage === true;
+          return (
+            <View key={comment.id} style={isSystemMsg ? styles.systemMessageItem : styles.commentItem}>
+              {!isSystemMsg && <Image source={{ uri: comment.avatar }} style={styles.commentAvatar} />}
+              <View style={isSystemMsg ? styles.systemMessageBubble : styles.commentBubble}>
+                {isSystemMsg ? (
+                  <Text style={styles.systemMessageText}>{comment.message}</Text>
+                ) : (
+                  <>
+                    <Text style={styles.commentUser}>@{comment.user}</Text>
+                    <Text style={styles.commentText}>{comment.message}</Text>
+                  </>
+                )}
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </ScrollView>
 
       {/* Floating Hearts */}
@@ -1159,6 +1168,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 18,
     color: '#333',
+  },
+  systemMessageItem: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  systemMessageBubble: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,215,0,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,215,0,0.4)',
+  },
+  systemMessageText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFD700',
+    textAlign: 'center',
   },
   floatingHeartsContainer: {
     position: 'absolute',

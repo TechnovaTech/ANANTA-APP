@@ -182,6 +182,18 @@ public class AppLiveController {
             // Track viewer
             if (StringUtils.hasText(userId)) {
                 sessionViewers.computeIfAbsent(sessionId, k -> new java.util.concurrent.CopyOnWriteArraySet<>()).add(userId);
+                
+                // Broadcast join message
+                Optional<User> viewerOpt = userRepository.findByUserId(userId);
+                String viewerUsername = viewerOpt.map(User::getUsername).orElse(userId);
+                Map<String, Object> joinMsg = new HashMap<>();
+                joinMsg.put("id", System.currentTimeMillis());
+                joinMsg.put("user", "System");
+                joinMsg.put("message", "@" + viewerUsername + " joined");
+                joinMsg.put("avatar", "system");
+                joinMsg.put("timestamp", LocalDateTime.now());
+                joinMsg.put("isSystemMessage", true);
+                sessionMessages.computeIfAbsent(sessionId, k -> new ArrayList<>()).add(joinMsg);
             }
             hostOpt.ifPresent(user -> {
                 response.put("hostUsername", user.getUsername());
@@ -290,6 +302,18 @@ public class AppLiveController {
             String leavingUserId = asString(payload.get("userId"));
             if (StringUtils.hasText(leavingUserId) && StringUtils.hasText(sessionId)) {
                 sessionViewers.getOrDefault(sessionId, new HashSet<>()).remove(leavingUserId);
+                
+                // Broadcast leave message
+                Optional<User> viewerOpt = userRepository.findByUserId(leavingUserId);
+                String viewerUsername = viewerOpt.map(User::getUsername).orElse(leavingUserId);
+                Map<String, Object> leaveMsg = new HashMap<>();
+                leaveMsg.put("id", System.currentTimeMillis());
+                leaveMsg.put("user", "System");
+                leaveMsg.put("message", "@" + viewerUsername + " left");
+                leaveMsg.put("avatar", "system");
+                leaveMsg.put("timestamp", LocalDateTime.now());
+                leaveMsg.put("isSystemMessage", true);
+                sessionMessages.computeIfAbsent(sessionId, k -> new ArrayList<>()).add(leaveMsg);
             }
             if (session != null) {
                 int current = session.getViewerCount() != null ? session.getViewerCount() : 0;
