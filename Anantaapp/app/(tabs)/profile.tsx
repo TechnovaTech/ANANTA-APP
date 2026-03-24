@@ -41,6 +41,7 @@ export default function ProfileScreen() {
   const [totalCoinsEarned, setTotalCoinsEarned] = useState(0);
   const [totalCoinsSpent, setTotalCoinsSpent] = useState(0);
   const [kycStatus, setKycStatus] = useState<string>('NONE');
+  const [userId, setUserId] = useState<string>('');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -56,6 +57,7 @@ export default function ProfileScreen() {
           }
         }
         if (storedUserId) {
+          setUserId(storedUserId);
           await loadProfile(storedUserId);
         }
       };
@@ -225,6 +227,7 @@ export default function ProfileScreen() {
             <View style={styles.onlineIndicator} />
           </View>
           <View style={styles.userInfo}>
+            <Text style={[styles.userId, { color: isDark ? '#aaa' : '#888' }]}>ID: {userId}</Text>
             <View style={styles.nameContainer}>
               <Text style={[styles.username, { color: isDark ? 'white' : '#333' }]}>{profileData.name}</Text>
               {kycStatus === 'APPROVED'
@@ -496,6 +499,13 @@ const styles = StyleSheet.create({
   },
   userInfo: {
     flex: 1,
+  },
+  userId: {
+    fontSize: 11,
+    color: '#888',
+    marginBottom: 4,
+    fontWeight: '500',
+    letterSpacing: 0.5,
   },
   nameContainer: {
     flexDirection: 'row',

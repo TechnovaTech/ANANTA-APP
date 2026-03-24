@@ -58,6 +58,7 @@ export default function AudioLiveScreen() {
     return false;
   });
   const [isMuted, setIsMuted] = useState(false);
+  const [isHostMuted, setIsHostMuted] = useState(false);
   const [isRoomAdmin, setIsRoomAdmin] = useState(false);
   const [showViewers, setShowViewers] = useState(false);
   const [viewersList, setViewersList] = useState<any[]>([]);
@@ -584,6 +585,19 @@ export default function AudioLiveScreen() {
     }
   };
 
+  const toggleHostMute = async () => {
+    const engine = engineRef.current;
+    if (!engine || role !== 'viewer') return;
+    try {
+      const nextMuted = !isHostMuted;
+      // Mute all remote audio streams (including host)
+      await engine.muteAllRemoteAudioStreams(nextMuted);
+      setIsHostMuted(nextMuted);
+    } catch (e) {
+      console.error('Toggle host mute error:', e);
+    }
+  };
+
   const { startLive, minimizeLive, clearLive, liveSession } = useLive();
   const endLiveRef = useRef<() => Promise<void>>(async () => {});
 
@@ -848,6 +862,17 @@ export default function AudioLiveScreen() {
             
             <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
               <Ionicons name="heart" size={20} color="#ff4444" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, isHostMuted && styles.mutedButton]} 
+              onPress={toggleHostMute}
+            >
+              <Ionicons 
+                name={isHostMuted ? "volume-mute" : "volume-high"} 
+                size={20} 
+                color="white" 
+              />
             </TouchableOpacity>
             
             <TouchableOpacity style={styles.actionButton} onPress={handleGift}>

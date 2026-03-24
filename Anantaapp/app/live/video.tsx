@@ -70,6 +70,7 @@ export default function VideoLiveScreen() {
   const [floatingHearts, setFloatingHearts] = useState<any[]>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [isCameraOn, setIsCameraOn] = useState(true);
+  const [isHostMuted, setIsHostMuted] = useState(false);
   const [joined, setJoined] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [giftList, setGiftList] = useState<any[]>([]);
@@ -771,6 +772,19 @@ export default function VideoLiveScreen() {
     }
   };
 
+  const toggleHostMute = async () => {
+    const engine = engineRef.current;
+    if (!engine || role !== 'viewer') return;
+    try {
+      const nextMuted = !isHostMuted;
+      // Mute all remote audio streams (including host)
+      await engine.muteAllRemoteAudioStreams(nextMuted);
+      setIsHostMuted(nextMuted);
+    } catch (e) {
+      console.error('Toggle host mute error:', e);
+    }
+  };
+
   const saveMinutes = async () => {
     const elapsedMinutes = elapsedTimeRef.current / 60;
     if (elapsedMinutes <= 0) return;
@@ -988,6 +1002,9 @@ export default function VideoLiveScreen() {
               <>
                 <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
                   <ThemedText style={[styles.actionIcon, { color: isLiked ? '#ff4444' : 'white' }]}>❤️</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionButton} onPress={toggleHostMute}>
+                  <ThemedText style={styles.actionIcon}>{isHostMuted ? '🔇' : '🔊'}</ThemedText>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionButton} onPress={handleGift}>
                   <ThemedText style={[styles.actionIcon, { color: '#ffd93d' }]}>🎁</ThemedText>
