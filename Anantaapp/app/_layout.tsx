@@ -2,8 +2,9 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ProfileProvider } from '../contexts/ProfileContext';
@@ -11,6 +12,10 @@ import { ThemeProvider as CustomThemeProvider } from '../contexts/ThemeContext';
 import { startAccountStatusCheck, stopAccountStatusCheck } from '../utils/accountStatus';
 import { LiveProvider, useLive } from '../contexts/LiveContext';
 import MiniLivePlayer from '../components/MiniLivePlayer';
+import CustomSplashScreen from '../components/SplashScreen';
+
+// Prevent the splash screen from auto-hiding
+SplashScreen.preventAutoHideAsync();
 
 export const unstable_settings = {
   initialRouteName: '(tabs)',
@@ -19,11 +24,35 @@ export const unstable_settings = {
 function AppContent() {
   const colorScheme = useColorScheme();
   const { liveSession, isMinimized } = useLive();
+  const [isReady, setIsReady] = useState(false);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
+    async function prepare() {
+      try {
+        // Pre-load any resources here
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (e) {
+        console.warn(e);
+      } finally {
+        setIsReady(true);
+        // Hide the native splash screen
+        await SplashScreen.hideAsync();
+      }
+    }
+
+    prepare();
     startAccountStatusCheck();
     return () => stopAccountStatusCheck();
   }, []);
+
+  const handleSplashFinish = () => {
+    setShowSplash(false);
+  };
+
+  if (!isReady || showSplash) {
+    return <CustomSplashScreen onFinish={handleSplashFinish} />;
+  }
 
   return (
     <CustomThemeProvider>

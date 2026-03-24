@@ -4,22 +4,22 @@
     "slug": "ananta",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app logo.png",
+    "icon": "./assets/images/app-logo.png",
     "scheme": "com.techvivek32.ananta",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
+      "icon": "./assets/images/app-logo.png",
       "infoPlist": {
         "NSCameraUsageDescription": "Camera access is required for live video.",
         "NSMicrophoneUsageDescription": "Microphone access is required for live audio and video."
       }
     },
     "android": {
+      "icon": "./assets/images/app-logo.png",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#127d96",
+        "foregroundImage": "./assets/images/app-logo.png"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -46,7 +46,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/app logo.png",
+      "favicon": "./assets/images/app-logo.png",
       "bundler": "metro"
     },
     "plugins": [
@@ -54,12 +54,13 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 200,
+          "image": "./assets/images/app-logo.png",
+          "imageWidth": 150,
           "resizeMode": "contain",
           "backgroundColor": "#127d96",
           "dark": {
-            "backgroundColor": "#127d96"
+            "backgroundColor": "#127d96",
+            "image": "./assets/images/app-logo.png"
           }
         }
       ],
