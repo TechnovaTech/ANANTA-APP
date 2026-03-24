@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { HapticTab } from '@/components/haptic-tab';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/contexts/ThemeContext';
+import AuthGuard from '@/components/AuthGuard';
 
 const HomeIcon = ({ color }: { color: string }) => (
   <Svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -53,32 +54,33 @@ export default function TabLayout() {
   }
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: isDark ? '#f7c14d' : '#127D96',
-        tabBarInactiveTintColor: isDark ? '#999' : '#666666',
-        tabBarStyle: {
-          backgroundColor: isDark ? '#1a1a1a' : 'white',
-          borderTopWidth: 1,
-          borderTopColor: isDark ? '#f7c14d' : '#E0E0E0',
-          paddingBottom: Math.max(insets.bottom, 20),
-          paddingTop: 10,
-          height: 70 + Math.max(insets.bottom, 20),
-        },
-        tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
-          marginTop: 4,
-          marginBottom: 2,
-          fontFamily: 'Inter_600SemiBold',
-          color: isDark ? '#ccc' : undefined,
-        },
-        tabBarIconStyle: {
-          marginBottom: 0,
-        },
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+    <AuthGuard>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: isDark ? '#f7c14d' : '#127D96',
+          tabBarInactiveTintColor: isDark ? '#999' : '#666666',
+          tabBarStyle: {
+            backgroundColor: isDark ? '#1a1a1a' : 'white',
+            borderTopWidth: 1,
+            borderTopColor: isDark ? '#f7c14d' : '#E0E0E0',
+            paddingBottom: Math.max(insets.bottom, 20),
+            paddingTop: 10,
+            height: 70 + Math.max(insets.bottom, 20),
+          },
+          tabBarLabelStyle: {
+            fontSize: 11,
+            fontWeight: '600',
+            marginTop: 4,
+            marginBottom: 2,
+            fontFamily: 'Inter_600SemiBold',
+            color: isDark ? '#ccc' : undefined,
+          },
+          tabBarIconStyle: {
+            marginBottom: 0,
+          },
+          headerShown: false,
+          tabBarButton: HapticTab,
+        }}>
       <Tabs.Screen
         name="index"
         options={{
@@ -120,5 +122,6 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </AuthGuard>
   );
 }

@@ -9,6 +9,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ProfileProvider } from '../contexts/ProfileContext';
 import { ThemeProvider as CustomThemeProvider } from '../contexts/ThemeContext';
+import { AuthProvider } from '../contexts/AuthContext';
 import { startAccountStatusCheck, stopAccountStatusCheck } from '../utils/accountStatus';
 import { LiveProvider, useLive } from '../contexts/LiveContext';
 import MiniLivePlayer from '../components/MiniLivePlayer';
@@ -87,8 +88,10 @@ function AppContent() {
 
 export default function RootLayout() {
   return (
-    <LiveProvider>
-      <AppContent />
-    </LiveProvider>
+    <AuthProvider>
+      <LiveProvider>
+        <AppContent />
+      </LiveProvider>
+    </AuthProvider>
   );
 }

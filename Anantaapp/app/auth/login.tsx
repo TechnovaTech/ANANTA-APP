@@ -1,21 +1,38 @@
 import { ThemedText } from '@/components/themed-text';
 import { Inter_400Regular, Inter_700Bold, useFonts } from '@expo-google-fonts/inter';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import { Alert, Image, ImageBackground, Platform, StyleSheet, TouchableOpacity, View, StatusBar, Dimensions } from 'react-native';
-import { useState, useEffect } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { Alert, Image, ImageBackground, Platform, StyleSheet, TouchableOpacity, View, StatusBar, Dimensions, BackHandler } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
 import { GoogleAuthService } from '../../services/GoogleAuthService';
 import * as SecureStore from 'expo-secure-store';
 import AnantaLogo from '../../components/AnantaLogo';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
+  const { checkAuth } = useAuth();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_700Bold,
   });
+
+  // Handle back button on Android to prevent going back to home without auth
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        // Prevent going back from login screen
+        return true;
+      };
+
+      if (Platform.OS === 'android') {
+        const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+        return () => subscription.remove();
+      }
+    }, [])
+  );
 
   // Handle Google OAuth callback on page load (web only)
   useEffect(() => {
@@ -60,6 +77,9 @@ export default function LoginScreen() {
         await SecureStore.setItemAsync('userId', authResult.userId);
         await SecureStore.setItemAsync('userEmail', authResult.email);
       }
+
+      // Refresh auth state
+      await checkAuth();
 
       if (authResult.redirectTo === 'home') {
         router.replace('/(tabs)');

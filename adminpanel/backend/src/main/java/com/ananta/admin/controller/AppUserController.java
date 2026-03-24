@@ -319,6 +319,66 @@ public class AppUserController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/validate-auth")
+    public ResponseEntity<?> validateAuth(@RequestBody Map<String, String> request) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            String userId = request.get("userId");
+            if (!StringUtils.hasText(userId)) {
+                response.put("valid", false);
+                response.put("message", "Invalid user ID");
+                return ResponseEntity.ok(response);
+            }
+
+            String normalizedUserId = userId.trim();
+            User user = userRepository.findByUserId(normalizedUserId).orElse(null);
+            if (user == null) {
+                user = userRepository.findByUserIdTrimmed(normalizedUserId).orElse(null);
+            }
+            if (user == null) {
+                String compactUserId = normalizedUserId.replaceAll("[^A-Za-z0-9]", "");
+                if (StringUtils.hasText(compactUserId)) {
+                    user = userRepository.findByUserIdNormalized(compactUserId).orElse(null);
+                }
+            }
+
+            if (user == null) {
+                response.put("valid", false);
+                response.put("message", "User not found");
+                return ResponseEntity.ok(response);
+            }
+
+            // Check if user is blocked or banned
+            if (user.isBlocked()) {
+                response.put("valid", false);
+                response.put("message", "Account is blocked");
+                return ResponseEntity.ok(response);
+            }
+
+            if (user.isBanned()) {
+                // Check if ban has expired
+                if (user.getBanUntil() != null && LocalDateTime.now().isAfter(user.getBanUntil())) {
+                    user.setBanned(false);
+                    user.setBanUntil(null);
+                    user.setBanReason(null);
+                    userRepository.save(user);
+                } else {
+                    response.put("valid", false);
+                    response.put("message", "Account is banned");
+                    return ResponseEntity.ok(response);
+                }
+            }
+
+            response.put("valid", true);
+            response.put("message", "User is valid");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("valid", false);
+            response.put("message", "Error validating user");
+            return ResponseEntity.ok(response);
+        }
+    }
+
     @GetMapping("/health")
     public ResponseEntity<?> health() {
         Map<String, Object> response = new HashMap<>();
