@@ -42,13 +42,14 @@ export default function UserLiveHistoryPage() {
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString('en-IN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
-    });
+      minute: '2-digit',
+      timeZone: 'Asia/Kolkata'
+    }) + ' IST';
   };
 
   const calculateDuration = (startDate: string, endDate: string) => {

@@ -21,14 +21,20 @@ const formatDateTime = (iso: string | null) => {
   if (!iso) return '';
   const date = new Date(iso);
   if (isNaN(date.getTime())) return '';
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-  const hours = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, '0');
+  
+  // Convert to IST (Indian Standard Time - UTC+5:30)
+  const istOffset = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+  const utcTime = date.getTime();
+  const istTime = new Date(utcTime + istOffset);
+  
+  const day = istTime.getUTCDate().toString().padStart(2, '0');
+  const month = (istTime.getUTCMonth() + 1).toString().padStart(2, '0');
+  const year = istTime.getUTCFullYear();
+  const hours = istTime.getUTCHours();
+  const minutes = istTime.getUTCMinutes().toString().padStart(2, '0');
   const suffix = hours >= 12 ? 'PM' : 'AM';
   const displayHour = ((hours + 11) % 12) + 1;
-  return `${day}/${month}/${year}  ${displayHour}:${minutes} ${suffix}`;
+  return `${day}/${month}/${year}  ${displayHour}:${minutes} ${suffix} IST`;
 };
 
 const formatDuration = (start: string | null, end: string | null) => {
