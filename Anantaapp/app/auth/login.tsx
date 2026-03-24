@@ -121,6 +121,16 @@ export default function LoginScreen() {
                     </LinearGradient>
                   </TouchableOpacity>
                 </View>
+
+                {/* Powered by section */}
+                <View style={styles.poweredByContainer}>
+                  <ThemedText style={styles.poweredByText}>Powered by</ThemedText>
+                  <Image 
+                    source={require('@/assets/images/sparknet logo.png')}
+                    style={styles.sparknetLogo}
+                    resizeMode="contain"
+                  />
+                </View>
           </View>
         </LinearGradient>
       </ImageBackground>
@@ -154,6 +164,7 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     width: '100%',
+    marginBottom: 100,
   },
   googleButton: {
     width: '100%',
@@ -189,5 +200,23 @@ const styles = StyleSheet.create({
     borderColor: '#333',
     borderTopColor: 'transparent',
     marginRight: 15,
+  },
+  poweredByContainer: {
+    position: 'absolute',
+    bottom: height * 0.05,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  poweredByText: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 18,
+    fontWeight: '600',
+    marginRight: 12,
+    letterSpacing: 0.5,
+  },
+  sparknetLogo: {
+    width: 160,
+    height: 50,
   },
 });
