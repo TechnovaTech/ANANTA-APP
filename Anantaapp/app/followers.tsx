@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, Text, FlatList, Image, TouchableOpacity, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../contexts/ThemeContext';
 import { ENV } from '@/config/env';
 import * as SecureStore from 'expo-secure-store';
@@ -20,8 +20,11 @@ const resolveAvatarUri = (value: string | null | undefined) => {
 
 export default function FollowersScreen() {
   const { isDark } = useTheme();
+  const params = useLocalSearchParams();
+  const targetUserId = typeof params.userId === 'string' ? params.userId : null;
   const [followers, setFollowers] = useState<any[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [targetUsername, setTargetUsername] = useState<string>('User');
 
   const mapApiFollowers = (raw: any[]): any[] => {
     console.log('[Followers] mapApiFollowers raw:', raw);
@@ -45,16 +48,28 @@ export default function FollowersScreen() {
   };
 
   const fetchFollowers = async () => {
-    const userId = await SecureStore.getItemAsync('userId');
-    if (!userId) return;
-    console.log('[Followers] fetchFollowers for userId:', userId);
+    // Get current user ID for follow/unfollow actions
+    const currentId = await SecureStore.getItemAsync('userId');
+    setCurrentUserId(currentId);
+    
+    // Use targetUserId if provided, otherwise use current user ID
+    const userIdToFetch = targetUserId || currentId;
+    if (!userIdToFetch) return;
+    
+    console.log('[Followers] fetchFollowers for userId:', userIdToFetch);
     try {
-      const res = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${userId}`);
+      const res = await fetch(`${ENV.API_BASE_URL}/api/app/profile/${userIdToFetch}`);
       console.log('[Followers] profile response status:', res.status);
       if (!res.ok) {
         return;
       }
       const data = await res.json();
+      
+      // Set the target username for header display
+      const username = data?.user?.username || 'User';
+      const isOwnProfile = currentId === userIdToFetch;
+      setTargetUsername(isOwnProfile ? 'My' : username + "'s");
+      
       const raw = (data && Array.isArray(data.followersList)) ? data.followersList : [];
       console.log('[Followers] followersList length:', Array.isArray(raw) ? raw.length : 'not array');
       if (!Array.isArray(raw)) {
@@ -69,9 +84,8 @@ export default function FollowersScreen() {
   };
 
   useEffect(() => {
-    SecureStore.getItemAsync('userId').then(uid => { if (uid) setCurrentUserId(uid); });
     fetchFollowers();
-  }, []);
+  }, [targetUserId]);
 
   const handleToggleFollow = async (targetUserId: string) => {
     if (!currentUserId || !targetUserId) {
@@ -150,7 +164,7 @@ export default function FollowersScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={isDark ? 'black' : 'white'} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: isDark ? 'black' : 'white' }]}>Followers</Text>
+        <Text style={[styles.headerTitle, { color: isDark ? 'black' : 'white' }]}>{targetUsername} Followers</Text>
         <View style={styles.placeholder} />
       </LinearGradient>
 

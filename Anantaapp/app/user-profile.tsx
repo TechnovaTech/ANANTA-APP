@@ -300,15 +300,25 @@ export default function UserProfileScreen() {
 
         {/* Stats bar */}
         <View style={[styles.statsBar, { backgroundColor: accent }]}>
-          <View style={styles.statItem}>
+          <TouchableOpacity 
+            style={styles.statItem}
+            onPress={() => router.push({ pathname: '/followers', params: { userId: targetUserId } })}
+            activeOpacity={0.7}
+          >
             <Text style={[styles.statNum, { color: accentText }]}>{followers}</Text>
             <Text style={[styles.statLabel, { color: isDark ? 'rgba(0,0,0,0.65)' : 'rgba(255,255,255,0.85)' }]}>Followers</Text>
-          </View>
+            <Ionicons name="chevron-forward" size={12} color={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.6)'} style={{ marginTop: 2 }} />
+          </TouchableOpacity>
           <View style={[styles.statDivider, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.3)' }]} />
-          <View style={styles.statItem}>
+          <TouchableOpacity 
+            style={styles.statItem}
+            onPress={() => router.push({ pathname: '/following', params: { userId: targetUserId } })}
+            activeOpacity={0.7}
+          >
             <Text style={[styles.statNum, { color: accentText }]}>{following}</Text>
             <Text style={[styles.statLabel, { color: isDark ? 'rgba(0,0,0,0.65)' : 'rgba(255,255,255,0.85)' }]}>Following</Text>
-          </View>
+            <Ionicons name="chevron-forward" size={12} color={isDark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.6)'} style={{ marginTop: 2 }} />
+          </TouchableOpacity>
         </View>
 
         {/* Level cards */}
