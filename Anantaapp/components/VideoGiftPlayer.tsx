@@ -71,10 +71,28 @@ export default function VideoGiftPlayer({ videoUrl, giftName, senderName, onComp
       </style>
     </head>
     <body>
-      <video autoplay muted="false" onended="window.ReactNativeWebView.postMessage('ended')" style="pointer-events: none;">
+      <video autoplay muted="false" controls="false" playsInline onended="window.ReactNativeWebView.postMessage('ended')" style="pointer-events: none;">
         <source src="${videoUrl}" type="video/mp4">
         Your browser does not support the video tag.
       </video>
+      <script>
+        // Ensure video plays with sound
+        const video = document.querySelector('video');
+        video.muted = false;
+        video.volume = 1.0;
+        
+        // Try to play with sound
+        video.play().catch(e => {
+          console.log('Autoplay failed:', e);
+          // If autoplay fails, try with muted first then unmute
+          video.muted = true;
+          video.play().then(() => {
+            setTimeout(() => {
+              video.muted = false;
+            }, 100);
+          });
+        });
+      </script>
     </body>
     </html>
   `;
@@ -102,6 +120,9 @@ export default function VideoGiftPlayer({ videoUrl, giftName, senderName, onComp
         mediaPlaybackRequiresUserAction={false}
         javaScriptEnabled
         domStorageEnabled
+        allowsFullscreenVideo={false}
+        mixedContentMode="compatibility"
+        androidLayerType="hardware"
       />
       
       <View style={styles.overlay}>
