@@ -8,6 +8,7 @@ import { createAgoraEngine, RtcSurfaceView, ChannelProfileType, ClientRoleType }
 import { ENV } from '@/config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import VideoGiftPlayer from '@/components/VideoGiftPlayer';
 import { useLive } from '@/contexts/LiveContext';
 
 const resolveGiftImageUrl = (value: string | null | undefined) => {
@@ -15,6 +16,11 @@ const resolveGiftImageUrl = (value: string | null | undefined) => {
   if (value.startsWith('http') || value.startsWith('data:')) return value;
   if (value.startsWith('/uploads/')) return `${ENV.API_BASE_URL}${value}`;
   return value;
+};
+
+const isVideoFile = (url: string) => {
+  if (!url) return false;
+  return /\.(mp4|mov|avi|webm|mkv|flv)$/i.test(url);
 };
 
 const resolveProfileImageUrl = (value: string | null | undefined) => {
@@ -77,6 +83,7 @@ export default function VideoLiveScreen() {
   const [showGifts, setShowGifts] = useState(false);
   const [loadingGifts, setLoadingGifts] = useState(false);
   const [giftAnimation, setGiftAnimation] = useState<{ senderName: string; giftImageUrl: string; giftName: string } | null>(null);
+  const [videoGift, setVideoGift] = useState<{ senderName: string; videoUrl: string; giftName: string } | null>(null);
   const giftAnimScale = useRef(new Animated.Value(0)).current;
   const giftAnimY = useRef(new Animated.Value(0)).current;
   const giftAnimOpacity = useRef(new Animated.Value(0)).current;
@@ -291,14 +298,23 @@ export default function VideoLiveScreen() {
       }
       const data = await res.json();
       if (Array.isArray(data)) {
-        setGiftList(
-          data.map((item: any) => ({
+        const processedGifts = data.map((item: any) => {
+          const resolvedUrl = resolveGiftImageUrl(item.imageUrl);
+          return {
             id: item.id,
             name: item.name,
             coinValue: item.coinValue,
-            imageUrl: resolveGiftImageUrl(item.imageUrl),
-          }))
-        );
+            imageUrl: resolvedUrl,
+          };
+        });
+        setGiftList(processedGifts);
+        
+        // Preload small images for better performance
+        processedGifts.forEach((gift: any) => {
+          if (gift.imageUrl && !isVideoFile(gift.imageUrl)) {
+            Image.prefetch(gift.imageUrl).catch(() => {});
+          }
+        });
       }
       setLoadingGifts(false);
     } catch {
@@ -307,6 +323,13 @@ export default function VideoLiveScreen() {
   };
 
   const triggerGiftAnimation = (senderName: string, giftImageUrl: string, giftName: string) => {
+    // Check if it's a video gift
+    if (isVideoFile(giftImageUrl)) {
+      setVideoGift({ senderName, videoUrl: giftImageUrl, giftName });
+      return;
+    }
+    
+    // Regular image gift animation
     giftAnimScale.setValue(0);
     giftAnimY.setValue(0);
     giftAnimOpacity.setValue(1);
@@ -1042,6 +1065,15 @@ export default function VideoLiveScreen() {
           </Animated.View>
         )}
 
+        {videoGift && (
+          <VideoGiftPlayer
+            videoUrl={videoGift.videoUrl}
+            giftName={videoGift.giftName}
+            senderName={videoGift.senderName}
+            onComplete={() => setVideoGift(null)}
+          />
+        )}
+
         <Modal visible={showViewers} transparent animationType="slide" onRequestClose={() => setShowViewers(false)}>
           <View style={styles.giftModalOverlay}>
             <View style={[styles.giftModalContainer, { paddingBottom: 20, marginBottom: keyboardHeight }]}>
@@ -1141,10 +1173,17 @@ export default function VideoLiveScreen() {
                     >
                       <View style={styles.giftImageWrapper}>
                         {item.imageUrl ? (
-                          <Image
-                            source={{ uri: item.imageUrl }}
-                            style={styles.giftImage}
-                          />
+                          isVideoFile(item.imageUrl) ? (
+                            <View style={styles.videoThumbnailContainer}>
+                              <Text style={styles.videoThumbnailIcon}>🎥</Text>
+                              <Text style={styles.videoLabel}>VIDEO</Text>
+                            </View>
+                          ) : (
+                            <Image
+                              source={{ uri: item.imageUrl }}
+                              style={styles.giftImage}
+                            />
+                          )
                         ) : (
                           <Text style={styles.giftPlaceholder}>🎁</Text>
                         )}
@@ -1470,6 +1509,26 @@ const styles = StyleSheet.create({
   giftCoins: {
     color: '#ffd93d',
     fontSize: 11,
+  },
+  videoThumbnailContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  videoThumbnailIcon: {
+    fontSize: 24,
+    marginBottom: 4,
+  },
+  videoLabel: {
+    color: 'white',
+    fontSize: 8,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   giftAnimOverlay: {
     position: 'absolute',
