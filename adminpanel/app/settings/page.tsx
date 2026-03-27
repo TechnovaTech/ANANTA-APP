@@ -362,7 +362,7 @@ export default function SettingsPage() {
                   }}
                 />
                 <p style={{margin:0,marginTop:4,fontSize:11,color:'#a0aec0'}}>
-                  JPG, PNG, GIF • Max 5MB
+                  JPG, PNG, GIF • Max 30MB
                 </p>
               </div>
             </div>
