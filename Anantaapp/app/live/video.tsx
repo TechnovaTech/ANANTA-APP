@@ -8,6 +8,7 @@ import { createAgoraEngine, RtcSurfaceView, ChannelProfileType, ClientRoleType }
 import { ENV } from '@/config/env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
+import { WebView } from 'react-native-webview';
 import VideoGiftPlayer from '@/components/VideoGiftPlayer';
 import { useLive } from '@/contexts/LiveContext';
 
@@ -1179,10 +1180,35 @@ export default function VideoLiveScreen() {
                       <View style={styles.giftImageWrapper}>
                         {item.imageUrl ? (
                           isVideoFile(item.imageUrl) ? (
-                            <View style={styles.videoThumbnailContainer}>
-                              <Text style={styles.videoThumbnailIcon}>🎥</Text>
-                              <Text style={styles.videoLabel}>VIDEO</Text>
-                            </View>
+                            <WebView
+                              source={{
+                                html: `
+                                  <!DOCTYPE html>
+                                  <html>
+                                  <head>
+                                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                                    <style>
+                                      body { margin: 0; padding: 0; background: transparent; }
+                                      video { width: 100%; height: 100%; object-fit: cover; border-radius: 14px; }
+                                    </style>
+                                  </head>
+                                  <body>
+                                    <video autoplay muted loop playsInline>
+                                      <source src="${item.imageUrl}" type="video/mp4">
+                                    </video>
+                                  </body>
+                                  </html>
+                                `
+                              }}
+                              style={styles.giftVideo}
+                              javaScriptEnabled
+                              domStorageEnabled
+                              allowsInlineMediaPlayback
+                              mediaPlaybackRequiresUserAction={false}
+                              scrollEnabled={false}
+                              showsHorizontalScrollIndicator={false}
+                              showsVerticalScrollIndicator={false}
+                            />
                           ) : (
                             <Image
                               source={{ uri: item.imageUrl }}
@@ -1502,6 +1528,12 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 14,
+  },
+  giftVideo: {
+    width: 64,
+    height: 64,
+    borderRadius: 14,
+    backgroundColor: 'transparent',
   },
   giftPlaceholder: {
     fontSize: 30,
