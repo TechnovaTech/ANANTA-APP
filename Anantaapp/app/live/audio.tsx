@@ -87,6 +87,7 @@ export default function AudioLiveScreen() {
   const giftAnimY = useRef(new Animated.Value(0)).current;
   const giftAnimOpacity = useRef(new Animated.Value(0)).current;
   const shownGiftIds = useRef<Set<number>>(new Set());
+  const processedGiftMessages = useRef<Set<number>>(new Set());
   const scrollViewRef = useRef<ScrollView>(null);
   const engineRef = useRef<any | null>(null);
   const statsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -479,9 +480,13 @@ export default function AudioLiveScreen() {
           data.forEach((msg: any) => {
             try {
               const parsed = JSON.parse(msg.message);
-              if (parsed.__gift && msg.id && !shownGiftIds.current.has(msg.id)) {
-                shownGiftIds.current.add(msg.id);
-                triggerGiftAnimation(msg.user, parsed.giftImageUrl, parsed.giftName);
+              if (parsed.__gift && msg.id && !processedGiftMessages.current.has(msg.id)) {
+                processedGiftMessages.current.add(msg.id);
+                // Only show gift animation if this is a new message (not from rejoining)
+                const messageAge = Date.now() - new Date(msg.createdAt || msg.timestamp || 0).getTime();
+                if (messageAge < 30000) { // Only show gifts from last 30 seconds
+                  triggerGiftAnimation(msg.user, parsed.giftImageUrl, parsed.giftName);
+                }
               }
             } catch {
               regularComments.push(msg);
