@@ -2,7 +2,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { router } from 'expo-router';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Dimensions, Image, ScrollView, StyleSheet, TouchableOpacity, View, Animated, Text, StatusBar, Platform, Alert } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { Video } from 'expo-av';
@@ -24,6 +24,7 @@ export default function HomeScreen() {
   const [videoLives, setVideoLives] = useState<any[]>([]);
   const [audioLives, setAudioLives] = useState<any[]>([]);
   const [heroItems, setHeroItems] = useState<any[]>([]);
+  const videoRefs = useRef<{ [key: number]: any }>({});
   
   // Smooth animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -79,23 +80,39 @@ export default function HomeScreen() {
   };
   
 
-  useEffect(() => {
-    if (heroItems.length < 2) {
-      return;
-    }
-    const interval = setInterval(() => {
-      setCurrentBannerIndex(prevIndex => {
-        const nextIndex = (prevIndex + 1) % heroItems.length;
-        bannerScrollRef.current?.scrollTo({
-          x: nextIndex * (width - 40 + 15), // Account for card width + margin
-          animated: true,
-        });
-        return nextIndex;
+  const moveToNextBanner = useCallback(() => {
+    if (heroItems.length < 2) return;
+    
+    setCurrentBannerIndex(prevIndex => {
+      const nextIndex = (prevIndex + 1) % heroItems.length;
+      bannerScrollRef.current?.scrollTo({
+        x: nextIndex * (width - 40 + 15),
+        animated: true,
       });
-    }, 3500); // Slightly faster animation
+      return nextIndex;
+    });
+  }, [heroItems.length]);
+
+  const handleVideoEnd = useCallback(() => {
+    moveToNextBanner();
+  }, [moveToNextBanner]);
+
+  useEffect(() => {
+    if (heroItems.length < 2) return;
+    
+    // Only set interval for non-video items or as fallback
+    const interval = setInterval(() => {
+      const currentItem = heroItems[currentBannerIndex];
+      const isVideo = String(currentItem?.mediaType || '').toUpperCase() === 'VIDEO';
+      
+      // For non-video items, auto-advance after 3.5 seconds
+      if (!isVideo) {
+        moveToNextBanner();
+      }
+    }, 3500);
 
     return () => clearInterval(interval);
-  }, [heroItems.length]);
+  }, [heroItems.length, currentBannerIndex, moveToNextBanner]);
 
   useEffect(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
@@ -390,12 +407,18 @@ export default function HomeScreen() {
                 <TouchableOpacity key={item.id ?? index} style={styles.featuredCard}>
                   {isVideo && mediaUrl ? (
                     <Video
+                      ref={(ref) => { videoRefs.current[index] = ref; }}
                       source={{ uri: mediaUrl }}
                       style={styles.featuredImage}
                       resizeMode="cover"
                       shouldPlay={index === currentBannerIndex}
-                      isLooping
+                      isLooping={false}
                       isMuted
+                      onPlaybackStatusUpdate={(status) => {
+                        if (status.isLoaded && status.didJustFinish && index === currentBannerIndex) {
+                          handleVideoEnd();
+                        }
+                      }}
                     />
                   ) : mediaUrl ? (
                     <View style={styles.featuredImage}>
@@ -422,13 +445,7 @@ export default function HomeScreen() {
                       <Text style={styles.heroSubtitle}>{item.subtitle}</Text>
                     ) : null}
                   </View>
-                  {isVideo ? (
-                    <View style={styles.featuredOverlay}>
-                      <View style={[styles.playButton, { backgroundColor: isDark ? 'rgba(247,193,77,0.9)' : 'rgba(18,125,150,0.9)' }]}>
-                        <Ionicons name="play" size={24} color="white" />
-                      </View>
-                    </View>
-                  ) : null}
+
                 </TouchableOpacity>
               );
             })}
@@ -636,20 +653,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  featuredOverlay: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -30 }, { translateY: -30 }],
-  },
-  playButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: 'rgba(18,125,150,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
   heroOverlay: {
     position: 'absolute',
     left: 16,
