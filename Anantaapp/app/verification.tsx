@@ -14,7 +14,7 @@ import { ENV } from '@/config/env';
 const HOST_POLICY_TEXT = `ANANTA
 Host Policy
 Guidelines and responsibilities for all live hosts on the Ananta platform.
-Effective Date: 24 March 2026
+Effective Date: 30 March 2026
 Operated by Sparknet Studios
 support@anantalive.com  |  anantalive.com
 
@@ -26,162 +26,184 @@ Failure to comply with this Policy may result in earnings being withheld, host p
 2. Becoming a Host on Ananta
 2.1 Eligibility
 To become a Host on Ananta, you must meet all of the following requirements:
-• Be at least 18 years of age
-• Hold a valid, active Ananta user account in good standing
-• Successfully complete Ananta's KYC (Know Your Customer) verification process
-• Agree to and comply with this Host Policy, the Terms of Service, and Privacy Policy
-
+•	Be at least 18 years of age
+•	Hold a valid, active Ananta user account in good standing
+•	Successfully complete Ananta's KYC (Know Your Customer) verification process
+•	Agree to and comply with this Host Policy, the Terms of Service, and Privacy Policy
 2.2 KYC Verification
 KYC verification is mandatory for all Hosts before going live or receiving earnings. The KYC process requires you to submit the following:
-• A valid government-issued photo ID — Aadhaar card, PAN card, Passport, or Voter ID
-• A selfie or liveness check for identity confirmation
-• Your bank account details or UPI ID for withdrawal purposes
-• PAN card details for tax compliance and TDS deduction as applicable under Indian income tax law
+•	A valid government-issued photo ID — Aadhaar card, PAN card, Passport, or Voter ID
+•	A selfie or liveness check for identity confirmation
+•	Your bank account details or UPI ID for withdrawal purposes
+•	PAN card details for tax compliance and TDS deduction as applicable under Indian income tax law
 KYC documents are reviewed by Sparknet Studios within 2-5 business days. You will be notified via email and in-app notification once your KYC is approved or if additional information is required. Providing false, incomplete, or fraudulent KYC documents will result in immediate permanent ban and may be reported to relevant authorities.
-
 2.3 Host Activation
 Once your KYC is verified and approved, your account will be upgraded to Host status. You may then go live using the Ananta app. Ananta reserves the right to revoke host status at any time for violations of this Policy or the Terms of Service.
 
 3. Host Responsibilities
 3.1 Stream Environment
 As a Host, you are fully responsible for everything that occurs within your live stream. This includes:
-• Ensuring your streaming environment is appropriate, well-lit, and free of hazardous or offensive background content
-• Ensuring no minors are visible or participating in your live stream in any capacity
-• Ensuring no other individuals appear in your stream without their explicit consent
-• Ensuring your stream does not take place in a location where broadcasting could be illegal or unsafe
-
+•	Ensuring your streaming environment is appropriate, well-lit, and free of hazardous or offensive background content
+•	Ensuring no minors are visible or participating in your live stream in any capacity
+•	Ensuring no other individuals appear in your stream without their explicit consent
+•	Ensuring your stream does not take place in a location where broadcasting could be illegal or unsafe
 3.2 Content Standards
 All content broadcast on Ananta must adhere to the following standards at all times during a live session:
-• Content must be suitable for a general adult audience (18+)
-• Language must be respectful — excessive profanity, slurs, or hate speech is not permitted
-• Hosts must not engage in or encourage any activity that is illegal under Indian law
-• Hosts must treat all viewers and co-hosts with dignity and respect
-• Hosts must not solicit personal information from viewers including phone numbers, addresses, or financial details
+•	Content must be suitable for a general adult audience (18+)
+•	Language must be respectful — excessive profanity, slurs, or hate speech is not permitted
+•	Hosts must not engage in or encourage any activity that is illegal under Indian law
+•	Hosts must treat all viewers and co-hosts with dignity and respect
+•	Hosts must not solicit personal information from viewers including phone numbers, addresses, or financial details
 
 4. Strictly Prohibited Content
 The following categories of content are strictly prohibited on Ananta under all circumstances. Broadcasting any of the following will result in immediate stream termination, earnings withholding, and permanent account ban:
-
 4.1 Adult and Sexual Content
-• Nudity, partial nudity, or sexually suggestive behaviour of any kind
-• Sexually explicit language, sounds, or acts
-• Content designed to solicit sexual favours or payments in exchange for sexual content
-• Any content that sexualises or exploits individuals
-
+•	Nudity, partial nudity, or sexually suggestive behaviour of any kind
+•	Sexually explicit language, sounds, or acts
+•	Content designed to solicit sexual favours or payments in exchange for sexual content
+•	Any content that sexualises or exploits individuals
 4.2 Political Content
-• Campaigning for or against any political party, candidate, or political ideology
-• Broadcasting political rallies, speeches, or party propaganda
-• Expressing partisan political opinions intended to influence viewers
-• Content that could be construed as election interference or voter manipulation
+•	Campaigning for or against any political party, candidate, or political ideology
+•	Broadcasting political rallies, speeches, or party propaganda
+•	Expressing partisan political opinions intended to influence viewers
+•	Content that could be construed as election interference or voter manipulation
 Ananta is a neutral entertainment platform. Discussions of current events are permitted in a neutral and factual manner but must not cross into partisan political advocacy.
-
 4.3 Religious Content
-• Content that mocks, disrespects, or attacks any religion, religious community, religious figure, or place of worship
-• Content that promotes religious extremism, fundamentalism, or sectarian violence
-• Content designed to provoke communal tension or religious discord
-• Proselytising or soliciting conversions during a live stream
+•	Content that mocks, disrespects, or attacks any religion, religious community, religious figure, or place of worship
+•	Content that promotes religious extremism, fundamentalism, or sectarian violence
+•	Content designed to provoke communal tension or religious discord
+•	Proselytising or soliciting conversions during a live stream
 Hosts may discuss religion respectfully and factually. Content that promotes harmony and understanding across religions is permitted. Content that incites division or disrespect is not.
-
 4.4 Other Prohibited Content
-• Violence, gore, self-harm, or content that glorifies or encourages physical harm
-• Gambling, betting, or promotion of online gambling platforms
-• Promotion, sale, or use of illegal drugs, alcohol to minors, or controlled substances
-• Sharing or displaying copyrighted material including songs, films, or shows without proper licencing
-• Harassment, stalking, or targeted abuse of any individual viewer or user
-• Fake news, misinformation, or content designed to deceive viewers
-• Unauthorised promotion or advertising of third-party products or services for personal gain
+•	Violence, gore, self-harm, or content that glorifies or encourages physical harm
+•	Gambling, betting, or promotion of online gambling platforms
+•	Promotion, sale, or use of illegal drugs, alcohol to minors, or controlled substances
+•	Sharing or displaying copyrighted material including songs, films, or shows without proper licencing
+•	Harassment, stalking, or targeted abuse of any individual viewer or user
+•	Fake news, misinformation, or content designed to deceive viewers
+•	Unauthorised promotion or advertising of third-party products or services for personal gain
 
 5. Gifting and Earnings
 5.1 Virtual Gifts
 Viewers may send virtual gifts to Hosts during live streams using Ananta coins. Gifts are a voluntary expression of appreciation from viewers and do not represent payment for any specific service or act. Hosts must not solicit gifts in exchange for specific content, actions, or promises, as this constitutes a transactional arrangement that violates this Policy.
-
 5.2 Platform Fee
 Ananta retains a platform fee from all gifts received by Hosts. The remaining balance after the platform fee is credited to the Host's in-app earnings wallet. The current platform fee percentage is communicated within the app and may be updated with prior notice.
-
 5.3 Earnings Wallet
 Earnings credited to your wallet represent your share of gifts received after the platform fee. Earnings accumulate in your in-app wallet and can be withdrawn subject to the conditions in Section 6. Sparknet Studios reserves the right to freeze, withhold, or forfeit earnings in the following circumstances:
-• Violation of this Host Policy or the Terms of Service
-• Suspected fraudulent activity including self-gifting, coordinated fake gifting, or coin manipulation
-• Pending investigation of a complaint or legal inquiry
-• Failure to maintain valid KYC or providing false KYC documents
-• Account termination due to policy violations
+•	Violation of this Host Policy or the Terms of Service
+•	Suspected fraudulent activity including self-gifting, coordinated fake gifting, or coin manipulation
+•	Pending investigation of a complaint or legal inquiry
+•	Failure to maintain valid KYC or providing false KYC documents
+•	Account termination due to policy violations
 
 6. Withdrawals
 6.1 Eligibility for Withdrawal
 To withdraw earnings from your Ananta wallet, you must:
-• Have completed and maintained valid KYC verification
-• Have a minimum balance meeting the withdrawal threshold as specified in the app
-• Have a verified bank account or UPI ID linked to your account
-• Not have any active policy violations, account suspensions, or pending investigations
-
+•	Have completed and maintained valid KYC verification
+•	Have a minimum balance meeting the withdrawal threshold as specified in the app
+•	Have a verified bank account or UPI ID linked to your account
+•	Not have any active policy violations, account suspensions, or pending investigations
 6.2 Withdrawal Process
 Withdrawal requests are processed within 3-7 business days via IMPS or UPI to your registered account. Sparknet Studios is not responsible for delays caused by your bank or payment infrastructure. Withdrawals may be subject to TDS deduction as applicable under Indian income tax regulations. It is your sole responsibility to file your income tax returns and declare earnings from Ananta.
-
 6.3 Withheld Earnings
 If your earnings are withheld due to a policy violation or investigation, you will be notified via email and in-app notification. Withheld earnings will be reviewed within 15 business days. If the investigation concludes in your favour, earnings will be released. If the investigation confirms a violation, withheld earnings may be forfeited permanently.
 
 7. Stream Moderation and Intervention
 Ananta employs automated monitoring tools and human moderators who may observe live streams at any time. In the event that a live stream is found to be in violation of this Policy, Ananta reserves the right to:
-• Immediately terminate the live stream without prior notice
-• Issue an in-app warning to the Host
-• Temporarily or permanently restrict the Host's ability to go live
-• Withhold or forfeit the Host's earnings
-• Permanently ban the Host's account
-• Report the content and Host details to law enforcement authorities if required by Indian law
+•	Immediately terminate the live stream without prior notice
+•	Issue an in-app warning to the Host
+•	Temporarily or permanently restrict the Host's ability to go live
+•	Withhold or forfeit the Host's earnings
+•	Permanently ban the Host's account
+•	Report the content and Host details to law enforcement authorities if required by Indian law
 Moderation decisions are made at the sole discretion of Sparknet Studios. Hosts may appeal a moderation decision by contacting support@anantalive.com within 7 days of the action. Appeals will be reviewed within 15 business days. The decision on appeal is final.
 
 8. Violations and Consequences
 8.1 Earnings Withholding
 Any confirmed violation of this Policy may result in some or all of your accumulated earnings being withheld. Withheld earnings may be permanently forfeited if the violation is determined to be severe or intentional. Examples of violations leading to earnings withholding include broadcasting prohibited content, fraudulent gifting activity, or providing false KYC information.
-
 8.2 Permanent Ban
 The following violations will result in immediate permanent account ban with no possibility of reinstatement:
-• Broadcasting adult, sexual, or pornographic content
-• Content involving or targeting minors in any harmful manner
-• Fraudulent KYC submission or identity impersonation
-• Coordinated gifting fraud or coin economy manipulation
-• Content that incites violence, communal hatred, or terrorism
-• Repeated serious violations following prior warnings or suspensions
+•	Broadcasting adult, sexual, or pornographic content
+•	Content involving or targeting minors in any harmful manner
+•	Fraudulent KYC submission or identity impersonation
+•	Coordinated gifting fraud or coin economy manipulation
+•	Content that incites violence, communal hatred, or terrorism
+•	Repeated serious violations following prior warnings or suspensions
 A permanently banned Host forfeits all accumulated earnings and coins. The associated device and phone number may also be blocked from creating new accounts on Ananta.
-
 8.3 Reporting Violations to Authorities
 Sparknet Studios will cooperate fully with law enforcement and regulatory authorities in India. Any content that constitutes a cognisable offence under Indian law including the Information Technology Act 2000, Indian Penal Code, or POCSO Act will be reported to the appropriate authorities and relevant user data will be shared as required by law.
 
 9. Intellectual Property During Streams
 Hosts are responsible for ensuring they have the necessary rights and licences for all content used during a live stream. This includes:
-• Background music — you must hold a valid licence or use royalty-free music only
-• Films, shows, or video clips — broadcasting copyrighted video content is strictly prohibited
-• Third-party logos, brand names, or trademarks — must not be used without authorisation
+•	Background music — you must hold a valid licence or use royalty-free music only
+•	Films, shows, or video clips — broadcasting copyrighted video content is strictly prohibited
+•	Third-party logos, brand names, or trademarks — must not be used without authorisation
 Ananta may mute or terminate streams where copyrighted content is detected. Repeat violations may result in permanent ban. Ananta is not liable for copyright claims arising from a Host's stream content.
 
 10. Host Conduct Towards Viewers
 Hosts are expected to maintain a respectful and positive relationship with their audience. The following conduct towards viewers is prohibited:
-• Soliciting personal information such as phone numbers, home addresses, or financial details from viewers
-• Pressuring viewers to send gifts, recharge coins, or make payments
-• Engaging in romantic or intimate conversations with viewers in a manner designed to exploit emotions or extract money
-• Discriminating against viewers based on religion, caste, gender, sexual orientation, or region
-• Publicly shaming, mocking, or humiliating any viewer
+•	Soliciting personal information such as phone numbers, home addresses, or financial details from viewers
+•	Pressuring viewers to send gifts, recharge coins, or make payments
+•	Engaging in romantic or intimate conversations with viewers in a manner designed to exploit emotions or extract money
+•	Discriminating against viewers based on religion, caste, gender, sexual orientation, or region
+•	Publicly shaming, mocking, or humiliating any viewer
 
 11. Tax Compliance
 All earnings received through Ananta are subject to applicable Indian tax laws. As a Host, you are solely responsible for:
-• Declaring your Ananta earnings in your annual income tax return
-• Paying applicable income tax on your earnings
-• Maintaining records of your earnings and withdrawals for tax purposes
+•	Declaring your Ananta earnings in your annual income tax return
+•	Paying applicable income tax on your earnings
+•	Maintaining records of your earnings and withdrawals for tax purposes
 Sparknet Studios will deduct TDS (Tax Deducted at Source) as required under Indian income tax regulations and will provide TDS certificates upon request. Ananta is not responsible for your personal tax filings or liabilities beyond mandatory TDS deduction.
 
-12. Changes to This Policy
+12. Launch Incentive — Monthly Streaming Stipend
+As a gesture of appreciation to hosts who join Ananta during its launch phase, Sparknet Studios is offering a fixed monthly stipend to eligible hosts who meet the minimum streaming activity requirements set out below. This stipend is entirely separate from gift earnings and is provided at the sole discretion of Sparknet Studios as a platform incentive for early adopters.
+12.1 Stipend Amount
+The monthly stipend applicable to eligible hosts during the launch phase is as follows:
+•	General hosts: ₹2,000 per month
+•	Singer category hosts: ₹2,500 per month
+•	Dancer category hosts: ₹2,500 per month
+Host category is determined at the time of KYC verification and profile setup. Hosts must select their primary category accurately. Misrepresentation of category to claim a higher stipend amount will result in disqualification and may lead to account termination.
+12.2 Eligibility Criteria
+To qualify for the monthly stipend, a host must meet all of the following conditions within the calendar month:
+•	Minimum total live streaming duration: 30 hours across all sessions in the month
+•	Minimum number of active streaming days: 20 days in the month
+•	Active and verified KYC status throughout the month
+•	No active policy violations, warnings, or suspensions during the month
+•	Account in good standing with no pending fraud investigations
+Both conditions — 30 total streaming hours and 20 active streaming days — must be met independently. Meeting one condition alone does not qualify the host for the stipend.
+12.3 Stipend Payment
+Stipend payments for eligible hosts will be processed within the first 10 business days of the following month. Payment will be made via UPI or IMPS to the bank account or UPI ID registered during KYC verification. Sparknet Studios will communicate the exact payment date to eligible hosts via the registered email address and in-app notification.
+12.4 Important Disclaimers on the Stipend
+Hosts must read and understand the following before relying on the stipend:
+•	The stipend is a discretionary launch incentive offered by Sparknet Studios and does not constitute a salary, employment contract, or guarantee of any kind
+•	Sparknet Studios reserves the right to modify the stipend amount, eligibility criteria, payment schedule, or host categories covered at any time
+•	Sparknet Studios reserves the right to discontinue the stipend programme entirely at any time without assigning any reason
+•	Any changes to or discontinuation of the stipend will be communicated to hosts via their registered email address with reasonable advance notice
+•	The stipend does not create an employer-employee relationship between Sparknet Studios and the host
+•	Stipend amounts may be subject to TDS deduction as applicable under Indian income tax law
+•	Hosts may not transfer, assign, or claim the stipend on behalf of another host
+•	Sparknet Studios decision on stipend eligibility is final and binding
+12.5 Disqualification
+A host will be disqualified from receiving the stipend for a given month if any of the following occur during that month:
+•	Failure to meet the 30-hour streaming or 20-day activity requirement
+•	Any confirmed violation of this Host Policy or the Terms of Service
+•	Artificially inflating streaming hours using bots, idle streams, or other fraudulent methods
+•	Account suspension or ban at any point during the month
+Sparknet Studios monitors streaming activity for authenticity. Idle streams, looped content, or non-interactive sessions may not be counted towards the 30-hour eligibility requirement at Ananta's discretion.
+
+13. Changes to This Policy
 Sparknet Studios reserves the right to update or modify this Host Policy at any time. Hosts will be notified of material changes via in-app notification or email at least 7 days before the changes take effect. Continued hosting activity after the effective date of changes constitutes your acceptance of the revised Policy.
 
-13. Contact and Support
-For any questions, concerns, or appeals related to this Host Policy, please contact the Ananta support team:
-• Email: support@anantalive.com
-• Website: https://anantalive.com
-• Response time: Within 5 business days
-• Operated by: Sparknet Studios, India
+14. Contact and Support
+For any questions, concerns, or appeals related to this Host Policy, the stipend programme, or any other matter, please contact the Ananta support team:
+•	Email: support@anantalive.com
+•	Website: https://anantalive.com
+•	Response time: Within 5 business days
+•	Operated by: Sparknet Studios, India
 
 SCHEDULE A
 Host Earnings Structure — Phase 1 (Starter)
-Effective: 24 March 2026  |  Applicable to all verified hosts during Phase 1
-
+Effective: 30 March 2026  |  Applicable to all verified hosts during Phase 1
 A1. Overview
 This Schedule forms part of the Ananta Host Policy and sets out the earnings structure applicable to all verified hosts during Phase 1 of the Ananta platform. All hosts who successfully complete KYC verification are automatically enrolled in the Starter tier. This structure will remain in effect until Sparknet Studios communicates a revised structure with at least 7 days prior notice.
 
@@ -191,51 +213,48 @@ The following fee structure applies to all gift earnings received during live vi
 Platform Deduction: 40% of total gift value received
 Host Payout: 60% of total gift value received
 The platform deduction of 40% covers the following operational costs incurred by Ananta on behalf of the host:
-• Agora HD streaming infrastructure costs (720p video and audio delivery)
-• Razorpay payment gateway processing fees on viewer recharges
-• Platform server, maintenance, and operational expenses
-• Customer support and moderation services
-• Platform profit and growth reinvestment
+•	Agora HD streaming infrastructure costs (720p video and audio delivery)
+•	Razorpay payment gateway processing fees on viewer recharges
+•	Platform server, maintenance, and operational expenses
+•	Customer support and moderation services
+•	Platform profit and growth reinvestment
 Sparknet Studios does not charge any fixed monthly fee to hosts during Phase 1. The platform deduction is the sole charge applied to gift earnings.
 
 A3. Illustrative Earnings Example
 The following example illustrates how earnings are calculated for a host receiving gifts during a live stream session:
-• Total gifts received during stream: ₹1,000
-• Platform deduction (40%): ₹400
-• Host gross earnings (60%): ₹600
-• TDS deducted at source (1% of host gross earnings): ₹6
-• Host net payout to bank/UPI: ₹594
+•	Total gifts received during stream: ₹1,000
+•	Platform deduction (40%): ₹400
+•	Host gross earnings (60%): ₹600
+•	TDS deducted at source (1% of host gross earnings): ₹6
+•	Host net payout to bank/UPI: ₹594
 Note: TDS is deducted as required under Section 194O or applicable provisions of the Indian Income Tax Act. A TDS certificate will be issued to the host for each financial year. Hosts are solely responsible for filing their own income tax returns and declaring total earnings from the platform.
 
 A4. Coin-to-Rupee Conversion
 Viewer gifts are sent using Ananta coins. The coin-to-rupee conversion rate used for calculating host earnings is as follows:
-• Coin value for host earnings calculation: as published within the Ananta app at the time of the gift
-• Ananta reserves the right to revise the coin-to-rupee conversion rate with 7 days prior notice to hosts
-• Conversion rates for viewer recharges and host earnings may differ — the applicable rate for host earnings will always be the rate displayed in the host earnings dashboard
+•	Coin value for host earnings calculation: as published within the Ananta app at the time of the gift
+•	Ananta reserves the right to revise the coin-to-rupee conversion rate with 7 days prior notice to hosts
+•	Conversion rates for viewer recharges and host earnings may differ — the applicable rate for host earnings will always be the rate displayed in the host earnings dashboard
 
 A5. Withdrawal Conditions
 A5.1 Minimum Withdrawal Threshold
 Hosts may submit a withdrawal request once their wallet balance meets the minimum threshold of ₹500. Withdrawal requests below this threshold will not be processed.
-
 A5.2 Processing Timeline
 Approved withdrawal requests are processed within 3 to 7 business days via IMPS or UPI transfer to the host's verified bank account or UPI ID registered during KYC. Sparknet Studios is not liable for delays caused by the host's bank or payment infrastructure.
-
 A5.3 Withdrawal Fees
 Ananta does not charge any additional fee on withdrawals during Phase 1. The host receives the full net payout amount after platform deduction and TDS as described in Section A3.
-
 A5.4 Withdrawal Holds
 Withdrawal requests may be placed on hold in the following circumstances:
-• Pending KYC re-verification or expiry of KYC documents
-• Active investigation of a policy violation or fraud complaint
-• Discrepancy between registered bank details and KYC identity
-• Legal hold or regulatory requirement
+•	Pending KYC re-verification or expiry of KYC documents
+•	Active investigation of a policy violation or fraud complaint
+•	Discrepancy between registered bank details and KYC identity
+•	Legal hold or regulatory requirement
 Hosts will be notified via in-app notification and email if a withdrawal is placed on hold. Sparknet Studios will endeavour to resolve holds within 15 business days.
 
 A6. Future Tier Structure
 Sparknet Studios intends to introduce additional earning tiers in future phases of the platform to reward high-performing hosts with improved revenue share. The indicative future structure is as follows — this is provided for transparency only and is not a contractual commitment:
-• Starter Tier (Phase 1, current): 40% platform deduction, host keeps 60% — applicable to all hosts
-• Growth Tier (future): 35% platform deduction, host keeps 65% — for hosts earning ₹10,000 or more per month
-• Star Tier (future): 30% platform deduction, host keeps 70% — for hosts earning ₹50,000 or more per month
+•	Starter Tier (Phase 1, current): 40% platform deduction, host keeps 60% — applicable to all hosts
+•	Growth Tier (future): 35% platform deduction, host keeps 65% — for hosts earning ₹10,000 or more per month
+•	Star Tier (future): 30% platform deduction, host keeps 70% — for hosts earning ₹50,000 or more per month
 Hosts will be automatically upgraded to a higher tier once their monthly earnings meet the applicable threshold. Tier changes will be communicated via in-app notification and will take effect from the first day of the following month.
 
 A7. Changes to Earnings Structure
@@ -243,10 +262,10 @@ Sparknet Studios reserves the right to revise the platform fee, tier thresholds,
 
 A8. Queries on Earnings
 For any questions or disputes regarding your earnings, deductions, withdrawals, or TDS certificates, please contact:
-• Email: support@anantalive.com
-• Subject line: Host Earnings Query — [Your Registered Username]
-• Include your transaction ID or withdrawal reference number for faster resolution
-• Response time: Within 5 business days`;
+•	Email: support@anantalive.com
+•	Subject line: Host Earnings Query — [Your Registered Username]
+•	Include your transaction ID or withdrawal reference number for faster resolution
+•	Response time: Within 5 business days`;
 
 export default function VerificationScreen() {
   const { isDark } = useTheme();
