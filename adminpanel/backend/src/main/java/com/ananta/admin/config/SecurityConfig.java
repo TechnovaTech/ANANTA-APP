@@ -100,6 +100,8 @@ public class SecurityConfig {
         configuration.addAllowedOrigin("http://localhost:3000");
         configuration.addAllowedOrigin("http://ecofuelglobal.com");
         configuration.addAllowedOrigin("https://ecofuelglobal.com");
+        configuration.addAllowedOrigin("http://anantalive.com");
+        configuration.addAllowedOrigin("https://anantalive.com");
         configuration.addAllowedHeader("*");
         configuration.addAllowedMethod("*");
         configuration.setAllowCredentials(true);
@@ -119,7 +121,9 @@ public class SecurityConfig {
                                 "http://localhost:19006",
                                 "http://localhost:3000",
                                 "http://ecofuelglobal.com",
-                                "https://ecofuelglobal.com"
+                                "https://ecofuelglobal.com",
+                                "http://anantalive.com",
+                                "https://anantalive.com"
                         )
                         .allowedMethods("*")
                         .allowedHeaders("*")
