@@ -19,7 +19,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await axios.post('https://ecofuelglobal.com/api/admin/login', { email, password });
+      const response = await axios.post('https://admin.anantalive.com/api/admin/login', { email, password });
       login(response.data.token);
       router.push('/users');
     } catch (err: any) {
