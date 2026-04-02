@@ -192,7 +192,7 @@ return true; // iOS permissions handled by Info.plist
 #### Before:
 ```typescript
 export const ENV = {
-  API_BASE_URL: 'http://localhost:3000',
+  API_BASE_URL: 'http://localhost:3011',
 };
 ```
 

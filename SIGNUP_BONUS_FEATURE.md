@@ -59,7 +59,7 @@ A new **App Settings** module has been added as a separate sidebar item in the a
    ```
 
 3. **Access the feature**:
-   - Go to: http://localhost:3000
+   - Go to: http://localhost:3011
    - Login with admin credentials
    - Click on **"App Settings"** in the sidebar
    - Set the signup bonus value (e.g., 100 coins)

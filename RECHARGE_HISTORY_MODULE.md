@@ -71,7 +71,7 @@ npm run dev
 ```
 
 ### Step 3: Access Recharge History
-Navigate to: **http://localhost:3000/recharge-history**
+Navigate to: **http://localhost:3011/recharge-history**
 
 ---
 
@@ -80,7 +80,7 @@ Navigate to: **http://localhost:3000/recharge-history**
 ### Viewing Recharge History
 
 1. **Login to Admin Panel**
-   - URL: http://localhost:3000
+   - URL: http://localhost:3011
    - Email: admin@ananta.com
    - Password: Admin@123
 
@@ -445,7 +445,7 @@ Your Recharge History module is now complete with:
 
 ---
 
-**Access URL:** http://localhost:3000/recharge-history
+**Access URL:** http://localhost:3011/recharge-history
 
 **Menu Location:** Sidebar → Recharge History
 

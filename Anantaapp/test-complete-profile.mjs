@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000';
+const API_BASE = 'http://localhost:3011';
 const testUserId = 'AND6926A9B';
 
 // Small test image (1x1 pixel)

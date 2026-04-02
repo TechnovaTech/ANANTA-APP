@@ -159,7 +159,7 @@ SELECT session_id, created_at, ended_at FROM live_sessions ORDER BY created_at D
 3. Verify times match your current IST time
 
 ### 4. **Test Admin Panel Display**
-1. Login to admin panel: http://localhost:3000
+1. Login to admin panel: http://localhost:3011
 2. Navigate to Users → Select a user → Live History
 3. Check that all timestamps show "IST" label
 4. Verify times match your current IST time

@@ -32,7 +32,7 @@ return (
 ---
 
 ### 2. ✅ Images Not Loading (ERR_CONNECTION_REFUSED)
-**Problem:** Hero images were trying to load from `http://localhost:3000/uploads/...` instead of the actual domain `https://ecofuelglobal.com/uploads/...`
+**Problem:** Hero images were trying to load from `http://localhost:3011/uploads/...` instead of the actual domain `https://ecofuelglobal.com/uploads/...`
 
 **File Fixed:**
 - `adminpanel/app/hero/page.tsx`
@@ -44,7 +44,7 @@ return (
 const resolveMediaUrl = (value: string) => {
   if (!value) return '';
   if (value.startsWith('http') || value.startsWith('data:')) return value;
-  if (value.startsWith('/uploads/')) return `http://localhost:3000${value}`;
+  if (value.startsWith('/uploads/')) return `http://localhost:3011${value}`;
   return value;
 };
 ```

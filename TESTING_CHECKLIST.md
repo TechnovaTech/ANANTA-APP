@@ -10,7 +10,7 @@
 ## 1. Permanent User Deletion
 
 ### Test Case 1.1: Delete User
-- [ ] Login to admin panel (http://localhost:3000/users)
+- [ ] Login to admin panel (http://localhost:3011/users)
 - [ ] Click "Delete" on a test user
 - [ ] Confirm deletion
 - [ ] **Expected**: User disappears from list

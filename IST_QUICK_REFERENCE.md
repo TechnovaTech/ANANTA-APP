@@ -48,7 +48,7 @@ npm start
 4. ✅ Check: All times should show "IST" label
 
 ### Step 4: Check Admin Panel
-1. Login: http://localhost:3000
+1. Login: http://localhost:3011
 2. Go to Users → Select user → Live History
 3. ✅ Check: All times should show "IST" label
 

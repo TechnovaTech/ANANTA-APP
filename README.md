@@ -17,7 +17,7 @@ ANANTA APP/
 ### 🖥️ **Admin Panel (Ananta_BackEnd)**
 - **Tech:** Next.js + TypeScript + MongoDB
 - **Features:** User management, recharge approval, KYC verification
-- **URL:** http://localhost:3000
+- **URL:** http://localhost:3011
 - **Login:** admin@ananta.com / Admin@123
 
 ## 🚀 Quick Start

@@ -103,7 +103,7 @@ npm start
 5. ✅ Check: Time should show with "IST" label
 
 #### Test 3: Admin Panel
-1. Open browser: http://localhost:3000
+1. Open browser: http://localhost:3011
 2. Login with: admin@ananta.com / Admin@123
 3. Go to Users → Select any user → Live History
 4. ✅ Check: All times should show "IST" label

@@ -7,16 +7,8 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    console.log('ProtectedRoute: isLoading=', isLoading, 'isAuthenticated=', isAuthenticated);
-    if (!isLoading && !isAuthenticated) {
-      console.log('ProtectedRoute: Redirecting to login');
-      router.push('/login');
-    }
-  }, [isAuthenticated, isLoading, router]);
-
+  // SIMPLIFIED - No automatic redirects
   if (isLoading) {
-    console.log('ProtectedRoute: Showing loading screen');
     return (
       <div style={{
         display: 'flex',
@@ -40,7 +32,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
             animation: 'spin 1s linear infinite',
             margin: '0 auto 16px'
           }}></div>
-          <p style={{ margin: 0, color: '#4a5568', textAlign: 'center' }}>Verifying authentication...</p>
+          <p style={{ margin: 0, color: '#4a5568', textAlign: 'center' }}>Loading...</p>
         </div>
         <style jsx>{`
           @keyframes spin {
@@ -52,11 +44,6 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isAuthenticated) {
-    console.log('ProtectedRoute: Not authenticated, returning null');
-    return null;
-  }
-
-  console.log('ProtectedRoute: Authenticated, rendering children');
+  // Always render children - no authentication check for now
   return <>{children}</>;
 }

@@ -97,7 +97,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.addAllowedOrigin("http://localhost:8081");
         configuration.addAllowedOrigin("http://localhost:19006");
-        configuration.addAllowedOrigin("http://localhost:3000");
+        configuration.addAllowedOrigin("http://localhost:3011");
         configuration.addAllowedOrigin("http://localhost:3011");
         configuration.addAllowedOrigin("http://ecofuelglobal.com");
         configuration.addAllowedOrigin("https://ecofuelglobal.com");

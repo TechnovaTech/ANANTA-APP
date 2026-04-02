@@ -159,7 +159,7 @@ mvn spring-boot:run
 3. ✅ Check: Times show "IST" label
 
 ### Test 3: Admin Panel Verification
-1. Open http://localhost:3000
+1. Open http://localhost:3011
 2. Go to Users → Live History
 3. ✅ Check: Times show "IST" label
 

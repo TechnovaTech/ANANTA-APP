@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 
-@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:8081", "http://localhost:19006"}, maxAge = 3600)
+@CrossOrigin(origins = {"http://localhost:3011", "http://localhost:8081", "http://localhost:19006"}, maxAge = 3600)
 @RestController
 @RequestMapping("/api/admin/referral")
 public class AdminReferralController {

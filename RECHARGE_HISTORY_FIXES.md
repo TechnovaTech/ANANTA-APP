@@ -157,7 +157,7 @@ npm run dev
 ```
 
 ### Step 3: Test
-1. Open: http://localhost:3000/recharge-history
+1. Open: http://localhost:3011/recharge-history
 2. Verify:
    - ✅ Usernames display correctly
    - ✅ Newest recharges at top

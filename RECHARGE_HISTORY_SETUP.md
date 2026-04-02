@@ -31,7 +31,7 @@ npm run dev
 ```
 
 ### Step 3: Access the Page
-Open browser: **http://localhost:3000/recharge-history**
+Open browser: **http://localhost:3011/recharge-history**
 
 ---
 
@@ -133,7 +133,7 @@ After installation, verify:
 
 Your Recharge History module is ready to use!
 
-**URL:** http://localhost:3000/recharge-history
+**URL:** http://localhost:3011/recharge-history
 
 **Menu:** Sidebar → Recharge History
 

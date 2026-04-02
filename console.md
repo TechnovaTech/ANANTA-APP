@@ -23,7 +23,7 @@ D:\Office\ANANTA-APP\Anantaapp\app\(tabs)\profile.tsx:64 [Profile] counts: Objec
          to explain an error. 
         Learn more
         Don't show again
-D:\Office\ANANTA-APP\Anantaapp\app\(tabs)\live.tsx:57 Start live response: {hostProfileImage: 'http://localhost:3000/uploads/profile_AND6926A9B_1771916595293.jpg', hostUserId: 'AND6926A9B', hostUid: 284397, hostUsername: 'MJ Rajput', appId: '1298c9c6945f4572bb6754755d2353b3', …}
+D:\Office\ANANTA-APP\Anantaapp\app\(tabs)\live.tsx:57 Start live response: {hostProfileImage: 'http://localhost:3011/uploads/profile_AND6926A9B_1771916595293.jpg', hostUserId: 'AND6926A9B', hostUid: 284397, hostUsername: 'MJ Rajput', appId: '1298c9c6945f4572bb6754755d2353b3', …}
 D:\Office\ANANTA-APP\Anantaapp\app\(tabs)\live.tsx:75 Navigating with params: {sessionId: '89107836-badf-492c-ba26-f3b0fdc518b9', channelName: 'live_AND6926A9B_1772202582352', token: '0061298c9c6945f4572bb6754755d2353b3IABjKQXFypPy680…U8uuQKeLwnb9Y/GAPL0kkPW2zIwtZkD5WqqFpAQABANb7omk=', appId: '1298c9c6945f4572bb6754755d2353b3', type: 'VIDEO', …}
 D:\Office\ANANTA-APP\Anantaapp\app\live\video.tsx:43 Video params: {appId: '1298c9c6945f4572bb6754755d2353b3', channelName: 'live_AND6926A9B_1772202582352', token: '0061298c9c6945f4572b', sessionId: '89107836-badf-492c-ba26-f3b0fdc518b9', hostUid: 284397}
 D:\Office\ANANTA-APP\Anantaapp\node_modules\@expo\metro-runtime\src\error-overlay\LogBox.web.ts:134  Unexpected text node: . A text node cannot be a child of a <View>.

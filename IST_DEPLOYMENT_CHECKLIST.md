@@ -22,7 +22,7 @@
 - [ ] App running successfully
 
 ### Step 4: Admin Panel Deployment
-- [ ] Admin panel accessible at: http://localhost:3000
+- [ ] Admin panel accessible at: http://localhost:3011
 - [ ] Login successful with: admin@ananta.com / Admin@123
 
 ---
@@ -50,7 +50,7 @@
 - [ ] Time matches current IST time (approximately)
 
 ### Test 4: Admin Panel - Live History
-- [ ] Login to admin panel: http://localhost:3000
+- [ ] Login to admin panel: http://localhost:3011
 - [ ] Navigate to: Users → Select user → Live History
 - [ ] Sessions are displayed
 - [ ] Timestamps show "IST" label
@@ -163,7 +163,7 @@ Metro waiting on exp://...
 
 ### Step 4: Verify Admin Panel
 ```bash
-# Open browser: http://localhost:3000
+# Open browser: http://localhost:3011
 # Login: admin@ananta.com / Admin@123
 ```
 

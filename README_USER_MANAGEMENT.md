@@ -41,7 +41,7 @@ npm start
 ```
 
 ### 4. Test It
-Go to http://localhost:3000/users and try:
+Go to http://localhost:3011/users and try:
 - Deleting a user
 - Blocking a user
 - Banning a user for 3 days

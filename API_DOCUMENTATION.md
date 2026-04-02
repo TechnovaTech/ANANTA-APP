@@ -2,7 +2,7 @@
 
 ## Base URLs
 - **Backend API**: `http://localhost:8080`
-- **Admin Panel**: `http://localhost:3000`
+- **Admin Panel**: `http://localhost:3011`
 
 ---
 

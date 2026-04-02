@@ -59,7 +59,7 @@ npm start
 ## Check Results
 
 ### In Admin Panel
-- Go to http://localhost:3000/recharges
+- Go to http://localhost:3011/recharges
 - See approved recharge with coins
 
 ### In App

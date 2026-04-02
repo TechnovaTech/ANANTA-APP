@@ -8,12 +8,12 @@
 **Authorized JavaScript origins:**
 - http://localhost:8081
 - http://localhost:19006
-- http://localhost:3000
+- http://localhost:3011
 
 **Authorized redirect URIs:**
 - http://localhost:8081
 - http://localhost:19006
-- http://localhost:3000
+- http://localhost:3011
 - http://localhost:8081/auth/callback
 - http://localhost:19006/auth/callback
 

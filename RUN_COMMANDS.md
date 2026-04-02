@@ -44,7 +44,7 @@ Browser will open: http://localhost:8081
 
 ### Check Admin Panel
 ```
-http://localhost:3000/recharges
+http://localhost:3011/recharges
 ```
 - Should show new approved recharge
 

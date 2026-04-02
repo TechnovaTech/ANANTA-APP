@@ -107,7 +107,7 @@ npm run dev
 ```
 
 ### Step 4: Access Gift History
-Navigate to: **http://localhost:3000/gift-history**
+Navigate to: **http://localhost:3011/gift-history**
 
 ---
 
@@ -116,7 +116,7 @@ Navigate to: **http://localhost:3000/gift-history**
 ### Viewing Gift History
 
 1. **Login to Admin Panel**
-   - URL: http://localhost:3000
+   - URL: http://localhost:3011
    - Email: admin@ananta.com
    - Password: Admin@123
 
@@ -465,7 +465,7 @@ Your Gift History module is now complete with:
 
 ---
 
-**Access URL:** http://localhost:3000/gift-history
+**Access URL:** http://localhost:3011/gift-history
 
 **Menu Location:** Sidebar → Gift History
 

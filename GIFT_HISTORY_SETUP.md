@@ -62,7 +62,7 @@ npm run dev
 ```
 
 ### Step 4: Access the Page
-Open browser: **http://localhost:3000/gift-history**
+Open browser: **http://localhost:3011/gift-history**
 
 ---
 
@@ -175,7 +175,7 @@ After installation, verify:
 
 Your Gift History module is ready to use!
 
-**URL:** http://localhost:3000/gift-history
+**URL:** http://localhost:3011/gift-history
 
 **Menu:** Sidebar → Gift History
 

@@ -50,7 +50,7 @@ mvn clean install
 ```
 
 ### 3. Test It!
-1. Go to admin panel: http://localhost:3000/users
+1. Go to admin panel: http://localhost:3011/users
 2. Try deleting a user (permanent)
 3. Try blocking a user (prevents login)
 4. Try banning a user for 3 days (temporary ban)
