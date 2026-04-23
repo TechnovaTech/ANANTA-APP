@@ -12,6 +12,8 @@ import { createAgoraEngine, ChannelProfileType, ClientRoleType } from '@/agoraCl
 import { WebView } from 'react-native-webview';
 import VideoGiftPlayer from '@/components/VideoGiftPlayer';
 import { useLive } from '@/contexts/LiveContext';
+import { useKeepAwake } from '@/hooks/useKeepAwake';
+import { KeepAwakeComponent } from '@/components/KeepAwakeComponent';
 
 const { width, height } = Dimensions.get('window');
 import { ENV } from '@/config/env';
@@ -95,6 +97,9 @@ export default function AudioLiveScreen() {
   const messagesIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef<number | null>(null);
+  
+  // Keep device awake during live streaming - PREVENTS DEVICE SLEEP!
+  const { activate: activateKeepAwake, deactivate: deactivateKeepAwake } = useKeepAwake(joined);
   
   // Animation values
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -447,6 +452,10 @@ export default function AudioLiveScreen() {
         if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
         if (messagesIntervalRef.current) clearInterval(messagesIntervalRef.current);
         if (role === 'viewer') {
+          if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
+          if (messagesIntervalRef.current) clearInterval(messagesIntervalRef.current);
+          // Deactivate keep awake when session not found (404)
+          deactivateKeepAwake();
           await cleanupAgora();
           Alert.alert('Live Ended', 'The host has ended this live session.', [
             { text: 'OK', onPress: () => router.back() }
@@ -461,6 +470,8 @@ export default function AudioLiveScreen() {
         if (role === 'viewer' && data.status === 'ended') {
           if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
           if (messagesIntervalRef.current) clearInterval(messagesIntervalRef.current);
+          // Deactivate keep awake when live session ends
+          deactivateKeepAwake();
           await cleanupAgora();
           Alert.alert('Live Ended', 'The host has ended this live session.', [
             { text: 'OK', onPress: () => router.back() }
@@ -541,11 +552,17 @@ export default function AudioLiveScreen() {
       const clientRole = role === 'viewer' ? ClientRoleType.ClientRoleAudience : ClientRoleType.ClientRoleBroadcaster;
       await engine.setClientRole(clientRole);
       engine.registerEventHandler({
-        onJoinChannelSuccess: () => setJoined(true),
+        onJoinChannelSuccess: () => {
+          setJoined(true);
+          // Activate keep awake when successfully joined
+          activateKeepAwake();
+        },
         onUserOffline: (_connection: any, uid: number) => {
           const offlineUid = typeof uid === 'number' ? uid : _connection;
           if (role === 'viewer' && offlineUid === hostUid) {
             if (statsIntervalRef.current) clearInterval(statsIntervalRef.current);
+            // Deactivate keep awake when host leaves
+            deactivateKeepAwake();
             cleanupAgora().then(() => {
               Alert.alert('Live Ended', 'The host has left the session.', [
                 { text: 'OK', onPress: () => router.back() }
@@ -575,6 +592,8 @@ export default function AudioLiveScreen() {
       }
       engineRef.current = null;
     }
+    // Deactivate keep awake when cleaning up
+    deactivateKeepAwake();
   };
 
   useEffect(() => {
@@ -722,7 +741,8 @@ export default function AudioLiveScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <KeepAwakeComponent isActive={joined}>
+      <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
       {/* Background Gradient */}
@@ -1102,6 +1122,7 @@ export default function AudioLiveScreen() {
         </View>
       </Modal>
     </View>
+    </KeepAwakeComponent>
   );
 }
 

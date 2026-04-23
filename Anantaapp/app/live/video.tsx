@@ -11,6 +11,8 @@ import * as SecureStore from 'expo-secure-store';
 import { WebView } from 'react-native-webview';
 import VideoGiftPlayer from '@/components/VideoGiftPlayer';
 import { useLive } from '@/contexts/LiveContext';
+import { useKeepAwake } from '@/hooks/useKeepAwake';
+import { KeepAwakeComponent } from '@/components/KeepAwakeComponent';
 
 const resolveGiftImageUrl = (value: string | null | undefined) => {
   if (!value) return '';
@@ -146,6 +148,9 @@ export default function VideoLiveScreen() {
   const endLiveRef = useRef<() => Promise<void>>(async () => {});
   const startedAtRef = useRef<number | null>(null);
   const keepAliveRef = useRef(false);
+
+  // Keep device awake during live streaming - PREVENTS DEVICE SLEEP!
+  const { activate: activateKeepAwake, deactivate: deactivateKeepAwake } = useKeepAwake(joined);
 
   useEffect(() => {
     if (role === 'host') {
@@ -515,6 +520,8 @@ export default function VideoLiveScreen() {
     if (role === 'host' && liveEngine && liveSession?.sessionId === (sessionId || '')) {
       engineRef.current = liveEngine;
       setJoined(true);
+      // Activate keep awake for existing session
+      await activateKeepAwake();
       return;
     }
     console.log('=== INIT AGORA START ===');
@@ -581,6 +588,8 @@ export default function VideoLiveScreen() {
         onJoinChannelSuccess: () => {
           console.log('[SUCCESS] Joined channel successfully');
           setJoined(true);
+          // Activate keep awake when successfully joined
+          activateKeepAwake();
           // viewer joined a room
           if (role === 'viewer') {
             AsyncStorage.getItem('pendingRoomJoined').then(raw => {
@@ -612,6 +621,8 @@ export default function VideoLiveScreen() {
               clearInterval(statsIntervalRef.current);
               statsIntervalRef.current = null;
             }
+            // Deactivate keep awake when host leaves
+            deactivateKeepAwake();
             saveMinutes().then(() => cleanupAgora()).then(() => {
               Alert.alert('Live Ended', 'The host has left the session.', [
                 { text: 'OK', onPress: () => router.back() }
@@ -656,6 +667,8 @@ export default function VideoLiveScreen() {
         setLiveEngine(null);
       }
     }
+    // Deactivate keep awake when cleaning up
+    deactivateKeepAwake();
   };
 
   const statsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -703,6 +716,8 @@ export default function VideoLiveScreen() {
           messagesIntervalRef.current = null;
         }
         if (role === 'viewer') {
+          // Deactivate keep awake when session not found (404)
+          deactivateKeepAwake();
           await saveMinutes();
           await cleanupAgora();
           Alert.alert('Live Ended', 'The host has ended this live session.', [
@@ -728,6 +743,8 @@ export default function VideoLiveScreen() {
             clearInterval(messagesIntervalRef.current);
             messagesIntervalRef.current = null;
           }
+          // Deactivate keep awake when live session ends
+          deactivateKeepAwake();
           await saveMinutes();
           await cleanupAgora();
           Alert.alert('Live Ended', 'The host has ended this live session.', [
@@ -876,11 +893,12 @@ export default function VideoLiveScreen() {
   }, [role]);
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
-    >
+    <KeepAwakeComponent isActive={joined}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
       <View style={styles.backgroundImage}>
         {joined && (
           <RtcSurfaceView
@@ -1232,6 +1250,7 @@ export default function VideoLiveScreen() {
         </Modal>
       </View>
     </KeyboardAvoidingView>
+    </KeepAwakeComponent>
   );
 }
 
